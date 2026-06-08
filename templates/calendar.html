@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ month_name }} {{ year }}{% endblock %}
+{% block main_class %}main-wide{% endblock %}
+
+{% block content %}
+<div class="cal-header">
+  <div class="cal-nav">
+    <a href="{{ url_for('calendar_view', year=prev_year, month=prev_month) }}" class="nav-arrow">&#8592;</a>
+    <h1 class="cal-title">{{ month_name }} {{ year }}</h1>
+    <a href="{{ url_for('calendar_view', year=next_year, month=next_month) }}" class="nav-arrow">&#8594;</a>
+  </div>
+  <div style="display:flex; align-items:center; gap:16px;">
+    <div class="size-control">
+      <span class="size-label">&#9633;</span>
+      <input type="range" id="cell-size" min="120" max="500" step="10" value="180">
+      <span class="size-label">&#9632;</span>
+    </div>
+    <a href="{{ url_for('calendar_view') }}" class="btn-today">Hoy</a>
+  </div>
+</div>
+
+<div class="cal-grid">
+  <!-- Cabecera días -->
+  {% for name in ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] %}
+  <div class="cal-dow">{{ name }}</div>
+  {% endfor %}
+
+  <!-- Días -->
+  {% for week in weeks %}
+    {% for day_num in week %}
+      {% if day_num == 0 %}
+        <div class="cal-cell cal-empty"></div>
+      {% else %}
+        {% set ds = "%04d-%02d-%02d"|format(year, month, day_num) %}
+        {% set is_today = ds == today %}
+        {% set day_notes = notes_by_date.get(ds, []) %}
+        {% set day_evs   = events_by_date.get(ds, []) %}
+
+        <a href="{{ url_for('day_view', date_str=ds) }}"
+           class="cal-cell {% if is_today %}is-today{% endif %}">
+
+          <span class="cal-num {% if is_today %}today-num{% endif %}">{{ day_num }}</span>
+
+          <!-- Eventos recurrentes -->
+          {% for ev in day_evs %}
+          <span class="chip {% if ev.done %}chip-done{% endif %}" style="--c: {{ ev.color }};">
+            {{ ev.title }}
+          </span>
+          {% endfor %}
+
+          <!-- Notas — todas visibles, con su color -->
+          {% for note in day_notes %}
+          <span class="cal-note-card {% if note.color %}cal-note-colored{% endif %}"
+                {% if note.color %}style="--c: {{ note.color }};"{% endif %}>
+            {{ note.content }}
+          </span>
+          {% endfor %}
+
+        </a>
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+</div>
+
+<script>
+const PREF = 'cal_cell_height';
+const slider = document.getElementById('cell-size');
+
+function apply(h) {
+  document.documentElement.style.setProperty('--cell-height', h + 'px');
+}
+
+const saved = localStorage.getItem(PREF);
+if (saved) { slider.value = saved; apply(saved); }
+else { apply(slider.value); }
+
+slider.addEventListener('input', () => {
+  apply(slider.value);
+  localStorage.setItem(PREF, slider.value);
+});
+</script>
+{% endblock %}

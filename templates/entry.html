@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Registrar — Health Tracker{% endblock %}
+
+{% block content %}
+<div class="page-title">Registrar día</div>
+<div class="page-subtitle">{{ entry_date }}</div>
+
+{% if entry %}
+<div class="alert alert-info">Editando entrada existente para este día.</div>
+{% endif %}
+
+<form method="POST">
+  <!-- PESO -->
+  <div class="form-section">
+    <div class="form-section-title">&#9878; Peso corporal</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Peso (kg)</label>
+        <input type="number" name="weight_kg" step="0.1" min="40" max="300"
+               value="{{ entry.weight_kg or '' }}" placeholder="ej: 128.5">
+      </div>
+      <div class="form-group" style="justify-content: flex-end;">
+        <div style="font-size: 13px; color: var(--text-muted); padding-top: 22px;">
+          Meta: <strong style="color: var(--green);">{{ goals.target_weight | int }} kg</strong><br>
+          Inicio: {{ goals.start_weight | int }} kg
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUEÑO -->
+  <div class="form-section">
+    <div class="form-section-title">&#9790; Sueño</div>
+    <div class="form-row col-3">
+      <div class="form-group">
+        <label>Me dormí a las</label>
+        <input type="time" name="sleep_start" value="{{ entry.sleep_start or '' }}">
+      </div>
+      <div class="form-group">
+        <label>Me desperté a las</label>
+        <input type="time" name="sleep_end" value="{{ entry.sleep_end or '' }}">
+      </div>
+      <div class="form-group">
+        <label>Horas totales (opcional, se calcula)</label>
+        <input type="number" name="sleep_hours" step="0.5" min="0" max="24"
+               value="{{ entry.sleep_hours or '' }}" placeholder="Auto">
+      </div>
+    </div>
+    <div class="form-row col-1">
+      <div class="form-group">
+        <label>Calidad del sueño (1=horrible, 5=excelente)</label>
+        <div class="rating-group">
+          {% for i in range(1, 6) %}
+          <input type="radio" name="sleep_quality" id="sq{{ i }}" value="{{ i }}"
+                 {% if entry.sleep_quality == i %}checked{% endif %}>
+          <label for="sq{{ i }}">{{ i }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVIDAD -->
+  <div class="form-section">
+    <div class="form-section-title">&#127939; Actividad física</div>
+    <div class="form-row col-3">
+      <div class="form-group">
+        <label>Caminadora (minutos)</label>
+        <input type="number" name="treadmill_minutes" min="0" max="300"
+               value="{{ entry.treadmill_minutes or '' }}" placeholder="ej: 20">
+      </div>
+      <div class="form-group">
+        <label>Pasos (opcional)</label>
+        <input type="number" name="steps" min="0"
+               value="{{ entry.steps or '' }}" placeholder="ej: 5000">
+      </div>
+      <div class="form-group" style="justify-content: flex-end;">
+        <div style="font-size: 13px; color: var(--text-muted); padding-top: 22px;">
+          Meta diaria: <strong style="color: var(--green);">{{ goals.daily_treadmill_minutes | int }} min</strong>
+        </div>
+      </div>
+    </div>
+    <div class="form-row col-1">
+      <div class="form-group">
+        <label>Notas de ejercicio</label>
+        <textarea name="exercise_notes" placeholder="ej: 20 min caminata rápida, stretching...">{{ entry.exercise_notes or '' }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- NUTRICIÓN -->
+  <div class="form-section">
+    <div class="form-section-title">&#127860; Alimentación</div>
+    <div class="form-row col-3">
+      <div class="form-group">
+        <label>Calorías (kcal)</label>
+        <input type="number" name="calories" min="0" max="10000"
+               value="{{ entry.calories or '' }}" placeholder="ej: 1800">
+      </div>
+      <div class="form-group">
+        <label>Agua (litros)</label>
+        <input type="number" name="water_liters" step="0.1" min="0" max="10"
+               value="{{ entry.water_liters or '' }}" placeholder="ej: 2.5">
+      </div>
+      <div class="form-group">
+        <label>Cantidad de comidas</label>
+        <input type="number" name="meals_count" min="0" max="10"
+               value="{{ entry.meals_count or '' }}" placeholder="ej: 2">
+      </div>
+    </div>
+  </div>
+
+  <!-- AYUNO INTERMITENTE -->
+  <div class="form-section">
+    <div class="form-section-title">&#8987; Ayuno intermitente</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Empecé el ayuno a las (última comida)</label>
+        <input type="time" name="fasting_start" value="{{ entry.fasting_start or '' }}">
+      </div>
+      <div class="form-group">
+        <label>Rompí el ayuno a las (primera comida del día)</label>
+        <input type="time" name="fasting_end" value="{{ entry.fasting_end or '' }}">
+      </div>
+    </div>
+    <div style="font-size: 13px; color: var(--text-muted);">
+      Las horas de ayuno se calculan automáticamente. Meta: <strong style="color: var(--orange);">{{ goals.fasting_window_hours | int }}h</strong> (ej: 16:8)
+    </div>
+  </div>
+
+  <!-- BIENESTAR -->
+  <div class="form-section">
+    <div class="form-section-title">&#9889; Bienestar general</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nivel de energía (1=agotado, 5=excelente)</label>
+        <div class="rating-group">
+          {% for i in range(1, 6) %}
+          <input type="radio" name="energy_level" id="el{{ i }}" value="{{ i }}"
+                 {% if entry.energy_level == i %}checked{% endif %}>
+          <label for="el{{ i }}">{{ i }}</label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Estado de ánimo (1=muy bajo, 5=muy bien)</label>
+        <div class="rating-group">
+          {% for i in range(1, 6) %}
+          <input type="radio" name="mood" id="mood{{ i }}" value="{{ i }}"
+                 {% if entry.mood == i %}checked{% endif %}>
+          <label for="mood{{ i }}">{{ i }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="form-row col-1">
+      <div class="form-group">
+        <label>Notas del día (opcional)</label>
+        <textarea name="notes" placeholder="¿Qué tal estuvo el día? Algo que quieras recordar...">{{ entry.notes or '' }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENTOS PERSONALIZADOS -->
+  {% if custom_events %}
+  <div class="form-section">
+    <div class="form-section-title">
+      &#10003; Eventos del día
+      <span style="font-size: 11px; font-weight: 400; color: var(--text-muted); margin-left: 8px;">
+        Marcá lo que lograste hoy
+      </span>
+    </div>
+    <div class="events-checklist">
+      {% for ev in custom_events %}
+      <label class="event-check-item {% if ev.id in logged_event_ids %}checked{% endif %}"
+             style="--ev-color: {{ ev.color }};">
+        <input type="checkbox" name="custom_event" value="{{ ev.id }}"
+               {% if ev.id in logged_event_ids %}checked{% endif %}>
+        <span class="event-check-icon">{{ ev.icon }}</span>
+        <span class="event-check-name">{{ ev.name }}</span>
+        {% if ev.description %}
+        <span class="event-check-desc">{{ ev.description }}</span>
+        {% endif %}
+        <span class="event-check-mark">&#10003;</span>
+      </label>
+      {% endfor %}
+    </div>
+    <div style="margin-top: 10px;">
+      <a href="{{ url_for('events') }}" style="font-size: 12px; color: var(--text-muted);">+ Administrar eventos</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="form-section" style="border-style: dashed; text-align: center; padding: 20px;">
+    <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 10px;">
+      Todavía no tenés eventos personalizados definidos.
+    </div>
+    <a href="{{ url_for('events') }}" class="btn btn-secondary btn-sm">Crear eventos</a>
+  </div>
+  {% endif %}
+
+  <div style="display: flex; gap: 12px; align-items: center;">
+    <button type="submit" class="btn btn-primary">Guardar entrada</button>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

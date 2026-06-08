@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Eventos recurrentes{% endblock %}
+
+{% block content %}
+<div class="page-top">
+  <h1 class="page-title">Eventos recurrentes</h1>
+  <p class="page-sub">Cosas que querés recordar hacer con cierta frecuencia. Aparecen en el calendario en los días que les toca.</p>
+</div>
+
+<!-- FORM -->
+<div class="rec-form-wrap">
+  <form method="POST" action="{{ url_for('recurring_add') }}" class="rec-form">
+
+    <div class="field-group">
+      <label>Nombre del evento</label>
+      <input type="text" name="title" required placeholder="ej: Caminadora, Peso, Medicación..." maxlength="60">
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label>Color</label>
+        <div class="color-row">
+          {% set colors = ['#6366f1','#22c55e','#3b82f6','#f97316','#ef4444','#a855f7','#ec4899','#eab308','#14b8a6'] %}
+          {% for c in colors %}
+          <label class="color-opt">
+            <input type="radio" name="color" value="{{ c }}" {% if loop.first %}checked{% endif %}>
+            <span class="color-circle" style="background:{{ c }};"></span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Desde</label>
+        <input type="date" name="start_date" value="{{ today }}">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label>Frecuencia</label>
+      <div class="freq-options">
+        <label class="freq-opt">
+          <input type="radio" name="rtype" value="daily" checked onchange="showFreq(this.value)">
+          <span>Todos los días</span>
+        </label>
+        <label class="freq-opt">
+          <input type="radio" name="rtype" value="weekly" onchange="showFreq(this.value)">
+          <span>Días de la semana</span>
+        </label>
+        <label class="freq-opt">
+          <input type="radio" name="rtype" value="every" onchange="showFreq(this.value)">
+          <span>Cada N días</span>
+        </label>
+      </div>
+
+      <div id="freq-weekly" class="freq-detail" style="display:none;">
+        <div class="weekday-row">
+          {% set day_names = [('0','Lu'),('1','Ma'),('2','Mi'),('3','Ju'),('4','Vi'),('5','Sá'),('6','Do')] %}
+          {% for val, name in day_names %}
+          <label class="weekday-btn">
+            <input type="checkbox" name="weekdays" value="{{ val }}">
+            <span>{{ name }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div id="freq-every" class="freq-detail" style="display:none;">
+        <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+          <span>Cada</span>
+          <input type="number" name="interval_days" value="2" min="2" max="365" style="width:70px;">
+          <span>días</span>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-primary">Agregar evento</button>
+  </form>
+</div>
+
+<!-- LIST -->
+{% if events %}
+<div class="rec-list">
+  {% for ev in events %}
+  <div class="rec-item" style="--c: {{ ev.color }};">
+    <div class="rec-dot"></div>
+    <div class="rec-info">
+      <span class="rec-title">{{ ev.title }}</span>
+      <span class="rec-rule">
+        {% if ev.recurrence == 'daily' %}
+          Todos los días
+        {% elif ev.recurrence.startswith('weekly:') %}
+          {% set day_map = {'0':'Lu','1':'Ma','2':'Mi','3':'Ju','4':'Vi','5':'Sá','6':'Do'} %}
+          {% set wdays = ev.recurrence.split(':')[1].split(',') %}
+          Cada: {% for d in wdays %}{{ day_map.get(d, d) }}{% if not loop.last %}, {% endif %}{% endfor %}
+        {% elif ev.recurrence.startswith('every:') %}
+          Cada {{ ev.recurrence.split(':')[1] }} días
+        {% endif %}
+        · desde {{ ev.start_date }}
+      </span>
+    </div>
+    <form method="POST" action="{{ url_for('recurring_delete', event_id=ev.id) }}"
+          onsubmit="return confirm('¿Eliminar este evento?');">
+      <button type="submit" class="btn-delete-sm">Eliminar</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty-msg">Todavía no tenés eventos recurrentes. Agregá el primero arriba.</p>
+{% endif %}
+
+<script>
+const today = "{{ today }}";
+document.querySelector('[name="start_date"]').value = today;
+
+function showFreq(val) {
+  document.getElementById('freq-weekly').style.display = val === 'weekly' ? 'block' : 'none';
+  document.getElementById('freq-every').style.display  = val === 'every'  ? 'block' : 'none';
+}
+</script>
+{% endblock %}
