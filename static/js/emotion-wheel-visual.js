@@ -165,8 +165,13 @@ function ewHover(base, mid, spec, depth, color) {
         (depth >= 3 && eR === 3 && eM === mid && eS === spec)
       );
 
-      if (inPath) el.style.fill = 'rgba(255,255,255,0.97)';
-      el.style.opacity = inPath ? '1' : '0.28';
+      if (inPath) {
+        el.style.fill = 'rgba(255,255,255,0.97)';
+        el.style.opacity = '1';
+        el.setAttribute('transform', `rotate(0,${el.getAttribute('x')},${el.getAttribute('y')})`);
+      } else {
+        el.style.opacity = '0.28';
+      }
     });
   }
 
