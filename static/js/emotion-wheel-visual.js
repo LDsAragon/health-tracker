@@ -155,6 +155,10 @@ function strokeW(depth) {
 // ── Hover — idéntico visualmente al sector activo ─────────────────────────
 
 function ewHover(base, mid, spec, depth, color) {
+  // Durante el giro, los sectores barren bajo el cursor y disparan mouseover:
+  // ignoramos esos hovers y aplicamos uno solo al terminar (_reapplyHover, con _ewAnimId ya nulo).
+  if (_ewAnimId) return;
+
   // Ids de segmento de los anillos clonables (2 y 3) — null si no participan
   const id2 = depth >= 2 ? base + '|' + mid : null;
   const id3 = depth >= 3 ? base + '|' + mid + '|' + spec : null;
