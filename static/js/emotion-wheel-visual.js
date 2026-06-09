@@ -155,8 +155,13 @@ function strokeW(depth) {
 // ── Hover — idéntico visualmente al sector activo ─────────────────────────
 
 function ewHover(base, mid, spec, depth, color) {
+  // Ids de segmento de los anillos clonables (2 y 3) — null si no participan
+  const id2 = depth >= 2 ? base + '|' + mid : null;
+  const id3 = depth >= 3 ? base + '|' + mid + '|' + spec : null;
+
+  // ── Paths: highlight + capturar fuentes para clonar (anillos 2 y 3) ──────
   const gWheel = document.getElementById('ew-wheel-g');
-  let   cloneSrc = null;
+  const srcByRing = {};
   if (gWheel) {
     gWheel.querySelectorAll('[data-base]').forEach(el => {
       const eB = el.dataset.base, eM = el.dataset.mid,
@@ -167,35 +172,42 @@ function ewHover(base, mid, spec, depth, color) {
         (depth >= 2 && eD === 2 && eM === mid) ||
         (depth >= 3 && eD === 3 && eM === mid && eS === spec)
       );
-      const exactMatch = inPath && eD === depth &&
-        (depth < 2 || eM === mid) && (depth < 3 || eS === spec);
       const sameBase = eB === base && !inPath;
+      const lifted   = inPath && eD >= 2; // anillos 2 y 3 se clonan/rotan; el 1 no
 
-      if (exactMatch) cloneSrc = el;
-      el.style.opacity     = exactMatch ? '0' : inPath ? '1' : sameBase ? '0.5' : '0.08';
+      if (lifted) srcByRing[eD] = el;
+      el.style.opacity     = lifted ? '0' : inPath ? '1' : sameBase ? '0.5' : '0.08';
       el.style.fill        = inPath ? solidFill(color, eD) : (el.dataset.fill0 || el.style.fill);
       el.style.stroke      = inPath ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.16)';
       el.style.strokeWidth = inPath ? '1.5'  : strokeW(el.dataset.depth);
       el.style.filter      = '';
     });
 
-    // Clon visual del sector exacto — rota hasta 90°, sin pointer events
+    // ── Clones por anillo (2 y 3) con persistencia ────────────────────────
     const gClone = document.getElementById('ew-hover-clone-g');
-    if (gClone && cloneSrc) {
-      gClone.innerHTML = '';
-      const clone = cloneSrc.cloneNode(true);
-      clone.style.pointerEvents = 'none';
-      clone.style.opacity       = '1';
-      clone.style.fill          = solidFill(color, depth);
-      clone.style.filter        = '';
-      clone.style.stroke        = 'rgba(255,255,255,0.55)';
-      clone.style.strokeWidth   = '1.5';
-      gClone.appendChild(clone);
-      const initA = parseFloat(cloneSrc.dataset.initAngle);
-      _animSectorClone(clone, ewState.angle, initA, depth);
+    if (gClone) {
+      [[2, id2], [3, id3]].forEach(([ring, id]) => {
+        let existing = gClone.querySelector(`[data-lift-ring="${ring}"]`);
+        if (existing && existing.dataset.liftId === (id || '')) return; // sin cambio → no re-animar
+        if (existing) existing.remove();
+        if (!id || !srcByRing[ring]) return;
+        const src   = srcByRing[ring];
+        const clone = src.cloneNode(true);
+        clone.dataset.liftRing  = String(ring);
+        clone.dataset.liftId    = id;
+        clone.style.pointerEvents = 'none';
+        clone.style.opacity       = '1';
+        clone.style.fill          = solidFill(color, ring);
+        clone.style.filter        = '';
+        clone.style.stroke        = 'rgba(255,255,255,0.55)';
+        clone.style.strokeWidth   = '1.5';
+        gClone.appendChild(clone);
+        _animSectorClone(clone, ewState.angle, parseFloat(src.dataset.initAngle), ring);
+      });
     }
   }
 
+  // ── Labels: inPath → horizontal (idempotente); resto → radial ────────────
   const gLabel = document.getElementById('ew-label-g');
   if (gLabel) {
     gLabel.querySelectorAll('[data-la]').forEach(el => {
@@ -214,6 +226,7 @@ function ewHover(base, mid, spec, depth, color) {
         _animLabelTo0(el, el.getAttribute('x'), el.getAttribute('y'));
       } else {
         el.style.opacity = '0.28';
+        _setLabelRadial(el);
       }
     });
   }
@@ -237,6 +250,14 @@ function ewHoverClear() {
   const hint = document.getElementById('ew-hover-hint');
   if (lbl)  lbl.innerHTML = '';
   if (hint) hint.textContent = 'Rotá para explorar · hover para leer · click para guardar';
+}
+
+// Restaura un label a su orientación radial de reposo (snap, sin animar)
+function _setLabelRadial(el) {
+  if (el._animId) { cancelAnimationFrame(el._animId); el._animId = null; }
+  const w = ((+el.dataset.la + ewState.angle) % 360 + 360) % 360;
+  let rot = w - 90; if (w > 180) rot += 180;
+  el.setAttribute('transform', `rotate(${f(rot)},${el.getAttribute('x')},${el.getAttribute('y')})`);
 }
 
 // Anima el label desde su rotación radial actual hasta 0° (horizontal)
@@ -295,6 +316,8 @@ function ewSelect(base, mid, spec, depth) {
 function buildFullWheel() {
   const svg = document.getElementById('ew-svg');
   svg.innerHTML = '';
+  // Reset total solo al salir de la rueda (no entre sectores → persistencia del hover)
+  svg.onmouseleave = ewHoverClear;
 
   const gWheel = svgG('ew-wheel-g');
   const gClone = svgG('ew-hover-clone-g');
@@ -402,7 +425,6 @@ function makeLabel(text, initAngle, r, fontSize, fontWeight, base, ring) {
 
 function bindSlice(el, base, mid, spec, depth, color) {
   el.addEventListener('mouseover', () => ewHover(base, mid, spec, depth, color));
-  el.addEventListener('mouseout',  ewHoverClear);
   el.addEventListener('click',     () => ewSelect(base, mid, spec, depth));
 }
 
