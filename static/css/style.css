@@ -1417,26 +1417,30 @@ select.journal-cat-select {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 16px 20px;
+  padding: 16px 20px 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  min-width: 370px;
+  max-height: 98vh;
+  overflow-y: auto;
 }
 
 .ew-wheel-wrap {
   position: relative;
-  width: 340px;
-  height: 340px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: min(600px, 90vmin);
+  height: min(600px, 90vmin);
+  flex-shrink: 0;
+}
+
+.ew-wheel-wrap svg {
+  width: 100%;
+  height: 100%;
 }
 
 .ew-pointer {
   position: absolute;
-  top: 4px;
+  top: 2px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 16px;
@@ -1444,30 +1448,29 @@ select.journal-cat-select {
   z-index: 2;
   line-height: 1;
   pointer-events: none;
-  text-shadow: 0 1px 5px rgba(0,0,0,0.8);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.9);
 }
 
-/* Etiqueta central sobre el círculo central del SVG */
+/* Etiqueta central (círculo interno del SVG) */
 .ew-center-label {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 58px;
-  font-size: 10px;
+  width: 56px;
+  font-size: 11px;
   font-weight: 800;
   text-align: center;
-  line-height: 1.25;
+  line-height: 1.2;
   pointer-events: none;
-  word-break: break-word;
   hyphens: auto;
 }
 
-/* Etiqueta de hover — muestra el camino base › media › específica */
+/* Etiqueta de hover */
 .ew-hover-label {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  min-height: 22px;
+  min-height: 24px;
   text-align: center;
   color: var(--text);
 }
