@@ -1428,27 +1428,14 @@ select.journal-cat-select {
 
 .ew-wheel-wrap {
   position: relative;
-  width: min(600px, 90vmin);
-  height: min(600px, 90vmin);
+  width: min(740px, calc(90vh - 140px), calc(100vw - 32px));
+  height: min(740px, calc(90vh - 140px), calc(100vw - 32px));
   flex-shrink: 0;
 }
 
 .ew-wheel-wrap svg {
   width: 100%;
   height: 100%;
-}
-
-.ew-pointer {
-  position: absolute;
-  top: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 16px;
-  color: #fff;
-  z-index: 2;
-  line-height: 1;
-  pointer-events: none;
-  text-shadow: 0 1px 6px rgba(0,0,0,0.9);
 }
 
 /* Etiqueta central (círculo interno del SVG) */
