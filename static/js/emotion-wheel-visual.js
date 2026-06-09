@@ -87,17 +87,26 @@ function applyAngle(angle) {
     el.style.filter      = isActive ? 'brightness(1.15)' : '';
   });
 
-  // ── 2. Posición de labels (sin rotación, siempre horizontal) ──────────
+  // ── 2. Posición y orientación radial de labels ────────────────────────
   gLabel.querySelectorAll('[data-la]').forEach(el => {
     const initA    = +el.dataset.la;
     const r        = +el.dataset.lr;
-    const worldRad = (initA + angle) * Math.PI / 180;
-    el.setAttribute('x', f(r * Math.sin(worldRad)));
-    el.setAttribute('y', f(-r * Math.cos(worldRad)));
+    const worldDeg = ((initA + angle) % 360 + 360) % 360;
+    const worldRad = worldDeg * Math.PI / 180;
+    const wx = f(r * Math.sin(worldRad));
+    const wy = f(-r * Math.cos(worldRad));
+    el.setAttribute('x', wx);
+    el.setAttribute('y', wy);
+
+    // Orientación radial: texto sigue la dirección de su sector
+    // Mitad izquierda (worldDeg > 180) se voltea para no quedar al revés
+    let rot = worldDeg - 90;
+    if (worldDeg > 180) rot += 180;
+    el.setAttribute('transform', `rotate(${f(rot)},${wx},${wy})`);
 
     const ring     = +el.dataset.ring;
     const isActive = el.dataset.base === topBase;
-    el.style.fill    = 'rgba(255,255,255,0.92)';
+    el.style.fill    = isActive ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.82)';
     el.style.opacity = ring === 1 ? '1' : (isActive ? '0.92' : '0.62');
   });
 
@@ -156,7 +165,7 @@ function ewHover(base, mid, spec, depth, color) {
         (depth >= 3 && eR === 3 && eM === mid && eS === spec)
       );
 
-      el.style.fill    = inPath ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.92)';
+      if (inPath) el.style.fill = 'rgba(255,255,255,0.97)';
       el.style.opacity = inPath ? '1' : '0.28';
     });
   }
