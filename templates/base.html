@@ -35,20 +35,24 @@
     {% block content %}{% endblock %}
   </main>
   <script src="{{ url_for('static', filename='js/emotion-wheel.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/emotion-wheel-content.js') }}"></script>
   <script src="{{ url_for('static', filename='js/emotion-wheel-visual.js') }}"></script>
 
   <div id="ew-modal" class="ew-modal-overlay" style="display:none;" onclick="ewOverlayClick(event)">
     <div class="ew-modal-box">
-      <div class="ew-wheel-wrap">
-        <svg id="ew-svg" viewBox="-180 -180 360 360" width="600" height="600"></svg>
-        <div id="ew-center-label" class="ew-center-label"></div>
+      <div class="ew-modal-main">
+        <div class="ew-wheel-wrap">
+          <svg id="ew-svg" viewBox="-180 -180 360 360" width="600" height="600"></svg>
+          <div id="ew-center-label" class="ew-center-label"></div>
+        </div>
+        <div class="ew-hover-label" id="ew-hover-label"></div>
+        <div class="ew-hover-hint" id="ew-hover-hint">Rotá para explorar · hover para ver · click para guardar</div>
+        <div class="ew-modal-actions">
+          <button onclick="closeEWModal()">Cancelar</button>
+        </div>
+        <p class="ew-hint">Q / ← rotar izq &nbsp;·&nbsp; E / → rotar der &nbsp;·&nbsp; Esc cancelar</p>
       </div>
-      <div class="ew-hover-label" id="ew-hover-label"></div>
-      <div class="ew-hover-hint" id="ew-hover-hint">Rotá para explorar · hover para ver · click para guardar</div>
-      <div class="ew-modal-actions">
-        <button onclick="closeEWModal()">Cancelar</button>
-      </div>
-      <p class="ew-hint">Q / ← rotar izq &nbsp;·&nbsp; E / → rotar der &nbsp;·&nbsp; Esc cancelar</p>
+      <aside class="ew-info-panel" id="ew-info-panel"></aside>
     </div>
   </div>
 </body>

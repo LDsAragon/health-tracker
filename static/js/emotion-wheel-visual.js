@@ -235,6 +235,8 @@ function ewHover(base, mid, spec, depth, color) {
     });
   }
 
+  ewRenderInfo(base, mid, spec, depth, color);
+
   const lbl = document.getElementById('ew-hover-label');
   if (!lbl) return;
   const sep  = '<span class="ew-sep"> › </span>';
@@ -254,6 +256,43 @@ function ewHoverClear() {
   const hint = document.getElementById('ew-hover-hint');
   if (lbl)  lbl.innerHTML = '';
   if (hint) hint.textContent = 'Rotá para explorar · hover para leer · click para guardar';
+  // El panel nunca queda vacío: muestra la emoción base activa (centro)
+  const tb = Object.keys(EMOTION_WHEEL)[topIdx(ewState.angle)];
+  ewRenderInfo(tb, null, null, 1, EMOTION_WHEEL[tb].color);
+}
+
+// ── Panel lateral de contexto ─────────────────────────────────────────────
+
+// Resuelve los 4 campos del más profundo disponible, cayendo al ancestro (spec→mid→base)
+function ewContent(base, mid, spec, depth) {
+  const C = (typeof EMOTION_CONTENT !== 'undefined') ? EMOTION_CONTENT : {};
+  const chain = [];
+  if (depth >= 3 && spec) chain.push(C[base + '|' + mid + '|' + spec]);
+  if (depth >= 2 && mid)  chain.push(C[base + '|' + mid]);
+  chain.push(C[base]);
+  const out = {};
+  ['que', 'sirve', 'manifiesta', 'distinguir', 'fuente'].forEach(field => {
+    for (const obj of chain) { if (obj && obj[field]) { out[field] = obj[field]; break; } }
+  });
+  return out;
+}
+
+function ewRenderInfo(base, mid, spec, depth, color) {
+  const panel = document.getElementById('ew-info-panel');
+  if (!panel) return;
+  const c = ewContent(base, mid, spec, depth);
+  let crumb = `<span style="color:${color}">${base}</span>`;
+  if (depth >= 2 && mid)  crumb += ` <span class="ew-sep">›</span> ${mid}`;
+  if (depth >= 3 && spec) crumb += ` <span class="ew-sep">›</span> ${spec}`;
+  const sec = (label, val) =>
+    val ? `<div class="ew-info-sec"><h4>${label}</h4><p>${val}</p></div>` : '';
+  panel.innerHTML =
+    `<div class="ew-info-title">${crumb}</div>` +
+    sec('Qué es', c.que) +
+    sec('Para qué sirve', c.sirve) +
+    sec('Cómo se manifiesta', c.manifiesta) +
+    sec('Disparadores y cómo distinguirla', c.distinguir) +
+    (c.fuente ? `<div class="ew-info-src">Fuente: ${c.fuente}</div>` : '');
 }
 
 // Restaura un label a su orientación radial de reposo (snap, sin animar)
