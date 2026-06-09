@@ -86,9 +86,9 @@ const EMOTION_WHEEL = {
       "Protector":   ["Digno",        "Valioso"],
       "Leal":        ["Confiado",     "Inteligente"],
       "Importante":  ["Respetado",    "Apreciado"],
-      "Esperanzado": ["Realizado",    "Optimista"],
-      "Creativo":    ["Inventivo",    "Capaz"],
-      "Entusiasta":  ["Satisfecho",   "Alegre"]
+      "Esperanzado": ["Realizado",    "Satisfecho"],
+      "Orgulloso":   ["Alegre",       "Emocionado"],
+      "Capaz":       ["Decidido",     "Independiente"]
     }
   }
 };
