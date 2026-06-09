@@ -208,11 +208,6 @@ function strokeW(depth) {
 function ewHover(base, mid, spec, depth, color) {
   const gWheel = document.getElementById('ew-wheel-g');
   if (gWheel) {
-    // Rotación extra para llevar la rama hoviada a horizontal (90°)
-    const ring1El   = gWheel.querySelector(`[data-depth="1"][data-base="${base}"]`);
-    const baseInitA = ring1El ? +ring1El.dataset.initAngle : 0;
-    const extra     = f(90 - baseInitA - ewState.angle);
-
     gWheel.querySelectorAll('[data-base]').forEach(el => {
       const eB = el.dataset.base, eM = el.dataset.mid,
             eS = el.dataset.specific, eD = +el.dataset.depth;
@@ -228,7 +223,6 @@ function ewHover(base, mid, spec, depth, color) {
       el.style.stroke      = inPath ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.16)';
       el.style.strokeWidth = inPath ? '1.5'  : strokeW(el.dataset.depth);
       el.style.filter      = inPath ? 'brightness(1.15)' : '';
-      if (inPath) el.setAttribute('transform', `rotate(${extra})`);
     });
   }
 
