@@ -97,8 +97,8 @@ function applyAngle(angle) {
 
     const ring     = +el.dataset.ring;
     const isActive = el.dataset.base === topBase;
-    el.style.opacity = ring === 1 ? '1' : (isActive ? '0.92' : '0.70');
-    el.style.fill    = isActive ? 'rgba(255,255,255,0.92)' : EMOTION_WHEEL[el.dataset.base].color;
+    el.style.fill    = 'rgba(255,255,255,0.92)';
+    el.style.opacity = ring === 1 ? '1' : (isActive ? '0.92' : '0.62');
   });
 
   // ── 3. Etiqueta central ───────────────────────────────────────────────
@@ -141,6 +141,23 @@ function ewHover(base, mid, spec, depth, color) {
       el.style.stroke      = inPath ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.16)';
       el.style.strokeWidth = inPath ? '1.5'  : strokeW(el.dataset.depth);
       el.style.filter      = inPath ? 'brightness(1.15)' : '';
+    });
+  }
+
+  const gLabel = document.getElementById('ew-label-g');
+  if (gLabel) {
+    gLabel.querySelectorAll('[data-la]').forEach(el => {
+      const eB = el.dataset.base, eR = +el.dataset.ring;
+      const eM = el.dataset.mid,  eS = el.dataset.specific;
+
+      const inPath = eB === base && (
+        eR === 1 ||
+        (depth >= 2 && eR === 2 && eM === mid) ||
+        (depth >= 3 && eR === 3 && eM === mid && eS === spec)
+      );
+
+      el.style.fill    = inPath ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.92)';
+      el.style.opacity = inPath ? '1' : '0.28';
     });
   }
 
@@ -209,7 +226,9 @@ function buildFullWheel() {
       p2.style.cursor  = 'pointer';
       bindSlice(p2, base, mid, null, 2, baseColor);
       gWheel.appendChild(p2);
-      gLabel.appendChild(makeLabel(mid, midA, (EW.r2i+EW.r2o)/2, '6px', '700', base, 2));
+      const lbl2 = makeLabel(mid, midA, (EW.r2i+EW.r2o)/2, '6px', '700', base, 2);
+      lbl2.dataset.mid = mid;
+      gLabel.appendChild(lbl2);
 
       const specs = EMOTION_WHEEL[base].children[mid];
       specs.forEach((spec, si) => {
@@ -223,7 +242,10 @@ function buildFullWheel() {
         p3.style.cursor     = 'pointer';
         bindSlice(p3, base, mid, spec, 3, baseColor);
         gWheel.appendChild(p3);
-        gLabel.appendChild(makeLabel(spec, specA, (EW.r3i+EW.r3o)/2, '5.5px', '600', base, 3));
+        const lbl3 = makeLabel(spec, specA, (EW.r3i+EW.r3o)/2, '5.5px', '600', base, 3);
+        lbl3.dataset.mid      = mid;
+        lbl3.dataset.specific = spec;
+        gLabel.appendChild(lbl3);
       });
     });
   });
