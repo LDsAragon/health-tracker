@@ -124,8 +124,9 @@ function applyAngle(angle) {
 
     const ring     = +el.dataset.ring;
     const isActive = el.dataset.base === topBase;
-    el.style.fill    = 'rgba(0,0,0,0.82)'; // negro en reposo para todos
+    el.style.fill    = 'rgba(0,0,0,0.82)';
     el.style.opacity = ring === 1 ? '1' : (isActive ? '0.92' : '0.62');
+    if (el._bg) el._bg.style.opacity = '0';
   });
 
   // ── 3. Etiqueta central ───────────────────────────────────────────────
@@ -186,9 +187,20 @@ function ewHover(base, mid, spec, depth, color) {
       if (inPath) {
         el.style.fill = 'rgba(0,0,0,0.90)';
         el.style.opacity = '1';
-        el.setAttribute('transform', `rotate(0,${el.getAttribute('x')},${el.getAttribute('y')})`);
+        const tx = el.getAttribute('x'), ty = el.getAttribute('y');
+        el.setAttribute('transform', `rotate(0,${tx},${ty})`);
+        if (el._bg) {
+          const bb = el.getBBox(), pad = 4;
+          el._bg.setAttribute('x',      bb.x - pad);
+          el._bg.setAttribute('y',      bb.y - pad);
+          el._bg.setAttribute('width',  bb.width  + pad * 2);
+          el._bg.setAttribute('height', bb.height + pad * 2);
+          el._bg.setAttribute('transform', `rotate(0,${tx},${ty})`);
+          el._bg.style.opacity = '1';
+        }
       } else {
         el.style.opacity = '0.28';
+        if (el._bg) el._bg.style.opacity = '0';
       }
     });
   }
@@ -247,7 +259,9 @@ function buildFullWheel() {
     p1.style.cursor      = 'pointer';
     bindSlice(p1, base, null, null, 1, baseColor);
     gWheel.appendChild(p1);
-    gLabel.appendChild(makeLabel(base, BASE_A, (EW.r1i+EW.r1o)/2, '8px', '800', base, 1));
+    const lbl1 = makeLabel(base, BASE_A, (EW.r1i+EW.r1o)/2, '8px', '800', base, 1);
+    const bg1  = makeLabelBg(); lbl1._bg = bg1;
+    gLabel.appendChild(bg1); gLabel.appendChild(lbl1);
 
     mids.forEach((mid, mi) => {
       const MID  = 60 / mids.length; // 10°
@@ -262,7 +276,8 @@ function buildFullWheel() {
       gWheel.appendChild(p2);
       const lbl2 = makeLabel(mid, midA, (EW.r2i+EW.r2o)/2, '6px', '700', base, 2);
       lbl2.dataset.mid = mid;
-      gLabel.appendChild(lbl2);
+      const bg2 = makeLabelBg(); lbl2._bg = bg2;
+      gLabel.appendChild(bg2); gLabel.appendChild(lbl2);
 
       const specs = EMOTION_WHEEL[base].children[mid];
       specs.forEach((spec, si) => {
@@ -280,7 +295,8 @@ function buildFullWheel() {
         const lbl3 = makeLabel(spec, specA, (EW.r3i+EW.r3o)/2, '5.5px', '600', base, 3);
         lbl3.dataset.mid      = mid;
         lbl3.dataset.specific = spec;
-        gLabel.appendChild(lbl3);
+        const bg3 = makeLabelBg(); lbl3._bg = bg3;
+        gLabel.appendChild(bg3); gLabel.appendChild(lbl3);
       });
     });
   });
@@ -330,6 +346,17 @@ function makeLabel(text, initAngle, r, fontSize, fontWeight, base, ring) {
   el.style.userSelect    = 'none';
   el.textContent = text;
   return el;
+}
+
+function makeLabelBg() {
+  const bg = svgEl('rect');
+  bg.setAttribute('rx', '3');
+  bg.setAttribute('ry', '3');
+  bg.style.fill          = 'rgba(255,255,255,0.90)';
+  bg.style.opacity       = '0';
+  bg.style.pointerEvents = 'none';
+  bg.style.transition    = 'opacity 0.10s ease';
+  return bg;
 }
 
 function bindSlice(el, base, mid, spec, depth, color) {
