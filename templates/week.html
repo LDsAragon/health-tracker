@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Semana {{ week_label }}{% endblock %}
+{% block main_class %}main-wide{% endblock %}
+
+{% block content %}
+
+{% set COLORS = ['#6366f1','#22c55e','#3b82f6','#f97316','#ef4444','#a855f7','#ec4899','#eab308','#14b8a6'] %}
+{% set DOW = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'] %}
+
+<div class="cal-header">
+  <div class="cal-nav">
+    <a href="{{ url_for('week_view', date_str=prev_week) }}" class="nav-arrow">&#8592;</a>
+    <h1 class="cal-title" style="min-width:0;">{{ week_label }}</h1>
+    <a href="{{ url_for('week_view', date_str=next_week) }}" class="nav-arrow">&#8594;</a>
+  </div>
+  <div style="display:flex; align-items:center; gap:16px;">
+    <div class="size-control">
+      <span class="size-label">&#9633;</span>
+      <input type="range" id="cell-size" min="120" max="500" step="10" value="180">
+      <span class="size-label">&#9632;</span>
+    </div>
+    <a href="{{ anchor_month_url }}" class="btn-view-toggle">Mes</a>
+    <a href="{{ url_for('day_view', date_str=today) }}" class="btn-today">Hoy</a>
+  </div>
+</div>
+
+<div class="cal-grid">
+
+  <!-- Cabeceras de días -->
+  {% for d in week_dates %}
+  {% set ds = d.isoformat() %}
+  <div class="cal-dow {% if ds == today %}dow-today{% endif %}">
+    {{ DOW[d.weekday()] }} {{ d.day }}
+  </div>
+  {% endfor %}
+
+  <!-- Celdas de la semana -->
+  {% for d in week_dates %}
+  {% set ds = d.isoformat() %}
+  {% set is_today = ds == today %}
+  {% set day_notes = notes_by_date.get(ds, []) %}
+  {% set day_evs   = events_by_date.get(ds, []) %}
+
+  <div class="cal-cell {% if is_today %}is-today{% endif %}">
+
+    <a href="{{ url_for('day_view', date_str=ds) }}" class="cal-cell-body">
+      <span class="cal-num {% if is_today %}today-num{% endif %}">{{ d.day }}</span>
+
+      {% for ev in day_evs %}
+      <span class="chip {% if ev.done %}chip-done{% elif ev.skipped %}chip-skipped{% endif %}"
+            {% if not ev.skipped %}style="--c: {{ ev.color }};"{% endif %}>{{ ev.title }}</span>
+      {% endfor %}
+
+      {% for note in day_notes %}
+      <div class="cal-note-card {% if note.color %}cal-note-colored{% endif %}"
+           {% if note.color %}style="--c: {{ note.color }};"{% endif %}>{{ note.content }}</div>
+      {% endfor %}
+    </a>
+
+    <form class="cal-quick-form" method="POST"
+          action="{{ url_for('note_add', date_str=ds) }}">
+      <input type="hidden" name="next" value="week">
+      <input type="text" name="content" class="cal-quick-input"
+             placeholder="+ escribí una nota..." autocomplete="off">
+      <div class="cal-color-mini" onmousedown="event.preventDefault()">
+        <label><input type="radio" name="color" value="" checked><span class="cal-cdot cal-cdot-none"></span></label>
+        {% for c in COLORS %}
+        <label><input type="radio" name="color" value="{{ c }}"><span class="cal-cdot" style="background:{{ c }};"></span></label>
+        {% endfor %}
+      </div>
+    </form>
+
+  </div>
+  {% endfor %}
+
+</div>
+
+<script>
+const PREF = 'cal_cell_height';
+const slider = document.getElementById('cell-size');
+function apply(h) { document.documentElement.style.setProperty('--cell-height', h + 'px'); }
+const saved = localStorage.getItem(PREF);
+if (saved) { slider.value = saved; apply(saved); } else { apply(slider.value); }
+slider.addEventListener('input', () => { apply(slider.value); localStorage.setItem(PREF, slider.value); });
+</script>
+{% endblock %}

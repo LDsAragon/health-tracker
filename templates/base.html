@@ -9,10 +9,23 @@
 <body>
   <nav class="navbar">
     <a href="{{ url_for('calendar_view') }}" class="nav-brand">Calendario</a>
-    <a href="{{ url_for('recurring_view') }}"
-       class="nav-link {% if request.endpoint == 'recurring_view' %}active{% endif %}">
-      Eventos recurrentes
-    </a>
+
+    <form class="nav-search" action="{{ url_for('search_view') }}" method="GET">
+      <input type="text" name="q" class="nav-search-input"
+             placeholder="Buscar notas..."
+             value="{{ request.args.get('q', '') if request.endpoint == 'search_view' else '' }}">
+    </form>
+
+    <div class="nav-links">
+      <a href="{{ url_for('recurring_view') }}"
+         class="nav-link {% if request.endpoint == 'recurring_view' %}active{% endif %}">
+        Eventos
+      </a>
+      <a href="{{ url_for('export_view') }}"
+         class="nav-link {% if request.endpoint in ('export_view', 'export_download') %}active{% endif %}">
+        Exportar
+      </a>
+    </div>
   </nav>
   <main class="{% block main_class %}main{% endblock %}">
     {% block content %}{% endblock %}

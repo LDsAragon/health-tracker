@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Exportar registros{% endblock %}
+
+{% block content %}
+<div class="page-top">
+  <h1 class="page-title">Exportar registros</h1>
+  <p class="page-sub">Descargá tus notas y completaciones como CSV para llevar al médico o revisar en otro lugar.</p>
+</div>
+
+<div class="export-form-wrap">
+  <form class="export-form" action="{{ url_for('export_download') }}" method="GET">
+    <div class="field-row">
+      <div class="field-group">
+        <label>Desde</label>
+        <input type="date" name="start" value="{{ first_of_month }}" required>
+      </div>
+      <div class="field-group">
+        <label>Hasta</label>
+        <input type="date" name="end" value="{{ today }}" required>
+      </div>
+    </div>
+    <button type="submit" class="btn-primary">Descargar CSV</button>
+  </form>
+</div>
+
+<div class="export-info">
+  <p>El archivo incluye:</p>
+  <ul>
+    <li>Notas libres con fecha y hora</li>
+    <li>Eventos completados o salteados con comentarios</li>
+  </ul>
+</div>
+
+<div class="export-form-wrap" style="margin-top:24px;">
+  <p style="font-size:14px; color:var(--muted); margin-bottom:14px;">
+    Backup completo de la base de datos — guardá este archivo por las dudas.
+  </p>
+  <a href="{{ url_for('backup_download') }}" class="btn-primary" style="display:inline-block;">
+    Descargar backup (.db)
+  </a>
+</div>
+{% endblock %}

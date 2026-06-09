@@ -50,6 +50,18 @@
         </form>
       </div>
 
+      {% elif ev.skipped %}
+      <!-- Salteado: chip gris + nota + deshacer -->
+      <div class="day-chip day-chip-skipped">
+        <span class="day-chip-title">{{ ev.title }}</span>
+        {% if ev.completion_note %}
+        <span class="day-chip-note">— {{ ev.completion_note }}</span>
+        {% endif %}
+        <form method="POST" action="{{ url_for('event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
+          <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
+        </form>
+      </div>
+
       {% else %}
       <!-- No hecho: chip clickeable que abre formulario inline -->
       <div class="day-chip day-chip-todo" style="--c: {{ ev.color }};"
@@ -58,11 +70,17 @@
         <span class="day-chip-title">{{ ev.title }}</span>
         <span class="day-chip-hint">clic para marcar</span>
       </div>
-      <form class="day-ev-form" id="ev-form-{{ ev.id }}" style="display:none;"
-            method="POST" action="{{ url_for('event_complete', date_str=date_str, event_id=ev.id) }}">
+      <form class="day-ev-form" id="ev-form-{{ ev.id }}" style="display:none;">
         <input type="text" name="note" class="ev-note-input"
-               placeholder="comentario opcional..." autofocus>
-        <button type="submit" class="btn-check">&#10003; Hecho</button>
+               placeholder="comentario opcional...">
+        <button type="submit"
+                formmethod="POST"
+                formaction="{{ url_for('event_complete', date_str=date_str, event_id=ev.id) }}"
+                class="btn-check">&#10003; Hecho</button>
+        <button type="submit"
+                formmethod="POST"
+                formaction="{{ url_for('event_skip', date_str=date_str, event_id=ev.id) }}"
+                class="btn-skip">&#8212; Salteé</button>
         <button type="button" class="btn-cancel-sm" onclick="closeEvForm({{ ev.id }})">&#10005;</button>
       </form>
       {% endif %}

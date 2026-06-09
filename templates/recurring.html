@@ -34,6 +34,10 @@
         <label>Desde</label>
         <input type="date" name="start_date" value="{{ today }}">
       </div>
+      <div class="field-group">
+        <label>Hasta <span style="font-weight:400;">(opcional)</span></label>
+        <input type="date" name="end_date" value="">
+      </div>
     </div>
 
     <div class="field-group">
@@ -103,8 +107,18 @@
           {% elif ev.recurrence.startswith('every:') %}
             Cada {{ ev.recurrence.split(':')[1] }} días
           {% endif %}
-          · desde {{ ev.start_date }}
+          · desde {{ ev.start_date }}{% if ev.end_date %} hasta {{ ev.end_date }}{% endif %}
         </span>
+        {% set s = stats.get(ev.id, {}) %}
+        {% if s.applicable %}
+          {% set pct = ((s.done / s.applicable) * 100) | int %}
+          <span class="rec-stat">
+            Últimos 30 días: {{ s.done }} / {{ s.applicable }}
+            <span class="rec-stat-pct {% if pct >= 70 %}stat-good{% elif pct >= 40 %}stat-mid{% else %}stat-low{% endif %}">
+              {{ pct }}%
+            </span>
+          </span>
+        {% endif %}
       </div>
       <div style="display:flex; gap:6px; flex-shrink:0;">
         <button type="button" class="btn-edit" onclick="editRec({{ ev.id }})">Editar</button>
@@ -139,6 +153,10 @@
           <div class="field-group">
             <label>Desde</label>
             <input type="date" name="start_date" value="{{ ev.start_date }}">
+          </div>
+          <div class="field-group">
+            <label>Hasta <span style="font-weight:400;">(opcional)</span></label>
+            <input type="date" name="end_date" value="{{ ev.end_date or '' }}">
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, make_response, send_file
 from datetime import date, datetime
 import calendar as cal
 import database as db
@@ -52,7 +52,12 @@ def calendar_view(year=None, month=None):
         d_str = d.isoformat()
         day_done = completions.get(d_str, {})
         events_by_date[d_str] = [
-            {**ev, "done": ev["id"] in day_done, "completion_note": day_done.get(ev["id"], "")}
+            {
+                **ev,
+                "done":    ev["id"] in day_done and day_done[ev["id"]]["status"] == "done",
+                "skipped": ev["id"] in day_done and day_done[ev["id"]]["status"] == "skipped",
+                "completion_note": day_done.get(ev["id"], {}).get("note", ""),
+            }
             for ev in recurring if db.event_applies(ev, d)
         ]
 
@@ -84,7 +89,12 @@ def day_view(date_str):
     recurring = db.get_recurring_events()
 
     day_events = [
-        {**ev, "done": ev["id"] in done, "completion_note": done.get(ev["id"], "")}
+        {
+            **ev,
+            "done":    ev["id"] in done and done[ev["id"]]["status"] == "done",
+            "skipped": ev["id"] in done and done[ev["id"]]["status"] == "skipped",
+            "completion_note": done.get(ev["id"], {}).get("note", ""),
+        }
         for ev in recurring if db.event_applies(ev, d)
     ]
 
@@ -110,9 +120,12 @@ def note_add(date_str):
     color   = request.form.get("color", "").strip()
     if content:
         db.add_note(date_str, content, color)
-    if request.form.get("next") == "calendar":
+    next_page = request.form.get("next")
+    if next_page == "calendar":
         d = date.fromisoformat(date_str)
         return redirect(url_for("calendar_view", year=d.year, month=d.month))
+    if next_page == "week":
+        return redirect(url_for("week_view", date_str=date_str))
     return redirect(url_for("day_view", date_str=date_str))
 
 
@@ -138,6 +151,13 @@ def event_complete(date_str, event_id):
     return redirect(url_for("day_view", date_str=date_str))
 
 
+@app.route("/day/<date_str>/event/<int:event_id>/skip", methods=["POST"])
+def event_skip(date_str, event_id):
+    note = request.form.get("note", "").strip()
+    db.complete_event(event_id, date_str, note, status="skipped")
+    return redirect(url_for("day_view", date_str=date_str))
+
+
 @app.route("/day/<date_str>/event/<int:event_id>/uncomplete", methods=["POST"])
 def event_uncomplete(date_str, event_id):
     db.uncomplete_event(event_id, date_str)
@@ -148,7 +168,12 @@ def event_uncomplete(date_str, event_id):
 
 @app.route("/recurring")
 def recurring_view():
-    return render_template("recurring.html", events=db.get_recurring_events())
+    events = db.get_recurring_events()
+    stats  = db.get_completion_stats(events)
+    return render_template("recurring.html",
+                           events=events,
+                           stats=stats,
+                           today=date.today().isoformat())
 
 
 @app.route("/recurring/add", methods=["POST"])
@@ -166,10 +191,11 @@ def recurring_add():
     title = request.form.get("title", "").strip()
     if title:
         db.add_recurring_event({
-            "title": title,
-            "color": request.form.get("color", "#6366f1"),
+            "title":      title,
+            "color":      request.form.get("color", "#6366f1"),
             "recurrence": recurrence,
             "start_date": request.form.get("start_date", date.today().isoformat()),
+            "end_date":   request.form.get("end_date", "").strip(),
         })
     return redirect(url_for("recurring_view"))
 
@@ -188,10 +214,11 @@ def recurring_edit(event_id):
     title = request.form.get("title", "").strip()
     if title:
         db.update_recurring_event(event_id, {
-            "title": title,
-            "color": request.form.get("color", "#6366f1"),
+            "title":      title,
+            "color":      request.form.get("color", "#6366f1"),
             "recurrence": recurrence,
             "start_date": request.form.get("start_date", date.today().isoformat()),
+            "end_date":   request.form.get("end_date", "").strip(),
         })
     return redirect(url_for("recurring_view"))
 
@@ -200,6 +227,130 @@ def recurring_edit(event_id):
 def recurring_delete(event_id):
     db.delete_recurring_event(event_id)
     return redirect(url_for("recurring_view"))
+
+
+# ── Week view ──────────────────────────────────────────────────────────────────
+
+@app.route("/week/<date_str>")
+def week_view(date_str):
+    from datetime import timedelta
+    today      = date.today()
+    anchor     = date.fromisoformat(date_str)
+    monday     = anchor - timedelta(days=anchor.weekday())
+    sunday     = monday + timedelta(days=6)
+
+    week_dates = [monday + timedelta(days=i) for i in range(7)]
+    start      = monday.isoformat()
+    end        = sunday.isoformat()
+
+    notes_by_date   = db.get_notes_range(start, end)
+    completions     = db.get_completions_range(start, end)
+    recurring       = db.get_recurring_events()
+
+    events_by_date = {}
+    for d in week_dates:
+        d_str    = d.isoformat()
+        day_done = completions.get(d_str, {})
+        events_by_date[d_str] = [
+            {
+                **ev,
+                "done":    ev["id"] in day_done and day_done[ev["id"]]["status"] == "done",
+                "skipped": ev["id"] in day_done and day_done[ev["id"]]["status"] == "skipped",
+                "completion_note": day_done.get(ev["id"], {}).get("note", ""),
+            }
+            for ev in recurring if db.event_applies(ev, d)
+        ]
+
+    prev_week = (monday - timedelta(days=7)).isoformat()
+    next_week = (monday + timedelta(days=7)).isoformat()
+
+    MONTHS = ['enero','febrero','marzo','abril','mayo','junio',
+              'julio','agosto','septiembre','octubre','noviembre','diciembre']
+
+    if monday.month == sunday.month:
+        week_label = f"{monday.day}–{sunday.day} de {MONTHS[monday.month-1]} {monday.year}"
+    else:
+        week_label = f"{monday.day} {MONTHS[monday.month-1]} – {sunday.day} {MONTHS[sunday.month-1]} {sunday.year}"
+
+    return render_template(
+        "week.html",
+        week_dates=week_dates,
+        week_label=week_label,
+        notes_by_date=notes_by_date,
+        events_by_date=events_by_date,
+        today=today.isoformat(),
+        prev_week=prev_week,
+        next_week=next_week,
+        anchor_month_url=url_for("calendar_view", year=anchor.year, month=anchor.month),
+    )
+
+
+# ── Export ─────────────────────────────────────────────────────────────────────
+
+@app.route("/export")
+def export_view():
+    today = date.today().isoformat()
+    first_of_month = date.today().replace(day=1).isoformat()
+    return render_template("export.html", today=today, first_of_month=first_of_month)
+
+
+@app.route("/export/download")
+def export_download():
+    import io, csv
+    start = request.args.get("start", "").strip()
+    end   = request.args.get("end", "").strip()
+    if not start or not end:
+        return redirect(url_for("export_view"))
+
+    notes       = db.get_notes_range(start, end)
+    completions = db.get_completions_range(start, end)
+    ev_index    = {ev["id"]: ev["title"] for ev in db.get_recurring_events()}
+
+    rows = []
+    for date_str, day_notes in notes.items():
+        for n in day_notes:
+            rows.append((date_str, "nota", n["content"], n["created_at"][:16] if n["created_at"] else ""))
+
+    for date_str, day_done in completions.items():
+        for event_id, comp in day_done.items():
+            title  = ev_index.get(event_id, f"evento #{event_id}")
+            status = comp["status"]
+            detail = f"[salteé] {title}" if status == "skipped" else title
+            if comp["note"]:
+                detail += f" — {comp['note']}"
+            rows.append((date_str, "completacion", detail, ""))
+
+    rows.sort(key=lambda r: r[0])
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["fecha", "tipo", "detalle", "hora"])
+    writer.writerows(rows)
+
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = f"attachment; filename=registros-{start}-al-{end}.csv"
+    response.headers["Content-Type"] = "text/csv; charset=utf-8"
+    return response
+
+
+# ── Backup ─────────────────────────────────────────────────────────────────────
+
+@app.route("/backup")
+def backup_download():
+    import os
+    db_path = os.path.abspath(db.DB_PATH)
+    today   = date.today().isoformat()
+    return send_file(db_path, as_attachment=True,
+                     download_name=f"health-backup-{today}.db")
+
+
+# ── Search ─────────────────────────────────────────────────────────────────────
+
+@app.route("/search")
+def search_view():
+    query   = request.args.get("q", "").strip()
+    results = db.search_notes(query) if query else []
+    return render_template("search.html", query=query, results=results)
 
 
 if __name__ == "__main__":
