@@ -97,6 +97,7 @@ function applyAngle(angle) {
 
   // ── 1. Highlight del sector activo en los paths ───────────────────────
   gWheel.querySelectorAll('[data-base]').forEach(el => {
+    el.removeAttribute('transform'); // limpia rotación individual del hover anterior
     const isActive = el.dataset.base === topBase && el.dataset.depth === '1';
     el.style.opacity     = '1';
     el.style.stroke      = isActive ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.16)';
@@ -123,7 +124,7 @@ function applyAngle(angle) {
 
     const ring     = +el.dataset.ring;
     const isActive = el.dataset.base === topBase;
-    el.style.fill    = isActive ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.82)';
+    el.style.fill    = 'rgba(0,0,0,0.82)'; // negro en reposo para todos
     el.style.opacity = ring === 1 ? '1' : (isActive ? '0.92' : '0.62');
   });
 
@@ -152,6 +153,11 @@ function strokeW(depth) {
 function ewHover(base, mid, spec, depth, color) {
   const gWheel = document.getElementById('ew-wheel-g');
   if (gWheel) {
+    // Rotación extra para llevar la rama hoviada a horizontal (90°)
+    const ring1El   = gWheel.querySelector(`[data-depth="1"][data-base="${base}"]`);
+    const baseInitA = ring1El ? +ring1El.dataset.initAngle : 0;
+    const extra     = f(90 - baseInitA - ewState.angle);
+
     gWheel.querySelectorAll('[data-base]').forEach(el => {
       const eB = el.dataset.base, eM = el.dataset.mid,
             eS = el.dataset.specific, eD = +el.dataset.depth;
@@ -167,6 +173,7 @@ function ewHover(base, mid, spec, depth, color) {
       el.style.stroke      = inPath ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.16)';
       el.style.strokeWidth = inPath ? '1.5'  : strokeW(el.dataset.depth);
       el.style.filter      = inPath ? 'brightness(1.15)' : '';
+      if (inPath) el.setAttribute('transform', `rotate(${extra})`);
     });
   }
 
@@ -241,8 +248,9 @@ function buildFullWheel() {
 
     // Anillo 1 — base
     const p1 = sector(EW.r1i, EW.r1o, BASE_A - 30, BASE_A + 30, baseColor, 0.7);
-    p1.dataset.base  = base; p1.dataset.depth = '1';
-    p1.style.cursor  = 'pointer';
+    p1.dataset.base      = base; p1.dataset.depth = '1';
+    p1.dataset.initAngle = BASE_A;
+    p1.style.cursor      = 'pointer';
     bindSlice(p1, base, null, null, 1, baseColor);
     gWheel.appendChild(p1);
     gLabel.appendChild(makeLabel(base, BASE_A, (EW.r1i+EW.r1o)/2, '8px', '800', base, 1));
@@ -253,8 +261,9 @@ function buildFullWheel() {
       const midColor = tint(baseColor, 0.20 + 0.06 * (mi & 1));
 
       const p2 = sector(EW.r2i, EW.r2o, BASE_A-30+mi*MID, BASE_A-30+(mi+1)*MID, midColor, 0.45);
-      p2.dataset.base  = base; p2.dataset.mid = mid; p2.dataset.depth = '2';
-      p2.style.cursor  = 'pointer';
+      p2.dataset.base      = base; p2.dataset.mid = mid; p2.dataset.depth = '2';
+      p2.dataset.initAngle = f(midA);
+      p2.style.cursor      = 'pointer';
       bindSlice(p2, base, mid, null, 2, baseColor);
       gWheel.appendChild(p2);
       const lbl2 = makeLabel(mid, midA, (EW.r2i+EW.r2o)/2, '6px', '700', base, 2);
@@ -268,9 +277,10 @@ function buildFullWheel() {
         const specColor = tint(baseColor, 0.36 + 0.08 * (si & 1));
 
         const p3 = sector(EW.r3i, EW.r3o, BASE_A-30+mi*MID+si*SPEC, BASE_A-30+mi*MID+(si+1)*SPEC, specColor, 0.3);
-        p3.dataset.base     = base; p3.dataset.mid = mid;
-        p3.dataset.specific = spec; p3.dataset.depth = '3';
-        p3.style.cursor     = 'pointer';
+        p3.dataset.base      = base; p3.dataset.mid = mid;
+        p3.dataset.specific  = spec; p3.dataset.depth = '3';
+        p3.dataset.initAngle = f(specA);
+        p3.style.cursor      = 'pointer';
         bindSlice(p3, base, mid, spec, 3, baseColor);
         gWheel.appendChild(p3);
         const lbl3 = makeLabel(spec, specA, (EW.r3i+EW.r3o)/2, '5.5px', '600', base, 3);
