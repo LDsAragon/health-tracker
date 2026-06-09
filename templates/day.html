@@ -115,12 +115,23 @@
               </form>
             </div>
           </div>
+          {% set EW_COLORS = {'Ira':'#ef4444','Disgusto':'#f97316','Tristeza':'#84cc16','Felicidad':'#eab308','Sorpresa':'#3b82f6','Miedo':'#a855f7'} %}
           {% for field in entry.category_fields %}
           {% set val = entry['values'].get(field.label, '') %}
           {% if val %}
           <div class="day-journal-field">
             <span class="day-journal-field-label">{{ field.label }}</span>
+            {% if field.get('type','text') == 'emotion-wheel' %}
+            {% set ew_color = EW_COLORS.get(val.split(' > ')[0], '#8892a4') %}
+            <div class="ew-display" style="--ew-c: {{ ew_color }};">
+              {% for part in val.split(' > ') %}
+              <span class="ew-display-chip">{{ part }}</span>
+              {% if not loop.last %}<span class="ew-display-sep">›</span>{% endif %}
+              {% endfor %}
+            </div>
+            {% else %}
             <p class="day-journal-field-value">{{ val }}</p>
+            {% endif %}
           </div>
           {% endif %}
           {% endfor %}
@@ -140,11 +151,34 @@
               action="{{ url_for('journal_entry_edit', date_str=date_str, entry_id=entry.id) }}"
               onsubmit="return prepareEditValues({{ entry.id }})">
           <input type="hidden" name="values_json" id="jedit-values-{{ entry.id }}">
+          {% set EW_EMOTIONS = ['Ira','Disgusto','Tristeza','Felicidad','Sorpresa','Miedo'] %}
           {% for field in entry.category_fields %}
+          {% set fval = entry['values'].get(field.label, '') %}
           <div class="day-journal-field-input">
             <label>{{ field.label }}</label>
+            {% if field.get('type','text') == 'emotion-wheel' %}
+            <div class="emotion-wheel-picker" data-label="{{ field.label }}"
+                 data-ew-saved="{{ fval }}">
+              <div class="ew-selects">
+                <select class="ew-select ew-level1" onchange="ewL2(this)">
+                  <option value="">Emoción base...</option>
+                  {% for em in EW_EMOTIONS %}
+                  <option value="{{ em }}">{{ em }}</option>
+                  {% endfor %}
+                </select>
+                <select class="ew-select ew-level2" style="display:none;" onchange="ewL3(this)">
+                  <option value="">Más específico...</option>
+                </select>
+                <select class="ew-select ew-level3" style="display:none;">
+                  <option value="">Aún más específico...</option>
+                </select>
+              </div>
+              <input type="hidden" data-ew-value="">
+            </div>
+            {% else %}
             <textarea data-label="{{ field.label }}" rows="3"
-                      class="note-edit-ta">{{ entry['values'].get(field.label, '') }}</textarea>
+                      class="note-edit-ta">{{ fval }}</textarea>
+            {% endif %}
           </div>
           {% endfor %}
           <div class="field-group">
@@ -303,13 +337,15 @@ function buildFields(containerId, catId) {
   if (!catId) { container.innerHTML = ''; return; }
   const cat = DAY_JOURNAL_CATS.find(c => c.id == catId);
   if (!cat || !cat.fields || !cat.fields.length) { container.innerHTML = ''; return; }
-  container.innerHTML = cat.fields.map(f =>
-    '<div class="day-journal-field-input">' +
-    '<label>' + f.label + '</label>' +
-    '<textarea data-label="' + f.label.replace(/"/g, '&quot;') + '" placeholder="' +
-    (f.placeholder || '').replace(/"/g, '&quot;') + '" rows="3" class="note-edit-ta"></textarea>' +
-    '</div>'
-  ).join('');
+  container.innerHTML = cat.fields.map(f => {
+    const type = (f.type || 'text');
+    if (type === 'emotion-wheel') return buildEWPicker(f.label);
+    return '<div class="day-journal-field-input">' +
+      '<label>' + f.label + '</label>' +
+      '<textarea data-label="' + f.label.replace(/"/g, '&quot;') + '" placeholder="' +
+      (f.placeholder || '').replace(/"/g, '&quot;') + '" rows="3" class="note-edit-ta"></textarea>' +
+      '</div>';
+  }).join('');
 }
 
 function updateDayFields(catId) { buildFields('jday-fields', catId); }
@@ -329,10 +365,12 @@ function toggleDayJournal() {
 }
 
 function collectValues(containerId) {
+  const container = document.getElementById(containerId);
   const values = {};
-  document.querySelectorAll('#' + containerId + ' textarea[data-label]').forEach(ta => {
+  container.querySelectorAll('textarea[data-label]').forEach(ta => {
     values[ta.dataset.label] = ta.value;
   });
+  collectEWValues(container, values);
   return JSON.stringify(values);
 }
 
@@ -355,5 +393,10 @@ function prepareEditValues(id) {
   document.getElementById('jedit-values-' + id).value = collectValues('jedit-' + id);
   return true;
 }
+
+// Restaurar valores de rueda de emociones en formularios de edición existentes
+document.querySelectorAll('.emotion-wheel-picker[data-ew-saved]').forEach(p => {
+  if (p.dataset.ewSaved) ewRestore(p, p.dataset.ewSaved);
+});
 </script>
 {% endblock %}

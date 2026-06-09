@@ -131,20 +131,24 @@ function updateJFields(ds, catId) {
   if (!catId) { container.innerHTML = ''; return; }
   const cat = JCATS.find(c => c.id == catId);
   if (!cat || !cat.fields || !cat.fields.length) { container.innerHTML = ''; return; }
-  container.innerHTML = cat.fields.map(f =>
-    '<label class="cal-journal-field-label">' + f.label + '</label>' +
-    '<textarea data-label="' + f.label.replace(/"/g, '&quot;') + '"' +
-    ' placeholder="' + (f.placeholder || '').replace(/"/g, '&quot;') + '"' +
-    ' class="cal-journal-textarea" rows="2"></textarea>'
-  ).join('');
+  container.innerHTML = cat.fields.map(f => {
+    const type = f.type || 'text';
+    if (type === 'emotion-wheel') return buildEWPickerCompact(f.label);
+    return '<label class="cal-journal-field-label">' + f.label + '</label>' +
+      '<textarea data-label="' + f.label.replace(/"/g, '&quot;') + '"' +
+      ' placeholder="' + (f.placeholder || '').replace(/"/g, '&quot;') + '"' +
+      ' class="cal-journal-textarea" rows="2"></textarea>';
+  }).join('');
 }
 function submitJEntry(ds, url, next) {
   const catId = document.getElementById('jcat-' + ds).value;
   if (!catId) return;
+  const container = document.getElementById('jfields-' + ds);
   const values = {};
-  document.querySelectorAll('#jfields-' + ds + ' textarea[data-label]').forEach(ta => {
+  container.querySelectorAll('textarea[data-label]').forEach(ta => {
     values[ta.dataset.label] = ta.value;
   });
+  collectEWValues(container, values);
   const tags = document.getElementById('jtags-' + ds).value;
   const fd = new FormData();
   fd.append('category_id', catId);

@@ -1314,6 +1314,77 @@ select.journal-cat-select {
 }
 .btn-cancel-sm:hover { color: var(--red); border-color: var(--red); }
 
+/* ── EMOTION WHEEL ────────────────────────────────────────────────────────── */
+
+.journal-type-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.journal-type-select:focus { outline: none; border-color: var(--accent); }
+
+.ew-selects {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ew-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+  appearance: auto;
+}
+.ew-select:focus { outline: none; }
+.ew-select option { color: var(--text); background: var(--surface); }
+
+/* Versión compacta para celdas del calendario */
+.ew-compact .ew-select {
+  font-size: 11px;
+  padding: 3px 5px;
+  border-radius: 4px;
+}
+.ew-compact { display: flex; flex-direction: column; gap: 4px; }
+
+/* Display de emoción guardada (vista de entrada) */
+.ew-display {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.ew-display-chip {
+  background: color-mix(in srgb, var(--ew-c, #8892a4) 18%, transparent);
+  color: var(--ew-c, #8892a4);
+  border: 1px solid color-mix(in srgb, var(--ew-c, #8892a4) 35%, transparent);
+  padding: 3px 12px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ew-display-sep {
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 /* ── RESPONSIVE ───────────────────────────────────────────────────── */
 @media (max-width: 700px) {
   .cal-cell { min-height: 80px; padding: 6px 4px; }

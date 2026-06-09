@@ -47,8 +47,12 @@
       </div>
       <div id="jcat-add-fields" class="journal-fields-builder">
         <div class="journal-field-row">
-          <input type="text" name="field_label[]" placeholder="Nombre del campo (ej: ¿Qué sentí?)" style="flex:1;">
-          <input type="text" name="field_placeholder[]" placeholder="Texto de ayuda (opcional)" style="flex:1;">
+          <input type="text" name="field_label[]" placeholder="Nombre del campo (ej: ¿Qué sentí?)" style="flex:1.2;">
+          <select name="field_type[]" class="journal-type-select">
+            <option value="text">Texto libre</option>
+            <option value="emotion-wheel">🎡 Rueda de emociones</option>
+          </select>
+          <input type="text" name="field_placeholder[]" placeholder="Ayuda (opcional)" style="flex:1;">
           <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar campo">&#10005;</button>
         </div>
       </div>
@@ -72,7 +76,7 @@
         <span class="rec-title">{{ cat.name }}</span>
         <span class="rec-rule">
           {% if cat.fields %}
-            Campos: {% for f in cat.fields %}{{ f.label }}{% if not loop.last %}, {% endif %}{% endfor %}
+            Campos: {% for f in cat.fields %}{{ f.label }}{% if f.get('type','text') == 'emotion-wheel' %} <span style="opacity:.6;font-size:10px;">(rueda)</span>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
           {% else %}
             Sin campos definidos
           {% endif %}
@@ -128,9 +132,14 @@
           </div>
           <div id="jcat-edit-fields-{{ cat.id }}" class="journal-fields-builder">
             {% for f in cat.fields %}
+            {% set ftype = f.get('type', 'text') %}
             <div class="journal-field-row">
-              <input type="text" name="field_label[]" value="{{ f.label }}" placeholder="Nombre del campo" style="flex:1;">
-              <input type="text" name="field_placeholder[]" value="{{ f.placeholder }}" placeholder="Texto de ayuda" style="flex:1;">
+              <input type="text" name="field_label[]" value="{{ f.label }}" placeholder="Nombre del campo" style="flex:1.2;">
+              <select name="field_type[]" class="journal-type-select">
+                <option value="text" {% if ftype != 'emotion-wheel' %}selected{% endif %}>Texto libre</option>
+                <option value="emotion-wheel" {% if ftype == 'emotion-wheel' %}selected{% endif %}>🎡 Rueda de emociones</option>
+              </select>
+              <input type="text" name="field_placeholder[]" value="{{ f.get('placeholder', '') }}" placeholder="Ayuda" style="flex:1;">
               <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>
             </div>
             {% endfor %}
@@ -158,8 +167,12 @@ function addField(containerId) {
   const row = document.createElement('div');
   row.className = 'journal-field-row';
   row.innerHTML =
-    '<input type="text" name="field_label[]" placeholder="Nombre del campo" style="flex:1;">' +
-    '<input type="text" name="field_placeholder[]" placeholder="Texto de ayuda (opcional)" style="flex:1;">' +
+    '<input type="text" name="field_label[]" placeholder="Nombre del campo" style="flex:1.2;">' +
+    '<select name="field_type[]" class="journal-type-select">' +
+    '<option value="text">Texto libre</option>' +
+    '<option value="emotion-wheel">🎡 Rueda de emociones</option>' +
+    '</select>' +
+    '<input type="text" name="field_placeholder[]" placeholder="Ayuda (opcional)" style="flex:1;">' +
     '<button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>';
   container.appendChild(row);
   row.querySelector('input').focus();

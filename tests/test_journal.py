@@ -288,6 +288,36 @@ def test_entry_aparece_en_dia(client):
     assert "ansioso hoy".encode() in r.data
 
 
+def test_campo_emotion_wheel_guardado(test_db):
+    """Un campo tipo emotion-wheel se guarda y recupera como string con separador >."""
+    eid = _add_cat(test_db, fields_json=json.dumps([
+        {"label": "Emoción", "type": "emotion-wheel", "placeholder": ""},
+    ]))
+    ew_val = "Tristeza > Deprimido > Impotente"
+    db.add_journal_entry({
+        "category_id": eid,
+        "entry_date": DATE,
+        "values_json": json.dumps({"Emoción": ew_val}),
+        "tags": "",
+    })
+    entries = db.get_journal_entries_for_date(DATE)
+    assert entries[0]["values"]["Emoción"] == ew_val
+
+
+def test_categoria_con_tipo_emotion_wheel(test_db):
+    """El tipo de campo se preserva en fields_json al guardar y recuperar."""
+    fields = [{"label": "Estado", "type": "emotion-wheel", "placeholder": ""}]
+    db.add_journal_category({
+        "name": "Estado emocional",
+        "color": "#a855f7",
+        "fields_json": json.dumps(fields),
+        "show_in_calendar": 0,
+    })
+    cat = db.get_journal_categories()[0]
+    assert cat["fields"][0]["type"] == "emotion-wheel"
+    assert cat["fields"][0]["label"] == "Estado"
+
+
 def test_badge_aparece_en_calendario(client):
     client.post("/journal/add", data={
         "name": "Estados", "color": "#6366f1", "show_in_calendar": "1",
