@@ -189,7 +189,7 @@ function ewHover(base, mid, spec, depth, color) {
       clone.style.strokeWidth   = '1.5';
       gClone.appendChild(clone);
       const initA = parseFloat(cloneSrc.dataset.initAngle);
-      _animSectorClone(clone, ewState.angle, 90 - initA);
+      _animSectorClone(clone, ewState.angle, initA, depth);
     }
   }
 
@@ -252,15 +252,26 @@ function _animLabelTo0(el, tx, ty) {
   el._animId = requestAnimationFrame(tick);
 }
 
-// Anima el clon del sector desde fromRot hasta toRot alrededor del centro (0,0)
-function _animSectorClone(clone, fromRot, toRot) {
-  const delta = toRot - fromRot;
-  if (Math.abs(delta) < 0.5) { clone.setAttribute('transform', `rotate(${toRot})`); return; }
+// Anima el clon del sector: lo inclina alrededor de su centro hasta quedar horizontal.
+// Mismo giro que el texto (no oscila al sector activo — rota en su lugar).
+function _animSectorClone(clone, ewAngle, initA, depth) {
+  const rMap   = { 1: (EW.r1i+EW.r1o)/2, 2: (EW.r2i+EW.r2o)/2, 3: (EW.r3i+EW.r3o)/2 };
+  const r      = rMap[depth] || rMap[1];
+  const wDeg   = ((initA + ewAngle) % 360 + 360) % 360;
+  const wRad   = wDeg * Math.PI / 180;
+  const wx     = f(r * Math.sin(wRad));
+  const wy     = f(-r * Math.cos(wRad));
+  let   radAng = wDeg - 90;
+  if (wDeg > 180) radAng += 180;
+
+  if (Math.abs(radAng) < 0.5) { clone.setAttribute('transform', `rotate(${ewAngle})`); return; }
   const start = performance.now(), dur = 130;
   function tick(now) {
     const t    = Math.min((now - start) / dur, 1);
     const ease = 1 - Math.pow(1 - t, 3);
-    clone.setAttribute('transform', `rotate(${f(fromRot + delta * ease)})`);
+    const tilt = f(-radAng * ease);
+    // Compone: primero rota la rueda (ewAngle), luego inclina alrededor de (wx,wy)
+    clone.setAttribute('transform', `rotate(${tilt},${wx},${wy}) rotate(${ewAngle})`);
     if (t < 1) requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
