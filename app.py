@@ -1,9 +1,25 @@
 from flask import Flask, render_template, request, redirect, url_for
-from datetime import date
+from datetime import date, datetime
 import calendar as cal
 import database as db
 
 app = Flask(__name__)
+
+
+@app.template_filter('humantime')
+def humantime_filter(ts):
+    if not ts:
+        return ''
+    try:
+        dt = datetime.fromisoformat(ts[:19])
+        delta = (date.today() - dt.date()).days
+        if delta == 0:
+            return f"hoy {dt.strftime('%H:%M')}"
+        if delta == 1:
+            return f"ayer {dt.strftime('%H:%M')}"
+        return dt.strftime('%d/%m/%Y')
+    except Exception:
+        return ''
 
 
 @app.before_request
@@ -63,8 +79,8 @@ def calendar_view(year=None, month=None):
 @app.route("/day/<date_str>")
 def day_view(date_str):
     d = date.fromisoformat(date_str)
-    notes   = db.get_notes_for_date(date_str)
-    done    = db.get_completions_range(date_str, date_str).get(date_str, {})
+    notes     = db.get_notes_for_date(date_str)
+    done      = db.get_completions_range(date_str, date_str).get(date_str, {})
     recurring = db.get_recurring_events()
 
     day_events = [
@@ -72,12 +88,19 @@ def day_view(date_str):
         for ev in recurring if db.event_applies(ev, d)
     ]
 
+    from datetime import timedelta
+    prev_day = (d - timedelta(days=1)).isoformat()
+    next_day = (d + timedelta(days=1)).isoformat()
+
     return render_template(
         "day.html",
         date_str=date_str,
         d=d,
         notes=notes,
         day_events=day_events,
+        prev_day=prev_day,
+        next_day=next_day,
+        today=date.today().isoformat(),
     )
 
 
@@ -87,6 +110,9 @@ def note_add(date_str):
     color   = request.form.get("color", "").strip()
     if content:
         db.add_note(date_str, content, color)
+    if request.form.get("next") == "calendar":
+        d = date.fromisoformat(date_str)
+        return redirect(url_for("calendar_view", year=d.year, month=d.month))
     return redirect(url_for("day_view", date_str=date_str))
 
 
@@ -140,6 +166,28 @@ def recurring_add():
     title = request.form.get("title", "").strip()
     if title:
         db.add_recurring_event({
+            "title": title,
+            "color": request.form.get("color", "#6366f1"),
+            "recurrence": recurrence,
+            "start_date": request.form.get("start_date", date.today().isoformat()),
+        })
+    return redirect(url_for("recurring_view"))
+
+
+@app.route("/recurring/<int:event_id>/edit", methods=["POST"])
+def recurring_edit(event_id):
+    rtype = request.form.get("rtype", "daily")
+    if rtype == "daily":
+        recurrence = "daily"
+    elif rtype == "weekly":
+        days = request.form.getlist("weekdays")
+        recurrence = "weekly:" + ",".join(sorted(days)) if days else "daily"
+    else:
+        n = int(request.form.get("interval_days", 2))
+        recurrence = f"every:{n}"
+    title = request.form.get("title", "").strip()
+    if title:
+        db.update_recurring_event(event_id, {
             "title": title,
             "color": request.form.get("color", "#6366f1"),
             "recurrence": recurrence,

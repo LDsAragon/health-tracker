@@ -1,66 +1,106 @@
 {% extends "base.html" %}
-{% block title %}{{ d.strftime('%d de %B') }}{% endblock %}
+{% block title %}{{ d.day }} de {{ d.strftime('%B') }}{% endblock %}
+{% block main_class %}main-day{% endblock %}
 
 {% set COLORS = ['#6366f1','#22c55e','#3b82f6','#f97316','#ef4444','#a855f7','#ec4899','#eab308','#14b8a6'] %}
+{% set MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'] %}
+{% set DAYS   = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'] %}
 
 {% block content %}
-<div class="day-header">
-  <a href="{{ url_for('calendar_view', year=d.year, month=d.month) }}" class="back-link">&#8592; {{ d.strftime('%B %Y') }}</a>
-  <h1 class="day-title">
-    {% set days = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'] %}
-    {% set months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'] %}
-    {{ days[d.weekday()] }}, {{ d.day }} de {{ months[d.month - 1] }} {{ d.year }}
-  </h1>
+
+<!-- Nav superior -->
+<div class="day-topnav">
+  <a href="{{ url_for('calendar_view', year=d.year, month=d.month) }}" class="back-link">
+    &#8592; {{ d.strftime('%B %Y') }}
+  </a>
+  <div class="day-arrows">
+    <a href="{{ url_for('day_view', date_str=prev_day) }}" class="nav-arrow" title="Día anterior">&#8592;</a>
+    <a href="{{ url_for('day_view', date_str=next_day) }}" class="nav-arrow" title="Día siguiente">&#8594;</a>
+  </div>
 </div>
 
-<!-- ADD NOTE -->
-<form class="note-form" method="POST" action="{{ url_for('note_add', date_str=date_str) }}">
-  <textarea name="content" class="note-input" placeholder="Escribí algo sobre este día..." rows="3" autofocus></textarea>
-  <div class="note-form-footer">
-    <div class="color-picker-row">
-      <label class="color-opt-none" title="Sin color">
-        <input type="radio" name="color" value="" checked>
-        <span class="color-circle color-none">&#10006;</span>
-      </label>
-      {% for c in COLORS %}
-      <label class="color-opt">
-        <input type="radio" name="color" value="{{ c }}">
-        <span class="color-circle" style="background:{{ c }};"></span>
-      </label>
-      {% endfor %}
+<!-- Celda grande centrada -->
+<div class="day-card">
+
+  <!-- Cabecera — mismo estilo que el número en el calendario -->
+  <div class="day-card-header">
+    <div class="day-card-label">
+      <span class="day-card-dow">{{ DAYS[d.weekday()] }}</span>
+      <span class="day-card-full-date">{{ d.day }} de {{ MONTHS[d.month - 1] }} {{ d.year }}</span>
     </div>
-    <button type="submit" class="btn-add">Agregar nota</button>
+    <span class="day-card-num {% if date_str == today %}today-num{% endif %}">{{ d.day }}</span>
   </div>
-</form>
 
-<!-- NOTES LIST -->
-{% if notes %}
-<div class="day-section">
-  <div class="section-label">Notas</div>
-  <div class="notes-list">
+  <!-- Eventos recurrentes — chips interactivos -->
+  {% if day_events %}
+  <div class="day-card-events">
+    {% for ev in day_events %}
+    <div class="day-ev-wrap" id="ev-wrap-{{ ev.id }}">
+
+      {% if ev.done %}
+      <!-- Hecho: chip tachado + nota + deshacer -->
+      <div class="day-chip day-chip-done" style="--c: {{ ev.color }};">
+        <span class="day-chip-check">&#10003;</span>
+        <span class="day-chip-title">{{ ev.title }}</span>
+        {% if ev.completion_note %}
+        <span class="day-chip-note">— {{ ev.completion_note }}</span>
+        {% endif %}
+        <form method="POST" action="{{ url_for('event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
+          <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
+        </form>
+      </div>
+
+      {% else %}
+      <!-- No hecho: chip clickeable que abre formulario inline -->
+      <div class="day-chip day-chip-todo" style="--c: {{ ev.color }};"
+           onclick="openEvForm({{ ev.id }})" id="ev-chip-{{ ev.id }}">
+        <span class="day-chip-circle"></span>
+        <span class="day-chip-title">{{ ev.title }}</span>
+        <span class="day-chip-hint">clic para marcar</span>
+      </div>
+      <form class="day-ev-form" id="ev-form-{{ ev.id }}" style="display:none;"
+            method="POST" action="{{ url_for('event_complete', date_str=date_str, event_id=ev.id) }}">
+        <input type="text" name="note" class="ev-note-input"
+               placeholder="comentario opcional..." autofocus>
+        <button type="submit" class="btn-check">&#10003; Hecho</button>
+        <button type="button" class="btn-cancel-sm" onclick="closeEvForm({{ ev.id }})">&#10005;</button>
+      </form>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Notas -->
+  <div class="day-card-notes">
     {% for note in notes %}
-    <div class="note-item {% if note.color %}note-colored{% endif %}"
-         {% if note.color %}style="--c: {{ note.color }};"{% endif %}>
+    <div class="day-note {% if note.color %}day-note-colored{% endif %}"
+         {% if note.color %}style="--c: {{ note.color }};"{% endif %}
+         id="dnote-{{ note.id }}">
 
-      <!-- Vista normal -->
-      <div class="note-view" id="view-{{ note.id }}">
-        <p class="note-content">{{ note.content }}</p>
-        <div class="note-actions">
-          <button type="button" class="btn-edit" onclick="startEdit({{ note.id }})">Editar</button>
+      <!-- Vista -->
+      <div class="day-note-view" id="dview-{{ note.id }}">
+        <div style="flex:1;">
+          <p class="day-note-text">{{ note.content }}</p>
+          {% if note.created_at %}<span class="day-note-time">{{ note.created_at | humantime }}</span>{% endif %}
+        </div>
+        <div class="day-note-actions">
+          <button class="btn-edit" onclick="editDayNote({{ note.id }})">Editar</button>
           <form method="POST" action="{{ url_for('note_delete', date_str=date_str, note_id=note.id) }}"
-                onsubmit="return confirm('¿Eliminar esta nota?');" style="display:inline;">
+                onsubmit="return confirm('¿Eliminar?');" style="display:inline;">
             <button type="submit" class="btn-delete">&#10005;</button>
           </form>
         </div>
       </div>
 
-      <!-- Formulario de edición (oculto por defecto) -->
-      <form class="note-edit-form" id="edit-{{ note.id }}" style="display:none;"
+      <!-- Edición -->
+      <form class="day-note-edit" id="dedit-{{ note.id }}" style="display:none;"
             method="POST" action="{{ url_for('note_edit', date_str=date_str, note_id=note.id) }}">
-        <textarea name="content" class="note-input" rows="3">{{ note.content }}</textarea>
+        <textarea name="content" class="note-edit-ta" rows="3">{{ note.content }}</textarea>
         <div class="note-form-footer">
           <div class="color-picker-row">
-            <label class="color-opt-none" title="Sin color">
+            <label class="color-opt-none">
               <input type="radio" name="color" value="" {% if not note.color %}checked{% endif %}>
               <span class="color-circle color-none">&#10006;</span>
             </label>
@@ -71,9 +111,9 @@
             </label>
             {% endfor %}
           </div>
-          <div style="display:flex; gap:8px;">
+          <div style="display:flex;gap:8px;">
             <button type="submit" class="btn-add">Guardar</button>
-            <button type="button" class="btn-cancel" onclick="cancelEdit({{ note.id }})">Cancelar</button>
+            <button type="button" class="btn-cancel" onclick="cancelDayNote({{ note.id }})">Cancelar</button>
           </div>
         </div>
       </form>
@@ -81,57 +121,50 @@
     </div>
     {% endfor %}
   </div>
-</div>
-{% endif %}
 
-<!-- RECURRING EVENTS -->
-{% if day_events %}
-<div class="day-section">
-  <div class="section-label">Eventos de hoy</div>
-  <div class="events-list">
-    {% for ev in day_events %}
-    <div class="event-item {% if ev.done %}event-done{% endif %}" style="--c: {{ ev.color }};">
-      <div class="event-left">
-        <span class="event-dot"></span>
-        <span class="event-title">{{ ev.title }}</span>
+  <!-- Input de nota al fondo — como la celda del calendario -->
+  <form class="day-card-footer" method="POST" action="{{ url_for('note_add', date_str=date_str) }}">
+    <div class="day-add-row">
+      <div class="color-picker-row">
+        <label class="color-opt-none">
+          <input type="radio" name="color" value="" checked>
+          <span class="color-circle color-none">&#10006;</span>
+        </label>
+        {% for c in COLORS %}
+        <label class="color-opt">
+          <input type="radio" name="color" value="{{ c }}">
+          <span class="color-circle" style="background:{{ c }};"></span>
+        </label>
+        {% endfor %}
       </div>
-      {% if ev.done %}
-        <div class="event-done-row">
-          {% if ev.completion_note %}
-          <span class="event-note-text">{{ ev.completion_note }}</span>
-          {% endif %}
-          <form method="POST" action="{{ url_for('event_uncomplete', date_str=date_str, event_id=ev.id) }}">
-            <button type="submit" class="btn-undo">Deshacer</button>
-          </form>
-        </div>
-      {% else %}
-        <form class="event-complete-form" method="POST"
-              action="{{ url_for('event_complete', date_str=date_str, event_id=ev.id) }}">
-          <input type="text" name="note" class="event-note-input" placeholder="comentario opcional...">
-          <button type="submit" class="btn-check">&#10003; Hecho</button>
-        </form>
-      {% endif %}
     </div>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
+    <textarea name="content" class="day-add-input" rows="2"
+              placeholder="Escribí una nota..."></textarea>
+    <button type="submit" class="day-add-btn">Agregar</button>
+  </form>
 
-{% if not notes and not day_events %}
-<div class="empty-day">
-  <p>Día vacío — escribí algo arriba o <a href="{{ url_for('recurring_view') }}">configurá eventos recurrentes</a>.</p>
 </div>
-{% endif %}
 
 <script>
-function startEdit(id) {
-  document.getElementById('view-' + id).style.display = 'none';
-  document.getElementById('edit-' + id).style.display = 'flex';
-  document.querySelector('#edit-' + id + ' textarea').focus();
+const today = "{{ date_str }}";
+
+function openEvForm(id) {
+  document.getElementById('ev-chip-' + id).style.display = 'none';
+  const f = document.getElementById('ev-form-' + id);
+  f.style.display = 'flex';
+  f.querySelector('input').focus();
 }
-function cancelEdit(id) {
-  document.getElementById('edit-' + id).style.display = 'none';
-  document.getElementById('view-' + id).style.display = 'flex';
+function closeEvForm(id) {
+  document.getElementById('ev-form-' + id).style.display = 'none';
+  document.getElementById('ev-chip-' + id).style.display = 'flex';
+}
+function editDayNote(id) {
+  document.getElementById('dview-' + id).style.display = 'none';
+  document.getElementById('dedit-' + id).style.display = 'flex';
+}
+function cancelDayNote(id) {
+  document.getElementById('dedit-' + id).style.display = 'none';
+  document.getElementById('dview-' + id).style.display = 'flex';
 }
 </script>
 {% endblock %}

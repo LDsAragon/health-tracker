@@ -110,6 +110,14 @@ def add_recurring_event(data: dict):
         )
 
 
+def update_recurring_event(event_id: int, data: dict):
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE recurring_events SET title=?, color=?, recurrence=?, start_date=? WHERE id=?",
+            (data["title"], data["color"], data["recurrence"], data["start_date"], event_id),
+        )
+
+
 def delete_recurring_event(event_id: int):
     with get_db() as conn:
         conn.execute("DELETE FROM recurring_events WHERE id = ?", (event_id,))

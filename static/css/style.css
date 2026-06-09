@@ -163,21 +163,28 @@ a { color: inherit; text-decoration: none; }
 
 .cal-cell {
   min-height: var(--cell-height, 180px);
-  padding: 12px 10px 10px;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 6px;
   background: var(--bg);
-  transition: background .12s;
-  cursor: pointer;
 }
 .cal-cell:nth-child(7n) { border-right: none; }
+.cal-cell.cal-empty  { background: rgba(0,0,0,.18); }
+.cal-cell.is-today   { background: rgba(99,102,241,.07); box-shadow: inset 0 0 0 2px rgba(99,102,241,.4); }
 
-.cal-cell:hover     { background: rgba(255,255,255,.025); }
-.cal-cell.cal-empty { background: rgba(0,0,0,.18); cursor: default; }
-.cal-cell.is-today  { background: rgba(99,102,241,.07); box-shadow: inset 0 0 0 2px rgba(99,102,241,.4); }
+/* Área de contenido clickeable */
+.cal-cell-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 10px 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: background .12s;
+}
+.cal-cell-body:hover { background: rgba(255,255,255,.025); }
 
 .cal-num {
   font-size: 18px;
@@ -187,6 +194,54 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 2px;
 }
 .today-num { color: var(--accent); font-size: 20px; }
+
+/* Input de nota rápida al fondo de la celda */
+.cal-quick-form {
+  border-top: 1px solid rgba(255,255,255,.05);
+  padding: 5px 8px;
+}
+.cal-quick-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 3px 2px;
+  transition: color .15s;
+}
+.cal-quick-input::placeholder { color: rgba(255,255,255,.18); }
+.cal-quick-input:focus {
+  outline: none;
+  color: var(--text);
+}
+.cal-quick-input:focus::placeholder { color: rgba(255,255,255,.35); }
+
+/* Color picker mini — aparece solo al enfocar el input (A1) */
+.cal-color-mini {
+  display: none;
+  gap: 4px;
+  align-items: center;
+  padding: 3px 2px 2px;
+  flex-wrap: wrap;
+}
+.cal-quick-form:focus-within .cal-color-mini { display: flex; }
+.cal-color-mini input[type="radio"] { display: none; }
+.cal-cdot {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all .1s;
+}
+.cal-color-mini input:checked + .cal-cdot { border-color: white; transform: scale(1.2); }
+.cal-color-mini label:hover .cal-cdot { transform: scale(1.1); }
+.cal-cdot-none {
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.2) !important;
+}
 
 /* Chips — eventos recurrentes */
 .chip {
@@ -205,31 +260,236 @@ a { color: inherit; text-decoration: none; }
 
 /* Notas en el calendario — tarjetas con color */
 .cal-note-card {
-  font-size: 12px;
-  line-height: 1.45;
-  padding: 5px 8px;
-  border-radius: 4px;
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 5px 9px;
+  border-radius: 5px;
   word-break: break-word;
-  background: var(--surface2);
+  /* contraste claro sobre el fondo oscuro de la celda */
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text);
-  border-left: 2px solid var(--border);
-  /* max 5 líneas visibles */
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+  /* máximo 6 líneas */
   overflow: hidden;
+  max-height: calc(6 * 1.5 * 13px);
 }
 .cal-note-card.cal-note-colored {
-  background: color-mix(in srgb, var(--c) 16%, var(--surface));
-  border-left: 2px solid var(--c);
-  color: var(--text);
+  background: color-mix(in srgb, var(--c) 22%, rgba(0,0,0,0.4));
+  border-left: 3px solid var(--c);
 }
 
 /* ── DAY VIEW ─────────────────────────────────────────────────────── */
 
-.day-header {
-  margin-bottom: 24px;
+.main-day {
+  padding: 20px 24px;
+  max-width: 760px;
+  margin: 0 auto;
 }
+
+.day-topnav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.day-arrows { display: flex; gap: 4px; }
+
+/* La celda grande */
+.day-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 60vh;
+  overflow: hidden;
+}
+
+/* Cabecera de la celda */
+.day-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.day-card-label { display: flex; flex-direction: column; gap: 2px; }
+
+.day-card-dow {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+}
+
+.day-card-full-date {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.day-card-num {
+  font-size: 52px;
+  font-weight: 800;
+  color: var(--muted);
+  line-height: 1;
+}
+.day-card-num.today-num { color: var(--accent); }
+
+/* Eventos */
+.day-card-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.day-ev-wrap { display: flex; flex-direction: column; gap: 6px; }
+
+.day-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1.5px solid color-mix(in srgb, var(--c) 40%, transparent);
+  background: color-mix(in srgb, var(--c) 15%, transparent);
+  color: var(--c);
+  transition: all .15s;
+}
+
+.day-chip-todo { cursor: pointer; }
+.day-chip-todo:hover { background: color-mix(in srgb, var(--c) 25%, transparent); }
+
+.day-chip-done {
+  opacity: .55;
+  text-decoration: line-through;
+}
+
+.day-chip-circle {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  flex-shrink: 0;
+}
+.day-chip-check { font-size: 13px; flex-shrink: 0; }
+.day-chip-note { font-size: 12px; font-weight: 400; font-style: italic; }
+.day-chip-hint { font-size: 11px; font-weight: 400; opacity: .6; }
+
+.day-chip-undo {
+  background: none; border: none; color: inherit;
+  cursor: pointer; font-size: 14px; padding: 0 2px;
+  opacity: .7; transition: opacity .15s;
+}
+.day-chip-undo:hover { opacity: 1; }
+
+.day-ev-form {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.ev-note-input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 220px;
+}
+.ev-note-input:focus { outline: none; border-color: var(--accent); }
+
+/* Notas dentro de la celda */
+.day-card-notes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 20px;
+}
+
+.day-note {
+  background: rgba(255,255,255,.07);
+  border-left: 3px solid rgba(255,255,255,.2);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+.day-note.day-note-colored {
+  background: color-mix(in srgb, var(--c) 18%, rgba(0,0,0,.3));
+  border-left-color: var(--c);
+}
+
+.day-note-view { display: flex; gap: 10px; align-items: flex-start; }
+.day-note-time { font-size: 11px; color: var(--muted); display: block; margin-top: 4px; }
+.day-note-text { flex: 1; font-size: 15px; white-space: pre-wrap; word-break: break-word; }
+.day-note-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.day-note-edit { display: none; flex-direction: column; gap: 10px; }
+
+.note-edit-ta {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  width: 100%;
+}
+.note-edit-ta:focus { outline: none; border-color: var(--accent); }
+
+/* Footer: agregar nota */
+.day-card-footer {
+  border-top: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+}
+
+.day-add-row { display: flex; align-items: center; gap: 8px; }
+
+.day-add-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  padding: 6px 2px;
+  width: 100%;
+  resize: none;
+  transition: border-color .15s;
+}
+.day-add-input:focus { outline: none; border-color: var(--accent); }
+.day-add-input::placeholder { color: var(--muted); }
+
+.day-add-btn {
+  align-self: flex-end;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 8px 18px;
+  border-radius: var(--r);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.day-add-btn:hover { opacity: .85; }
 
 .back-link {
   font-size: 13px;
@@ -237,17 +497,11 @@ a { color: inherit; text-decoration: none; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 10px;
   transition: color .15s;
 }
 .back-link:hover { color: var(--text); }
 
-.day-title {
-  font-size: 26px;
-  font-weight: 800;
-}
-
-/* Note input form */
+/* Note input form (legacy, kept for recurring page) */
 .note-form {
   display: flex;
   flex-direction: column;
@@ -676,6 +930,18 @@ input:focus { outline: none; border-color: var(--accent); }
 .btn-delete-sm:hover { color: var(--red); border-color: var(--red); }
 
 .empty-msg { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+.form-error { color: var(--red); font-size: 13px; margin-top: 6px; }
+
+.rec-entry { display: flex; flex-direction: column; }
+
+.rec-edit-wrap {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--r);
+  padding: 20px 24px;
+  margin-bottom: 8px;
+}
 
 /* ── RESPONSIVE ───────────────────────────────────────────────────── */
 @media (max-width: 700px) {
