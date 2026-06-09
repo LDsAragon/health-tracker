@@ -5,6 +5,20 @@
 
 let ewState = { angle: 90, picker: null }; // 90° → sector 0 arranca a la derecha
 let _ewAnimId = null;
+let _ewMouse  = { x: null, y: null };
+
+function _ewTrackMouse(e) { _ewMouse.x = e.clientX; _ewMouse.y = e.clientY; }
+
+// Al terminar rotación: re-evalúa qué sector está bajo el cursor y reactiva hover
+function _reapplyHover() {
+  if (_ewMouse.x === null) return;
+  let el = document.elementFromPoint(_ewMouse.x, _ewMouse.y);
+  while (el && !el.dataset.depth) el = el.parentElement;
+  if (el && el.dataset.depth) {
+    ewHover(el.dataset.base, el.dataset.mid || null, el.dataset.specific || null,
+            +el.dataset.depth, EMOTION_WHEEL[el.dataset.base].color);
+  }
+}
 
 // Geometría (viewBox "-180 -180 360 360")
 const EW = {
@@ -21,12 +35,15 @@ function openEWModal(pickerEl) {
   ewState = { angle: 90, picker: pickerEl };
   buildFullWheel();
   document.getElementById('ew-modal').style.display = 'flex';
-  document.addEventListener('keydown', ewKeyHandler);
+  document.addEventListener('keydown',    ewKeyHandler);
+  document.addEventListener('mousemove',  _ewTrackMouse);
 }
 
 function closeEWModal() {
   document.getElementById('ew-modal').style.display = 'none';
-  document.removeEventListener('keydown', ewKeyHandler);
+  document.removeEventListener('keydown',    ewKeyHandler);
+  document.removeEventListener('mousemove',  _ewTrackMouse);
+  _ewMouse.x = null;
   if (_ewAnimId) { cancelAnimationFrame(_ewAnimId); _ewAnimId = null; }
 }
 
@@ -60,7 +77,7 @@ function animateWheelTo(from, to) {
     const ease = 1 - Math.pow(1 - t, 3);
     applyAngle(from + (to - from) * ease);
     if (t < 1) _ewAnimId = requestAnimationFrame(frame);
-    else _ewAnimId = null;
+    else { _ewAnimId = null; _reapplyHover(); }
   }
   _ewAnimId = requestAnimationFrame(frame);
 }
