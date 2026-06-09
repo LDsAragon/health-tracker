@@ -90,6 +90,116 @@
   </div>
   {% endif %}
 
+  <!-- Registros de journal -->
+  {% if journal_entries or journal_cats %}
+  <div class="day-card-journal">
+
+    {% if journal_entries %}
+    <div class="day-journal-list">
+      {% for entry in journal_entries %}
+      <div class="day-journal-entry" id="jentry-{{ entry.id }}" style="--c: {{ entry.category_color }};">
+
+        <!-- Vista -->
+        <div id="jview-{{ entry.id }}" class="day-journal-view">
+          <div class="day-journal-cat-header">
+            <span class="chip chip-journal" style="--c: {{ entry.category_color }};">{{ entry.category_name }}</span>
+            {% if entry.created_at %}
+            <span class="day-note-time">{{ entry.created_at | humantime }}</span>
+            {% endif %}
+            <div class="day-note-actions" style="margin-left:auto;">
+              <button class="btn-edit" onclick="editJEntry({{ entry.id }})">Editar</button>
+              <form method="POST"
+                    action="{{ url_for('journal_entry_delete', date_str=date_str, entry_id=entry.id) }}"
+                    onsubmit="return confirm('¿Eliminar este registro?');" style="display:inline;">
+                <button type="submit" class="btn-delete">&#10005;</button>
+              </form>
+            </div>
+          </div>
+          {% for field in entry.category_fields %}
+          {% set val = entry['values'].get(field.label, '') %}
+          {% if val %}
+          <div class="day-journal-field">
+            <span class="day-journal-field-label">{{ field.label }}</span>
+            <p class="day-journal-field-value">{{ val }}</p>
+          </div>
+          {% endif %}
+          {% endfor %}
+          {% if entry.tags %}
+          <div class="day-journal-tags">
+            {% for tag in entry.tags.split(',') %}
+            {% set t = tag.strip() %}
+            {% if t %}<span class="day-journal-tag">{{ t }}</span>{% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Edición -->
+        <form id="jedit-{{ entry.id }}" class="day-journal-edit-form" style="display:none;"
+              method="POST"
+              action="{{ url_for('journal_entry_edit', date_str=date_str, entry_id=entry.id) }}"
+              onsubmit="return prepareEditValues({{ entry.id }})">
+          <input type="hidden" name="values_json" id="jedit-values-{{ entry.id }}">
+          {% for field in entry.category_fields %}
+          <div class="day-journal-field-input">
+            <label>{{ field.label }}</label>
+            <textarea data-label="{{ field.label }}" rows="3"
+                      class="note-edit-ta">{{ entry['values'].get(field.label, '') }}</textarea>
+          </div>
+          {% endfor %}
+          <div class="field-group">
+            <label>Tags</label>
+            <input type="text" name="tags" value="{{ entry.tags }}" placeholder="ej: ansiedad, trabajo">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button type="submit" class="btn-add">Guardar</button>
+            <button type="button" class="btn-cancel" onclick="cancelJEntry({{ entry.id }})">Cancelar</button>
+          </div>
+        </form>
+
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Agregar nuevo registro -->
+    {% if journal_cats %}
+    <div class="day-journal-add-wrap">
+      <button type="button" class="day-journal-add-toggle" id="jday-toggle"
+              onclick="toggleDayJournal()">+ Agregar registro</button>
+      <div id="jday-form-wrap" style="display:none;">
+        <form id="jday-form" method="POST"
+              action="{{ url_for('journal_entry_add', date_str=date_str) }}"
+              onsubmit="return prepareNewValues()">
+          <input type="hidden" name="next" value="day">
+          <input type="hidden" name="values_json" id="jday-values-json">
+          <div class="field-group">
+            <label>Categoría</label>
+            <select name="category_id" id="jday-cat" class="journal-cat-select"
+                    onchange="updateDayFields(this.value)">
+              <option value="">Seleccionar...</option>
+              {% for cat in journal_cats %}
+              <option value="{{ cat.id }}">{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div id="jday-fields"></div>
+          <div class="field-group" style="margin-top:8px;">
+            <label>Tags (separados por coma)</label>
+            <input type="text" name="tags" placeholder="ej: ansiedad, trabajo, tarde">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button type="submit" class="btn-add">Guardar</button>
+            <button type="button" class="btn-cancel" onclick="toggleDayJournal()">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+  {% endif %}
+
   <!-- Notas -->
   <div class="day-card-notes">
     {% for note in notes %}
@@ -183,6 +293,67 @@ function editDayNote(id) {
 function cancelDayNote(id) {
   document.getElementById('dedit-' + id).style.display = 'none';
   document.getElementById('dview-' + id).style.display = 'flex';
+}
+
+// Journal
+const DAY_JOURNAL_CATS = {{ journal_cats | tojson }};
+
+function buildFields(containerId, catId) {
+  const container = document.getElementById(containerId);
+  if (!catId) { container.innerHTML = ''; return; }
+  const cat = DAY_JOURNAL_CATS.find(c => c.id == catId);
+  if (!cat || !cat.fields || !cat.fields.length) { container.innerHTML = ''; return; }
+  container.innerHTML = cat.fields.map(f =>
+    '<div class="day-journal-field-input">' +
+    '<label>' + f.label + '</label>' +
+    '<textarea data-label="' + f.label.replace(/"/g, '&quot;') + '" placeholder="' +
+    (f.placeholder || '').replace(/"/g, '&quot;') + '" rows="3" class="note-edit-ta"></textarea>' +
+    '</div>'
+  ).join('');
+}
+
+function updateDayFields(catId) { buildFields('jday-fields', catId); }
+
+function toggleDayJournal() {
+  const wrap = document.getElementById('jday-form-wrap');
+  const btn  = document.getElementById('jday-toggle');
+  if (wrap.style.display === 'none') {
+    wrap.style.display = 'block';
+    btn.style.display = 'none';
+  } else {
+    wrap.style.display = 'none';
+    btn.style.display = 'block';
+    document.getElementById('jday-cat').value = '';
+    document.getElementById('jday-fields').innerHTML = '';
+  }
+}
+
+function collectValues(containerId) {
+  const values = {};
+  document.querySelectorAll('#' + containerId + ' textarea[data-label]').forEach(ta => {
+    values[ta.dataset.label] = ta.value;
+  });
+  return JSON.stringify(values);
+}
+
+function prepareNewValues() {
+  const catId = document.getElementById('jday-cat').value;
+  if (!catId) { alert('Seleccioná una categoría.'); return false; }
+  document.getElementById('jday-values-json').value = collectValues('jday-fields');
+  return true;
+}
+
+function editJEntry(id) {
+  document.getElementById('jview-' + id).style.display = 'none';
+  document.getElementById('jedit-' + id).style.display = 'flex';
+}
+function cancelJEntry(id) {
+  document.getElementById('jedit-' + id).style.display = 'none';
+  document.getElementById('jview-' + id).style.display = 'flex';
+}
+function prepareEditValues(id) {
+  document.getElementById('jedit-values-' + id).value = collectValues('jedit-' + id);
+  return true;
 }
 </script>
 {% endblock %}

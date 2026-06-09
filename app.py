@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, make_response, send_file
 from datetime import date, datetime
 import calendar as cal
+import json
 import database as db
 
 app = Flask(__name__)
@@ -61,6 +62,19 @@ def calendar_view(year=None, month=None):
             for ev in recurring if db.event_applies(ev, d)
         ]
 
+    journal_cats  = db.get_journal_categories()
+    journal_raw   = db.get_journal_entries_range(month_start, month_end)
+    journal_badges: dict = {}
+    for ds_str, entries in journal_raw.items():
+        seen: set = set()
+        badges = []
+        for e in entries:
+            if e["show_in_calendar"] and e["category_id"] not in seen:
+                seen.add(e["category_id"])
+                badges.append({"name": e["category_name"], "color": e["category_color"]})
+        if badges:
+            journal_badges[ds_str] = badges
+
     prev_month = month - 1 if month > 1 else 12
     prev_year  = year if month > 1 else year - 1
     next_month = month % 12 + 1
@@ -76,6 +90,8 @@ def calendar_view(year=None, month=None):
         today=today.isoformat(),
         prev_year=prev_year, prev_month=prev_month,
         next_year=next_year, next_month=next_month,
+        journal_cats=journal_cats,
+        journal_badges=journal_badges,
     )
 
 
@@ -98,6 +114,9 @@ def day_view(date_str):
         for ev in recurring if db.event_applies(ev, d)
     ]
 
+    journal_entries = db.get_journal_entries_for_date(date_str)
+    journal_cats    = db.get_journal_categories()
+
     from datetime import timedelta
     prev_day = (d - timedelta(days=1)).isoformat()
     next_day = (d + timedelta(days=1)).isoformat()
@@ -108,6 +127,8 @@ def day_view(date_str):
         d=d,
         notes=notes,
         day_events=day_events,
+        journal_entries=journal_entries,
+        journal_cats=journal_cats,
         prev_day=prev_day,
         next_day=next_day,
         today=date.today().isoformat(),
@@ -261,6 +282,19 @@ def week_view(date_str):
             for ev in recurring if db.event_applies(ev, d)
         ]
 
+    journal_cats  = db.get_journal_categories()
+    journal_raw   = db.get_journal_entries_range(start, end)
+    journal_badges: dict = {}
+    for ds_str, entries in journal_raw.items():
+        seen: set = set()
+        badges = []
+        for e in entries:
+            if e["show_in_calendar"] and e["category_id"] not in seen:
+                seen.add(e["category_id"])
+                badges.append({"name": e["category_name"], "color": e["category_color"]})
+        if badges:
+            journal_badges[ds_str] = badges
+
     prev_week = (monday - timedelta(days=7)).isoformat()
     next_week = (monday + timedelta(days=7)).isoformat()
 
@@ -282,6 +316,8 @@ def week_view(date_str):
         prev_week=prev_week,
         next_week=next_week,
         anchor_month_url=url_for("calendar_view", year=anchor.year, month=anchor.month),
+        journal_cats=journal_cats,
+        journal_badges=journal_badges,
     )
 
 
@@ -351,6 +387,95 @@ def search_view():
     query   = request.args.get("q", "").strip()
     results = db.search_notes(query) if query else []
     return render_template("search.html", query=query, results=results)
+
+
+# ── Journal categories ─────────────────────────────────────────────────────────
+
+@app.route("/journal")
+def journal_view():
+    categories = db.get_journal_categories()
+    return render_template("journal.html", categories=categories)
+
+
+@app.route("/journal/add", methods=["POST"])
+def journal_category_add():
+    name  = request.form.get("name", "").strip()
+    color = request.form.get("color", "#6366f1").strip()
+    show  = 1 if request.form.get("show_in_calendar") else 0
+    labels       = request.form.getlist("field_label[]")
+    placeholders = request.form.getlist("field_placeholder[]")
+    fields = [{"label": l.strip(), "placeholder": p.strip()}
+              for l, p in zip(labels, placeholders) if l.strip()]
+    if name:
+        db.add_journal_category({
+            "name":             name,
+            "color":            color,
+            "fields_json":      json.dumps(fields, ensure_ascii=False),
+            "show_in_calendar": show,
+        })
+    return redirect(url_for("journal_view"))
+
+
+@app.route("/journal/<int:cat_id>/edit", methods=["POST"])
+def journal_category_edit(cat_id):
+    name  = request.form.get("name", "").strip()
+    color = request.form.get("color", "#6366f1").strip()
+    show  = 1 if request.form.get("show_in_calendar") else 0
+    labels       = request.form.getlist("field_label[]")
+    placeholders = request.form.getlist("field_placeholder[]")
+    fields = [{"label": l.strip(), "placeholder": p.strip()}
+              for l, p in zip(labels, placeholders) if l.strip()]
+    if name:
+        db.update_journal_category(cat_id, {
+            "name":             name,
+            "color":            color,
+            "fields_json":      json.dumps(fields, ensure_ascii=False),
+            "show_in_calendar": show,
+        })
+    return redirect(url_for("journal_view"))
+
+
+@app.route("/journal/<int:cat_id>/delete", methods=["POST"])
+def journal_category_delete(cat_id):
+    db.delete_journal_category(cat_id)
+    return redirect(url_for("journal_view"))
+
+
+# ── Journal entries ────────────────────────────────────────────────────────────
+
+@app.route("/day/<date_str>/journal/add", methods=["POST"])
+def journal_entry_add(date_str):
+    cat_id_str  = request.form.get("category_id", "").strip()
+    values_json = request.form.get("values_json", "{}").strip() or "{}"
+    tags        = request.form.get("tags", "").strip()
+    if cat_id_str:
+        db.add_journal_entry({
+            "category_id": int(cat_id_str),
+            "entry_date":  date_str,
+            "values_json": values_json,
+            "tags":        tags,
+        })
+    next_page = request.form.get("next")
+    if next_page == "calendar":
+        d = date.fromisoformat(date_str)
+        return redirect(url_for("calendar_view", year=d.year, month=d.month))
+    if next_page == "week":
+        return redirect(url_for("week_view", date_str=date_str))
+    return redirect(url_for("day_view", date_str=date_str))
+
+
+@app.route("/day/<date_str>/journal/<int:entry_id>/edit", methods=["POST"])
+def journal_entry_edit(date_str, entry_id):
+    values_json = request.form.get("values_json", "{}").strip() or "{}"
+    tags        = request.form.get("tags", "").strip()
+    db.update_journal_entry(entry_id, {"values_json": values_json, "tags": tags})
+    return redirect(url_for("day_view", date_str=date_str))
+
+
+@app.route("/day/<date_str>/journal/<int:entry_id>/delete", methods=["POST"])
+def journal_entry_delete(date_str, entry_id):
+    db.delete_journal_entry(entry_id)
+    return redirect(url_for("day_view", date_str=date_str))
 
 
 if __name__ == "__main__":

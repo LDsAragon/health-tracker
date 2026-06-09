@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Categorías de registro{% endblock %}
+
+{% set COLORS = ['#6366f1','#22c55e','#3b82f6','#f97316','#ef4444','#a855f7','#ec4899','#eab308','#14b8a6'] %}
+
+{% block content %}
+<div class="page-top">
+  <h1 class="page-title">Categorías de registro</h1>
+  <p class="page-sub">Definí categorías con campos guiados para llevar registros estructurados.</p>
+</div>
+
+<!-- ── Agregar categoría ── -->
+<div class="rec-form-wrap">
+  <form class="rec-form" method="POST" action="{{ url_for('journal_category_add') }}"
+        id="jcat-add-form" onsubmit="return validateJournalForm('jcat-add-form')">
+
+    <div class="field-row">
+      <div class="field-group">
+        <label for="jcat-name">Nombre de la categoría</label>
+        <input type="text" id="jcat-name" name="name" placeholder="ej: Emociones, Alimentación..." required>
+      </div>
+      <div class="field-group" style="flex:0 0 auto;">
+        <label>Color</label>
+        <div class="color-row">
+          {% for c in COLORS %}
+          <label class="color-opt">
+            <input type="radio" name="color" value="{{ c }}" {% if loop.first %}checked{% endif %}>
+            <span class="color-circle" style="background:{{ c }};"></span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label>
+        <input type="checkbox" name="show_in_calendar" value="1" style="margin-right:6px;accent-color:var(--accent);">
+        Mostrar badge en el calendario
+      </label>
+    </div>
+
+    <!-- Builder de campos -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <label>Campos del registro</label>
+        <button type="button" class="btn-undo" onclick="addField('jcat-add-fields')">+ Agregar campo</button>
+      </div>
+      <div id="jcat-add-fields" class="journal-fields-builder">
+        <div class="journal-field-row">
+          <input type="text" name="field_label[]" placeholder="Nombre del campo (ej: ¿Qué sentí?)" style="flex:1;">
+          <input type="text" name="field_placeholder[]" placeholder="Texto de ayuda (opcional)" style="flex:1;">
+          <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar campo">&#10005;</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="jcat-add-error" class="form-error" style="display:none;"></div>
+    <button type="submit" class="btn-primary">Agregar categoría</button>
+  </form>
+</div>
+
+<!-- ── Lista de categorías ── -->
+{% if categories %}
+<div class="rec-list">
+  {% for cat in categories %}
+  <div class="rec-entry" id="jcat-entry-{{ cat.id }}" style="--c: {{ cat.color }};">
+
+    <!-- Vista -->
+    <div class="rec-item" id="jcat-item-{{ cat.id }}">
+      <span class="rec-dot"></span>
+      <div class="rec-info">
+        <span class="rec-title">{{ cat.name }}</span>
+        <span class="rec-rule">
+          {% if cat.fields %}
+            Campos: {% for f in cat.fields %}{{ f.label }}{% if not loop.last %}, {% endif %}{% endfor %}
+          {% else %}
+            Sin campos definidos
+          {% endif %}
+          {% if cat.show_in_calendar %} · Badge en calendario{% endif %}
+        </span>
+      </div>
+      <button class="btn-edit" onclick="editJCat({{ cat.id }})">Editar</button>
+      <form method="POST" action="{{ url_for('journal_category_delete', cat_id=cat.id) }}"
+            onsubmit="return confirm('¿Eliminar categoría y todos sus registros?');"
+            style="display:inline;">
+        <button type="submit" class="btn-delete-sm">Eliminar</button>
+      </form>
+    </div>
+
+    <!-- Formulario de edición inline -->
+    <div class="rec-edit-wrap" id="jcat-edit-{{ cat.id }}" style="display:none;">
+      <form class="rec-form" method="POST"
+            action="{{ url_for('journal_category_edit', cat_id=cat.id) }}"
+            id="jcat-edit-form-{{ cat.id }}"
+            onsubmit="return validateJournalForm('jcat-edit-form-{{ cat.id }}')">
+
+        <div class="field-row">
+          <div class="field-group">
+            <label>Nombre</label>
+            <input type="text" name="name" value="{{ cat.name }}" required>
+          </div>
+          <div class="field-group" style="flex:0 0 auto;">
+            <label>Color</label>
+            <div class="color-row">
+              {% for c in COLORS %}
+              <label class="color-opt">
+                <input type="radio" name="color" value="{{ c }}" {% if cat.color == c %}checked{% endif %}>
+                <span class="color-circle" style="background:{{ c }};"></span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>
+            <input type="checkbox" name="show_in_calendar" value="1"
+                   {% if cat.show_in_calendar %}checked{% endif %}
+                   style="margin-right:6px;accent-color:var(--accent);">
+            Mostrar badge en el calendario
+          </label>
+        </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <label>Campos</label>
+            <button type="button" class="btn-undo" onclick="addField('jcat-edit-fields-{{ cat.id }}')">+ Agregar campo</button>
+          </div>
+          <div id="jcat-edit-fields-{{ cat.id }}" class="journal-fields-builder">
+            {% for f in cat.fields %}
+            <div class="journal-field-row">
+              <input type="text" name="field_label[]" value="{{ f.label }}" placeholder="Nombre del campo" style="flex:1;">
+              <input type="text" name="field_placeholder[]" value="{{ f.placeholder }}" placeholder="Texto de ayuda" style="flex:1;">
+              <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div id="jcat-edit-error-{{ cat.id }}" class="form-error" style="display:none;"></div>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn-primary">Guardar</button>
+          <button type="button" class="btn-cancel" onclick="cancelJCat({{ cat.id }})">Cancelar</button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty-msg">No hay categorías todavía. ¡Creá la primera arriba!</p>
+{% endif %}
+
+<script>
+function addField(containerId) {
+  const container = document.getElementById(containerId);
+  const row = document.createElement('div');
+  row.className = 'journal-field-row';
+  row.innerHTML =
+    '<input type="text" name="field_label[]" placeholder="Nombre del campo" style="flex:1;">' +
+    '<input type="text" name="field_placeholder[]" placeholder="Texto de ayuda (opcional)" style="flex:1;">' +
+    '<button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>';
+  container.appendChild(row);
+  row.querySelector('input').focus();
+}
+
+function removeField(btn) {
+  btn.closest('.journal-field-row').remove();
+}
+
+function editJCat(id) {
+  document.getElementById('jcat-item-' + id).style.display = 'none';
+  document.getElementById('jcat-edit-' + id).style.display = 'block';
+}
+
+function cancelJCat(id) {
+  document.getElementById('jcat-edit-' + id).style.display = 'none';
+  document.getElementById('jcat-item-' + id).style.display = 'flex';
+}
+
+function validateJournalForm(formId) {
+  const form = document.getElementById(formId);
+  const name = form.querySelector('input[name="name"]');
+  if (!name || !name.value.trim()) {
+    const err = form.querySelector('.form-error');
+    if (err) { err.textContent = 'El nombre es requerido.'; err.style.display = 'block'; }
+    return false;
+  }
+  return true;
+}
+</script>
+{% endblock %}

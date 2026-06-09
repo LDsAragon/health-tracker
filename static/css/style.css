@@ -1075,6 +1075,245 @@ input:focus { outline: none; border-color: var(--accent); }
 }
 .search-result-text { font-size: 14px; color: var(--text); white-space: pre-wrap; word-break: break-word; }
 
+/* ── JOURNAL PAGE ─────────────────────────────────────────────────────── */
+
+.journal-fields-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.journal-field-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.journal-cat-select,
+select.journal-cat-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 8px 11px;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+  transition: border-color .15s;
+}
+.journal-cat-select:focus { outline: none; border-color: var(--accent); }
+
+/* ── JOURNAL in DAY VIEW ──────────────────────────────────────────────── */
+
+.day-card-journal {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.day-journal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.day-journal-entry {
+  background: color-mix(in srgb, var(--c, #6366f1) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--c, #6366f1) 25%, var(--border));
+  border-left: 3px solid var(--c, #6366f1);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.day-journal-view { display: flex; flex-direction: column; gap: 6px; }
+
+.day-journal-cat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.chip-journal {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--c, #6366f1) 20%, transparent);
+  color: var(--c, #6366f1);
+  border: 1px solid color-mix(in srgb, var(--c, #6366f1) 40%, transparent);
+  white-space: nowrap;
+}
+
+.day-journal-field { margin-top: 4px; }
+.day-journal-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 2px;
+}
+.day-journal-field-value {
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
+.day-journal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+.day-journal-tag {
+  font-size: 11px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 2px 8px;
+  color: var(--muted);
+}
+
+.day-journal-edit-form {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.day-journal-field-input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.day-journal-field-input label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.day-journal-add-wrap {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.day-journal-add-toggle {
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+}
+.day-journal-add-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+#jday-form-wrap {
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── JOURNAL in CALENDAR CELLS ────────────────────────────────────────── */
+
+.cal-journal-add {
+  border-top: 1px solid rgba(255,255,255,.05);
+  padding: 4px 8px 5px;
+}
+
+.cal-journal-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.25);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 0;
+  font-family: inherit;
+  transition: color .15s;
+  width: 100%;
+  text-align: left;
+}
+.cal-journal-btn:hover { color: var(--accent); }
+
+.cal-journal-form {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  padding: 3px 0;
+}
+
+.cal-journal-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  width: 100%;
+}
+.cal-journal-select:focus { outline: none; border-color: var(--accent); }
+
+.cal-journal-field-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+  display: block;
+  margin-top: 3px;
+}
+
+.cal-journal-textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 4px 6px;
+  resize: vertical;
+}
+.cal-journal-textarea:focus { outline: none; border-color: var(--accent); }
+
+.cal-journal-tags {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-family: inherit;
+  padding: 3px 2px;
+}
+.cal-journal-tags:focus { outline: none; border-color: var(--accent); color: var(--text); }
+.cal-journal-tags::placeholder { color: rgba(255,255,255,.18); }
+
+.btn-cancel-sm {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+}
+.btn-cancel-sm:hover { color: var(--red); border-color: var(--red); }
+
 /* ── RESPONSIVE ───────────────────────────────────────────────────── */
 @media (max-width: 700px) {
   .cal-cell { min-height: 80px; padding: 6px 4px; }

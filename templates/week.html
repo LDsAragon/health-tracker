@@ -55,6 +55,10 @@
       <div class="cal-note-card {% if note.color %}cal-note-colored{% endif %}"
            {% if note.color %}style="--c: {{ note.color }};"{% endif %}>{{ note.content }}</div>
       {% endfor %}
+
+      {% for badge in journal_badges.get(ds, []) %}
+      <span class="chip chip-journal" style="--c: {{ badge.color }};">{{ badge.name }}</span>
+      {% endfor %}
     </a>
 
     <form class="cal-quick-form" method="POST"
@@ -70,6 +74,32 @@
       </div>
     </form>
 
+    {% if journal_cats %}
+    <div class="cal-journal-add">
+      <button type="button" class="cal-journal-btn" id="jbtn-{{ ds }}"
+              onclick="toggleJForm('{{ ds }}')">+ registro</button>
+      <div class="cal-journal-form" id="jform-{{ ds }}" style="display:none;">
+        <select class="cal-journal-select" id="jcat-{{ ds }}"
+                onchange="updateJFields('{{ ds }}', this.value)">
+          <option value="">Categoría...</option>
+          {% for cat in journal_cats %}
+          <option value="{{ cat.id }}">{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+        <div id="jfields-{{ ds }}"></div>
+        <input type="text" class="cal-journal-tags" id="jtags-{{ ds }}"
+               placeholder="tags (ej: ansiedad, tarde)" autocomplete="off">
+        <div style="display:flex;gap:5px;margin-top:4px;">
+          <button type="button" class="btn-check"
+                  onclick="submitJEntry('{{ ds }}', '{{ url_for('journal_entry_add', date_str=ds) }}', 'week')"
+                  style="font-size:12px;padding:4px 10px;">Guardar</button>
+          <button type="button" class="btn-cancel-sm"
+                  onclick="cancelJForm('{{ ds }}')">&#10005;</button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
   </div>
   {% endfor %}
 
@@ -82,5 +112,47 @@ function apply(h) { document.documentElement.style.setProperty('--cell-height', 
 const saved = localStorage.getItem(PREF);
 if (saved) { slider.value = saved; apply(saved); } else { apply(slider.value); }
 slider.addEventListener('input', () => { apply(slider.value); localStorage.setItem(PREF, slider.value); });
+
+const JCATS = {{ journal_cats | tojson }};
+
+function toggleJForm(ds) {
+  document.getElementById('jform-' + ds).style.display = 'flex';
+  document.getElementById('jbtn-' + ds).style.display  = 'none';
+  document.getElementById('jcat-' + ds).focus();
+}
+function cancelJForm(ds) {
+  document.getElementById('jform-' + ds).style.display = 'none';
+  document.getElementById('jbtn-' + ds).style.display  = 'block';
+  document.getElementById('jcat-' + ds).value = '';
+  document.getElementById('jfields-' + ds).innerHTML = '';
+  document.getElementById('jtags-' + ds).value = '';
+}
+function updateJFields(ds, catId) {
+  const container = document.getElementById('jfields-' + ds);
+  if (!catId) { container.innerHTML = ''; return; }
+  const cat = JCATS.find(c => c.id == catId);
+  if (!cat || !cat.fields || !cat.fields.length) { container.innerHTML = ''; return; }
+  container.innerHTML = cat.fields.map(f =>
+    '<label class="cal-journal-field-label">' + f.label + '</label>' +
+    '<textarea data-label="' + f.label.replace(/"/g, '&quot;') + '"' +
+    ' placeholder="' + (f.placeholder || '').replace(/"/g, '&quot;') + '"' +
+    ' class="cal-journal-textarea" rows="2"></textarea>'
+  ).join('');
+}
+function submitJEntry(ds, url, next) {
+  const catId = document.getElementById('jcat-' + ds).value;
+  if (!catId) return;
+  const values = {};
+  document.querySelectorAll('#jfields-' + ds + ' textarea[data-label]').forEach(ta => {
+    values[ta.dataset.label] = ta.value;
+  });
+  const tags = document.getElementById('jtags-' + ds).value;
+  const fd = new FormData();
+  fd.append('category_id', catId);
+  fd.append('values_json', JSON.stringify(values));
+  fd.append('tags', tags);
+  fd.append('next', next);
+  fetch(url, { method: 'POST', body: fd }).then(() => location.reload());
+}
 </script>
 {% endblock %}
