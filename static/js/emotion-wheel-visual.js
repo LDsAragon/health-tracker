@@ -3,76 +3,21 @@
 // ew-label-g → textos FIJOS (posición orbita, orientación siempre horizontal)
 // Selector (◄) fijo a la derecha (3 en punto, 90°)
 
-let ewState    = { angle: 90, picker: null };
-let _ewAnimId  = null;
-let _ewMouse   = { x: null, y: null };
-let _ewHovering = null; // sector actualmente hoviado { base, mid, spec, depth } | null
+let ewState   = { angle: 90, picker: null };
+let _ewAnimId = null;
+let _ewMouse  = { x: null, y: null };
 
-// ── Hit detection matemática ──────────────────────────────────────────────
-// Calcula qué sector está bajo el cursor independientemente de transforms visuales.
-// Los paths pueden rotar visualmente sin romper la detección de hover.
+function _ewTrackMouse(e) { _ewMouse.x = e.clientX; _ewMouse.y = e.clientY; }
 
-function _sectorAtMouse() {
-  if (_ewMouse.x === null) return null;
-  const svg = document.getElementById('ew-svg');
-  if (!svg) return null;
-  const rect = svg.getBoundingClientRect();
-  // Coordenadas en espacio SVG (viewBox "-180 -180 360 360", centro = 0,0)
-  const sx = (_ewMouse.x - rect.left)  * (360 / rect.width)  - 180;
-  const sy = (_ewMouse.y - rect.top)   * (360 / rect.height) - 180;
-  const r  = Math.sqrt(sx * sx + sy * sy);
-
-  let depth;
-  if      (r >= EW.r1i && r <= EW.r1o) depth = 1;
-  else if (r >= EW.r2i && r <= EW.r2o) depth = 2;
-  else if (r >= EW.r3i && r <= EW.r3o) depth = 3;
-  else return null;
-
-  // Ángulo world → local (descontando rotación del grupo ew-wheel-g)
-  const worldDeg = ((Math.atan2(sx, -sy) * 180 / Math.PI) % 360 + 360) % 360;
-  const localDeg = ((worldDeg - ewState.angle)             % 360 + 360) % 360;
-
-  const bases  = Object.keys(EMOTION_WHEEL);
-  const bi     = Math.floor((localDeg + 30) / 60) % 6;
-  const base   = bases[bi];
-  const BASE_A = bi * 60;
-  const color  = EMOTION_WHEEL[base].color;
-  if (depth === 1) return { base, mid: null, spec: null, depth: 1, color };
-
-  const mids      = Object.keys(EMOTION_WHEEL[base].children);
-  const midOffset = ((localDeg - (BASE_A - 30)) % 360 + 360) % 360;
-  const mi        = Math.min(Math.floor(midOffset / 10), mids.length - 1);
-  const mid       = mids[mi];
-  if (depth === 2) return { base, mid, spec: null, depth: 2, color };
-
-  const specs      = EMOTION_WHEEL[base].children[mid];
-  const specOffset = midOffset - mi * 10;
-  const si         = Math.min(Math.floor(specOffset / 5), specs.length - 1);
-  return { base, mid, spec: specs[si], depth: 3, color };
-}
-
-function _evalHoverAtMouse() {
-  if (_ewAnimId !== null) return; // durante animación no actualizar
-  const s = _sectorAtMouse();
-  if (!s) {
-    if (_ewHovering) { _ewHovering = null; ewHoverClear(); }
-    return;
+// Después de rotar: busca el sector bajo el cursor y reactiva hover
+function _reapplyHover() {
+  if (_ewMouse.x === null) return;
+  let el = document.elementFromPoint(_ewMouse.x, _ewMouse.y);
+  while (el && !el.dataset.depth) el = el.parentElement;
+  if (el && el.dataset.depth) {
+    ewHover(el.dataset.base, el.dataset.mid || null, el.dataset.specific || null,
+            +el.dataset.depth, EMOTION_WHEEL[el.dataset.base].color);
   }
-  // Solo re-llama ewHover si cambió el sector objetivo
-  if (!_ewHovering
-      || _ewHovering.base  !== s.base
-      || _ewHovering.mid   !== s.mid
-      || _ewHovering.spec  !== s.spec
-      || _ewHovering.depth !== s.depth) {
-    _ewHovering = s;
-    ewHover(s.base, s.mid, s.spec, s.depth, s.color);
-  }
-}
-
-function _ewTrackMouse(e) {
-  _ewMouse.x = e.clientX;
-  _ewMouse.y = e.clientY;
-  _evalHoverAtMouse();
 }
 
 // Geometría (viewBox "-180 -180 360 360")
@@ -98,7 +43,7 @@ function closeEWModal() {
   document.getElementById('ew-modal').style.display = 'none';
   document.removeEventListener('keydown',    ewKeyHandler);
   document.removeEventListener('mousemove',  _ewTrackMouse);
-  _ewMouse.x = null; _ewHovering = null;
+  _ewMouse.x = null;
   if (_ewAnimId) { cancelAnimationFrame(_ewAnimId); _ewAnimId = null; }
 }
 
@@ -132,7 +77,7 @@ function animateWheelTo(from, to) {
     const ease = 1 - Math.pow(1 - t, 3);
     applyAngle(from + (to - from) * ease);
     if (t < 1) _ewAnimId = requestAnimationFrame(frame);
-    else { _ewAnimId = null; _ewHovering = null; _evalHoverAtMouse(); }
+    else { _ewAnimId = null; _reapplyHover(); }
   }
   _ewAnimId = requestAnimationFrame(frame);
 }
@@ -388,7 +333,9 @@ function makeLabel(text, initAngle, r, fontSize, fontWeight, base, ring) {
 }
 
 function bindSlice(el, base, mid, spec, depth, color) {
-  el.addEventListener('click', () => ewSelect(base, mid, spec, depth));
+  el.addEventListener('mouseover', () => ewHover(base, mid, spec, depth, color));
+  el.addEventListener('mouseout',  ewHoverClear);
+  el.addEventListener('click',     () => ewSelect(base, mid, spec, depth));
 }
 
 function sector(ri, ro, a1deg, a2deg, color, sw) {
