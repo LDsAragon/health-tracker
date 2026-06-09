@@ -1,18 +1,21 @@
-// ── Rueda de emociones — modal SVG giratorio ───────────────────────────────
+// ── Rueda de emociones — 3 anillos concéntricos (base / media / específica) ─
 
-let ewState = { level: 1, base: null, mid: null, angle: 0, picker: null };
-let ewEmotions = [];
-let ewColors   = [];
+let ewState = { angle: 0, picker: null };
+let _ewAnimId = null;
 
-// ── Abrir / cerrar modal ───────────────────────────────────────────────────
+// Radios (unidades SVG, viewBox "-130 -130 260 260")
+const EW = {
+  r0: 30,   // agujero central
+  r1i: 32, r1o: 65,   // anillo 1 — emoción base
+  r2i: 68, r2o: 96,   // anillo 2 — media
+  r3i: 99, r3o: 120   // anillo 3 — específica
+};
+
+// ── Abrir / cerrar ────────────────────────────────────────────────────────
 
 function openEWModal(pickerEl) {
-  ewState = { level: 1, base: null, mid: null, angle: 0, picker: pickerEl };
-  const bases = Object.keys(EMOTION_WHEEL);
-  ewEmotions = bases;
-  ewColors   = bases.map(b => EMOTION_WHEEL[b].color);
-  buildWheelStructure();
-  updateBreadcrumb();
+  ewState = { angle: 0, picker: pickerEl };
+  buildFullWheel();
   document.getElementById('ew-modal').style.display = 'flex';
   document.addEventListener('keydown', ewKeyHandler);
 }
@@ -20,261 +23,262 @@ function openEWModal(pickerEl) {
 function closeEWModal() {
   document.getElementById('ew-modal').style.display = 'none';
   document.removeEventListener('keydown', ewKeyHandler);
-  ewState = { level: 1, base: null, mid: null, angle: 0, picker: null };
+  if (_ewAnimId) { cancelAnimationFrame(_ewAnimId); _ewAnimId = null; }
 }
 
 function ewOverlayClick(e) {
   if (e.target === document.getElementById('ew-modal')) closeEWModal();
 }
 
-// ── Teclado ────────────────────────────────────────────────────────────────
+// ── Teclado ───────────────────────────────────────────────────────────────
 
 function ewKeyHandler(e) {
   if (document.getElementById('ew-modal').style.display === 'none') return;
   if (e.key === 'q' || e.key === 'Q' || e.key === 'ArrowLeft')  { e.preventDefault(); rotateWheel(-1); }
   if (e.key === 'e' || e.key === 'E' || e.key === 'ArrowRight') { e.preventDefault(); rotateWheel(+1); }
-  if (e.key === 'Enter')     { e.preventDefault(); selectTopEmotion(); }
-  if (e.key === 'Escape')    { e.preventDefault(); closeEWModal(); }
-  if (e.key === 'Backspace') { e.preventDefault(); ewBack(); }
+  if (e.key === 'Escape') { e.preventDefault(); closeEWModal(); }
 }
 
-// ── Rotación ───────────────────────────────────────────────────────────────
+// ── Rotación con snap a 60° ───────────────────────────────────────────────
 
 function rotateWheel(dir) {
-  const step = 360 / ewEmotions.length;
+  if (_ewAnimId) { cancelAnimationFrame(_ewAnimId); _ewAnimId = null; }
   const from = ewState.angle;
-  const to   = from + dir * step;
+  const to   = from + dir * 60;
   ewState.angle = to;
   animateWheelTo(from, to);
 }
 
-let _ewAnimId = null;
-
 function animateWheelTo(from, to) {
-  if (_ewAnimId) cancelAnimationFrame(_ewAnimId);
-  const start = performance.now();
-  const duration = 200;
+  const start = performance.now(), dur = 320;
   function frame(now) {
-    const t = Math.min((now - start) / duration, 1);
-    const ease = t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t;
-    applyWheelAngle(from + (to - from) * ease);
+    const t    = Math.min((now - start) / dur, 1);
+    const ease = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    applyAngle(from + (to - from) * ease);
     if (t < 1) _ewAnimId = requestAnimationFrame(frame);
     else _ewAnimId = null;
   }
   _ewAnimId = requestAnimationFrame(frame);
 }
 
-function applyWheelAngle(angle) {
+function applyAngle(angle) {
   const g = document.getElementById('ew-wheel-g');
   if (!g) return;
-  const N    = ewEmotions.length;
-  const step = 360 / N;
 
   g.setAttribute('transform', `rotate(${angle})`);
 
-  const topIdx = calcTopIndex(angle, N);
-  g.querySelectorAll('.ew-slice').forEach((p, i) => {
-    if (i === topIdx) {
-      p.style.opacity     = '1';
-      p.style.stroke      = 'rgba(255,255,255,0.85)';
-      p.style.strokeWidth = '2.5';
-      p.style.filter      = 'brightness(1.2)';
-    } else {
-      p.style.opacity     = '0.65';
-      p.style.stroke      = 'rgba(0,0,0,0.3)';
-      p.style.strokeWidth = '1';
-      p.style.filter      = '';
-    }
+  // Mantener texto del anillo 1 legible (contra-rotación inteligente)
+  g.querySelectorAll('[data-r1lbl]').forEach(t => {
+    const bi = +t.dataset.r1lbl;
+    const tx = +t.getAttribute('x');
+    const ty = +t.getAttribute('y');
+    t.setAttribute('transform', `rotate(${textRot(bi * 60, angle)},${tx},${ty})`);
   });
 
-  g.querySelectorAll('[data-slice-text]').forEach(t => {
-    const i  = parseInt(t.dataset.sliceText);
-    const tx = parseFloat(t.getAttribute('x'));
-    const ty = parseFloat(t.getAttribute('y'));
-    t.setAttribute('transform', `rotate(${-angle},${tx},${ty})`);
-  });
-
-  document.getElementById('ew-current-label').textContent =
-    ewEmotions[topIdx] || '';
+  // Actualizar etiqueta central
+  const bases   = Object.keys(EMOTION_WHEEL);
+  const topBase = bases[topIdx(angle)];
+  const cl = document.getElementById('ew-center-label');
+  if (cl) { cl.textContent = topBase; cl.style.color = EMOTION_WHEEL[topBase].color; }
 }
 
-function calcTopIndex(angle, N) {
-  const step = 360 / N;
+function textRot(baseAngle, wheelAngle) {
+  // ángulo visual del sector en el mundo
+  const w = ((baseAngle + wheelAngle) % 360 + 360) % 360;
+  // si está en el semiciclo inferior, girar 180° para que no quede al revés
+  const target = (w > 90 && w < 270) ? baseAngle + 180 : baseAngle;
+  return target - wheelAngle;
+}
+
+function topIdx(angle) {
   let best = 0, bestDist = Infinity;
-  for (let i = 0; i < N; i++) {
-    const pos  = ((i * step + angle) % 360 + 360) % 360;
+  for (let i = 0; i < 6; i++) {
+    const pos  = ((i * 60 + angle) % 360 + 360) % 360;
     const dist = Math.min(pos, 360 - pos);
     if (dist < bestDist) { bestDist = dist; best = i; }
   }
   return best;
 }
 
-function getTopIndex() {
-  return calcTopIndex(ewState.angle, ewEmotions.length);
+// ── Hover ─────────────────────────────────────────────────────────────────
+
+function ewHover(base, mid, spec, depth, color) {
+  const g = document.getElementById('ew-wheel-g');
+  if (!g) return;
+
+  g.querySelectorAll('[data-base]').forEach(el => {
+    const eB = el.dataset.base, eM = el.dataset.mid,
+          eS = el.dataset.specific, eD = +el.dataset.depth;
+
+    // ¿es parte del camino hovered?
+    const inPath = eB === base && (
+      (eD === 1) ||
+      (depth >= 2 && eD === 2 && eM === mid) ||
+      (depth >= 3 && eD === 3 && eM === mid && eS === spec)
+    );
+    // ¿mismo base pero fuera del camino?
+    const sameBase = eB === base && !inPath;
+
+    el.style.opacity = inPath ? '1' : sameBase ? '0.55' : '0.12';
+    el.style.filter  = inPath ? 'brightness(1.12)' : sameBase ? '' : 'saturate(0.25)';
+  });
+
+  const lbl = document.getElementById('ew-hover-label');
+  if (!lbl) return;
+  const sep = `<span class="ew-sep"> › </span>`;
+  let html = `<span style="color:${color}">${base}</span>`;
+  if (depth >= 2) html += sep + `<span style="color:${color}">${mid}</span>`;
+  if (depth >= 3) html += sep + `<span style="color:${color}">${spec}</span>`;
+  lbl.innerHTML = html;
+
+  const hint = document.getElementById('ew-hover-hint');
+  if (hint) hint.textContent = 'Click para guardar';
 }
 
-// ── Selección ──────────────────────────────────────────────────────────────
-
-function selectTopEmotion() {
-  const emotion = ewEmotions[getTopIndex()];
-  if (ewState.level === 3) finalizeSelection(emotion);
-  else advanceLevel(emotion);
+function ewHoverClear() {
+  const g = document.getElementById('ew-wheel-g');
+  if (!g) return;
+  g.querySelectorAll('[data-base]').forEach(el => {
+    el.style.opacity = '1';
+    el.style.filter  = '';
+  });
+  const lbl  = document.getElementById('ew-hover-label');
+  const hint = document.getElementById('ew-hover-hint');
+  if (lbl)  lbl.innerHTML = '';
+  if (hint) hint.textContent = 'Rotá para explorar · hover para ver · click para guardar';
 }
 
-function handleSliceClick(i, emotion) {
-  const step = 360 / ewEmotions.length;
-  const from = ewState.angle;
-  const to   = -i * step;
-  ewState.angle = to;
-  animateWheelTo(from, to);
-  setTimeout(() => {
-    if (ewState.level === 3) finalizeSelection(emotion);
-    else advanceLevel(emotion);
-  }, 230);
-}
+// ── Selección ─────────────────────────────────────────────────────────────
 
-function advanceLevel(emotion) {
-  if (ewState.level === 1) {
-    ewState.base  = emotion;
-    ewState.level = 2;
-    const mids = Object.keys(EMOTION_WHEEL[emotion].children);
-    ewEmotions = mids;
-    ewColors   = mids.map(() => EMOTION_WHEEL[emotion].color);
-  } else {
-    ewState.mid   = emotion;
-    ewState.level = 3;
-    const specs = EMOTION_WHEEL[ewState.base].children[emotion];
-    ewEmotions = specs;
-    ewColors   = specs.map(() => EMOTION_WHEEL[ewState.base].color);
-  }
-  ewState.angle = 0;
-  buildWheelStructure();
-  updateBreadcrumb();
-}
-
-function ewBack() {
-  if (ewState.level === 1) { closeEWModal(); return; }
-  if (ewState.level === 2) {
-    ewState.level = 1; ewState.base = null;
-    const bases = Object.keys(EMOTION_WHEEL);
-    ewEmotions = bases;
-    ewColors   = bases.map(b => EMOTION_WHEEL[b].color);
-  } else {
-    ewState.level = 2; ewState.mid = null;
-    const mids = Object.keys(EMOTION_WHEEL[ewState.base].children);
-    ewEmotions = mids;
-    ewColors   = mids.map(() => EMOTION_WHEEL[ewState.base].color);
-  }
-  ewState.angle = 0;
-  buildWheelStructure();
-  updateBreadcrumb();
-}
-
-function finalizeSelection(emotion) {
-  const val = ewState.base + ' > ' + ewState.mid + ' > ' + emotion;
+function ewSelect(base, mid, spec, depth) {
+  let val = base;
+  if (depth >= 2 && mid)  val += ' > ' + mid;
+  if (depth >= 3 && spec) val += ' > ' + spec;
   ewRestore(ewState.picker, val);
   closeEWModal();
 }
 
-// ── Construir SVG ──────────────────────────────────────────────────────────
+// ── Construir SVG ─────────────────────────────────────────────────────────
 
-function buildWheelStructure() {
+function buildFullWheel() {
   const svg = document.getElementById('ew-svg');
   svg.innerHTML = '';
-
-  const N      = ewEmotions.length;
-  const step   = 360 / N;
-  const R      = 100, ri = 26;
-  const rLabel = (R + ri) / 2;
 
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.id = 'ew-wheel-g';
 
-  for (let i = 0; i < N; i++) {
-    const a1   = (i - 0.5) * step;
-    const a2   = (i + 0.5) * step;
-    const path = makeSlicePath(R, ri, a1, a2, ewColors[i]);
-    path.classList.add('ew-slice');
-    const em   = ewEmotions[i];
-    path.addEventListener('click', () => handleSliceClick(i, em));
-    path.style.cursor = 'pointer';
-    g.appendChild(path);
+  const bases = Object.keys(EMOTION_WHEEL);
 
-    const rad = i * step * Math.PI / 180;
-    const tx  = rLabel * Math.sin(rad);
-    const ty  = -rLabel * Math.cos(rad);
-    g.appendChild(makeSvgLabel(em, tx, ty, N, i));
-  }
+  bases.forEach((base, bi) => {
+    const baseColor = EMOTION_WHEEL[base].color;
+    const mids      = Object.keys(EMOTION_WHEEL[base].children);
+    const BASE_A    = bi * 60; // ángulo central del sector base (en grados, desde arriba)
 
-  const center = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  center.setAttribute('cx', 0); center.setAttribute('cy', 0);
-  center.setAttribute('r', ri - 1);
-  center.style.fill         = 'var(--surface2)';
-  center.style.stroke       = 'var(--border)';
-  center.style.strokeWidth  = '1';
-  center.style.pointerEvents = 'none';
-  g.appendChild(center);
+    // ── Anillo 1 — base ────────────────────────────────────────────────
+    const p1 = sector(EW.r1i, EW.r1o, BASE_A - 30, BASE_A + 30, baseColor, 0.6);
+    p1.dataset.base  = base; p1.dataset.depth = '1';
+    p1.style.cursor  = 'pointer';
+    bindSlice(p1, base, null, null, 1, baseColor);
+    g.appendChild(p1);
+
+    // Texto del anillo 1 (contra-rotado dinámicamente)
+    const r1mid = (EW.r1i + EW.r1o) / 2;
+    const rad1  = BASE_A * Math.PI / 180;
+    const tx = f(r1mid * Math.sin(rad1));
+    const ty = f(-r1mid * Math.cos(rad1));
+    const txt = svgText(base, tx, ty, '9px');
+    txt.dataset.r1lbl = bi;
+    g.appendChild(txt);
+
+    mids.forEach((mid, mi) => {
+      const MID_STEP = 60 / mids.length;       // 10°
+      const midA1    = BASE_A - 30 + mi * MID_STEP;
+      const midA2    = midA1 + MID_STEP;
+      const midColor = tint(baseColor, 0.22 + 0.06 * (mi & 1));
+
+      // ── Anillo 2 — media ───────────────────────────────────────────
+      const p2 = sector(EW.r2i, EW.r2o, midA1, midA2, midColor, 0.4);
+      p2.dataset.base  = base; p2.dataset.mid = mid; p2.dataset.depth = '2';
+      p2.style.cursor  = 'pointer';
+      bindSlice(p2, base, mid, null, 2, baseColor);
+      g.appendChild(p2);
+
+      const specs = EMOTION_WHEEL[base].children[mid];
+      specs.forEach((spec, si) => {
+        const SPEC_STEP = MID_STEP / 2;        // 5°
+        const specA1    = midA1 + si * SPEC_STEP;
+        const specA2    = specA1 + SPEC_STEP;
+        const specColor = tint(baseColor, 0.38 + 0.08 * (si & 1));
+
+        // ── Anillo 3 — específica ─────────────────────────────────────
+        const p3 = sector(EW.r3i, EW.r3o, specA1, specA2, specColor, 0.3);
+        p3.dataset.base     = base; p3.dataset.mid = mid;
+        p3.dataset.specific = spec; p3.dataset.depth = '3';
+        p3.style.cursor     = 'pointer';
+        bindSlice(p3, base, mid, spec, 3, baseColor);
+        g.appendChild(p3);
+      });
+    });
+  });
+
+  // Círculo central (tapa agujero)
+  const hole = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  hole.setAttribute('cx', 0); hole.setAttribute('cy', 0); hole.setAttribute('r', EW.r0);
+  hole.style.fill          = 'var(--surface2)';
+  hole.style.stroke        = 'var(--border)';
+  hole.style.strokeWidth   = '1';
+  hole.style.pointerEvents = 'none';
+  g.appendChild(hole);
 
   svg.appendChild(g);
-  applyWheelAngle(0);
+  applyAngle(0);
+  ewHoverClear();
 }
 
-function makeSlicePath(R, ri, a1deg, a2deg, color) {
-  const a1   = a1deg * Math.PI / 180;
-  const a2   = a2deg * Math.PI / 180;
-  const large = (a2deg - a1deg > 180) ? 1 : 0;
-  const ox1 = R * Math.sin(a1),  oy1 = -R * Math.cos(a1);
-  const ox2 = R * Math.sin(a2),  oy2 = -R * Math.cos(a2);
-  const ix1 = ri * Math.sin(a1), iy1 = -ri * Math.cos(a1);
-  const ix2 = ri * Math.sin(a2), iy2 = -ri * Math.cos(a2);
+function bindSlice(el, base, mid, spec, depth, color) {
+  el.addEventListener('mouseover', () => ewHover(base, mid, spec, depth, color));
+  el.addEventListener('mouseout',  ewHoverClear);
+  el.addEventListener('click',     () => ewSelect(base, mid, spec, depth));
+}
 
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d',
-    `M${f(ox1)} ${f(oy1)} A${R} ${R} 0 ${large} 1 ${f(ox2)} ${f(oy2)} ` +
-    `L${f(ix2)} ${f(iy2)} A${ri} ${ri} 0 ${large} 0 ${f(ix1)} ${f(iy1)}Z`
+// ── Helpers SVG ───────────────────────────────────────────────────────────
+
+function sector(ri, ro, a1deg, a2deg, color, sw) {
+  const a1 = a1deg * Math.PI / 180, a2 = a2deg * Math.PI / 180;
+  const lg = (a2deg - a1deg > 180) ? 1 : 0;
+  const p  = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('d',
+    `M${f(ro*Math.sin(a1))} ${f(-ro*Math.cos(a1))} ` +
+    `A${ro} ${ro} 0 ${lg} 1 ${f(ro*Math.sin(a2))} ${f(-ro*Math.cos(a2))} ` +
+    `L${f(ri*Math.sin(a2))} ${f(-ri*Math.cos(a2))} ` +
+    `A${ri} ${ri} 0 ${lg} 0 ${f(ri*Math.sin(a1))} ${f(-ri*Math.cos(a1))}Z`
   );
-  path.style.fill        = color;
-  path.style.stroke      = 'rgba(0,0,0,0.3)';
-  path.style.strokeWidth = '1';
-  return path;
+  p.style.fill        = color;
+  p.style.stroke      = 'rgba(0,0,0,0.18)';
+  p.style.strokeWidth = String(sw);
+  return p;
 }
 
-function makeSvgLabel(label, tx, ty, N, idx) {
-  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  text.setAttribute('x', f(tx));
-  text.setAttribute('y', f(ty));
-  text.setAttribute('text-anchor', 'middle');
-  text.setAttribute('dominant-baseline', 'middle');
-  text.dataset.sliceText = idx;
-  text.style.fontSize    = N <= 2 ? '13px' : '9px';
-  text.style.fill        = '#fff';
-  text.style.fontWeight  = '700';
-  text.style.pointerEvents = 'none';
-  text.style.userSelect  = 'none';
-
-  const words = label.split(' ');
-  if (words.length > 1 && N > 2) {
-    const t1 = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-    t1.setAttribute('x', f(tx)); t1.setAttribute('dy', '-0.55em');
-    t1.textContent = words[0];
-    text.appendChild(t1);
-    const t2 = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-    t2.setAttribute('x', f(tx)); t2.setAttribute('dy', '1.1em');
-    t2.textContent = words.slice(1).join(' ');
-    text.appendChild(t2);
-  } else {
-    text.textContent = label;
-  }
-  return text;
+function svgText(label, tx, ty, size) {
+  const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  t.setAttribute('x', tx); t.setAttribute('y', ty);
+  t.setAttribute('text-anchor', 'middle');
+  t.setAttribute('dominant-baseline', 'middle');
+  t.style.fontSize     = size;
+  t.style.fill         = 'rgba(255,255,255,0.9)';
+  t.style.fontWeight   = '800';
+  t.style.pointerEvents = 'none';
+  t.style.userSelect   = 'none';
+  t.textContent = label;
+  return t;
 }
 
-function f(n) { return Math.round(n * 100) / 100; }
-
-// ── Breadcrumb ─────────────────────────────────────────────────────────────
-
-function updateBreadcrumb() {
-  const bc = document.getElementById('ew-breadcrumb');
-  if (ewState.level === 1) bc.textContent = '';
-  else if (ewState.level === 2) bc.textContent = ewState.base + ' ›';
-  else bc.textContent = ewState.base + ' › ' + ewState.mid + ' ›';
+// tint: mezcla color con blanco (factor 0=original, 1=blanco)
+function tint(hex, factor) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgb(${~~(r+(255-r)*factor)},${~~(g+(255-g)*factor)},${~~(b+(255-b)*factor)})`;
 }
+
+function f(n) { return Math.round(n * 1000) / 1000; }

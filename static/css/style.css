@@ -1417,26 +1417,18 @@ select.journal-cat-select {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 20px 24px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  min-width: 310px;
-}
-
-.ew-breadcrumb {
-  font-size: 12px;
-  color: var(--muted);
-  min-height: 16px;
-  letter-spacing: .02em;
-  align-self: flex-start;
+  gap: 8px;
+  min-width: 370px;
 }
 
 .ew-wheel-wrap {
   position: relative;
-  width: 260px;
-  height: 260px;
+  width: 340px;
+  height: 340px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1444,23 +1436,48 @@ select.journal-cat-select {
 
 .ew-pointer {
   position: absolute;
-  top: -2px;
+  top: 4px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 18px;
+  font-size: 16px;
   color: #fff;
   z-index: 2;
   line-height: 1;
   pointer-events: none;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+  text-shadow: 0 1px 5px rgba(0,0,0,0.8);
 }
 
-.ew-current-label {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-  min-height: 26px;
+/* Etiqueta central sobre el círculo central del SVG */
+.ew-center-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 58px;
+  font-size: 10px;
+  font-weight: 800;
   text-align: center;
+  line-height: 1.25;
+  pointer-events: none;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* Etiqueta de hover — muestra el camino base › media › específica */
+.ew-hover-label {
+  font-size: 15px;
+  font-weight: 700;
+  min-height: 22px;
+  text-align: center;
+  color: var(--text);
+}
+.ew-sep { color: var(--muted); font-weight: 400; }
+
+.ew-hover-hint {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  min-height: 16px;
 }
 
 .ew-modal-actions {
@@ -1472,19 +1489,12 @@ select.journal-cat-select {
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: 6px;
-  padding: 6px 14px;
+  padding: 6px 16px;
   font-size: 13px;
   cursor: pointer;
   transition: border-color .15s;
 }
 .ew-modal-actions button:hover { border-color: var(--accent); }
-.ew-modal-actions button:first-child {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  font-weight: 600;
-}
-.ew-modal-actions button:first-child:hover { filter: brightness(1.1); }
 
 .ew-hint {
   font-size: 11px;
