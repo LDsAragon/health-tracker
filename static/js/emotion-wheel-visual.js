@@ -101,6 +101,7 @@ function applyAngle(angle) {
   gWheel.querySelectorAll('[data-base]').forEach(el => {
     el.removeAttribute('transform'); // limpia rotación individual del hover anterior
     const isActive = el.dataset.base === topBase && el.dataset.depth === '1';
+    if (el.dataset.fill0) el.style.fill = el.dataset.fill0; // restaura color original
     el.style.opacity     = '1';
     el.style.stroke      = isActive ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.16)';
     el.style.strokeWidth = isActive ? '1.5' : strokeW(el.dataset.depth);
@@ -172,9 +173,10 @@ function ewHover(base, mid, spec, depth, color) {
 
       if (exactMatch) cloneSrc = el;
       el.style.opacity     = exactMatch ? '0' : inPath ? '1' : sameBase ? '0.5' : '0.08';
+      el.style.fill        = inPath ? solidFill(color, eD) : (el.dataset.fill0 || el.style.fill);
       el.style.stroke      = inPath ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.16)';
       el.style.strokeWidth = inPath ? '1.5'  : strokeW(el.dataset.depth);
-      el.style.filter      = inPath ? 'brightness(1.15)' : '';
+      el.style.filter      = '';
     });
 
     // Clon visual del sector exacto — rota hasta 90°, sin pointer events
@@ -184,7 +186,8 @@ function ewHover(base, mid, spec, depth, color) {
       const clone = cloneSrc.cloneNode(true);
       clone.style.pointerEvents = 'none';
       clone.style.opacity       = '1';
-      clone.style.filter        = 'brightness(1.12)';
+      clone.style.fill          = solidFill(color, depth);
+      clone.style.filter        = '';
       clone.style.stroke        = 'rgba(255,255,255,0.55)';
       clone.style.strokeWidth   = '1.5';
       gClone.appendChild(clone);
@@ -414,6 +417,7 @@ function sector(ri, ro, a1deg, a2deg, color, sw) {
     `A${ri} ${ri} 0 ${lg} 0 ${f(ri*Math.sin(a1))} ${f(-ri*Math.cos(a1))}Z`
   );
   p.style.fill        = color;
+  p.dataset.fill0     = color; // color original, para restaurar tras el hover
   p.style.stroke      = 'rgba(0,0,0,0.16)';
   p.style.strokeWidth = String(sw);
   return p;
@@ -424,5 +428,10 @@ function svgG(id)   { const g = svgEl('g'); g.id = id; return g; }
 function tint(hex, f2) {
   const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
   return `rgb(${~~(r+(255-r)*f2)},${~~(g+(255-g)*f2)},${~~(b+(255-b)*f2)})`;
+}
+// Color sólido para hover — menos lavado que los tints normales (nivel anillo 1/2)
+function solidFill(baseHex, depth) {
+  const f2 = depth === 1 ? 0 : depth === 2 ? 0.10 : 0.18;
+  return f2 === 0 ? baseHex : tint(baseHex, f2);
 }
 function f(n) { return Math.round(n * 1000) / 1000; }
