@@ -1,4 +1,4 @@
-// Rueda de emociones — 8 emociones base (6 rueda española + 2 rueda inglesa)
+// Rueda de emociones — 6 emociones base, 6 medias cada una, 2 específicas cada media
 const EMOTION_WHEEL = {
   "Ira": {
     color: "#ef4444",
@@ -67,30 +67,6 @@ const EMOTION_WHEEL = {
     }
   },
 
-  // ── De la rueda inglesa (PEACEFUL / POWERFUL) ─────────────────────────────
-
-  "Tranquilo": {
-    color: "#10b981",
-    children: {
-      "Contento":    ["Pensativo",    "Relajado"],
-      "Reflexivo":   ["Receptivo",    "Sereno"],
-      "Íntimo":      ["Tierno",       "Sensible"],
-      "Amoroso":     ["Agradecido",   "Cálido"],
-      "Confiado":    ["Nutrido",      "Seguro"],
-      "Sentimental": ["Nostálgico",   "Emotivo"]
-    }
-  },
-  "Poderoso": {
-    color: "#d97706",
-    children: {
-      "Protector":   ["Digno",        "Valioso"],
-      "Leal":        ["Confiado",     "Inteligente"],
-      "Importante":  ["Respetado",    "Apreciado"],
-      "Esperanzado": ["Realizado",    "Satisfecho"],
-      "Orgulloso":   ["Alegre",       "Emocionado"],
-      "Capaz":       ["Decidido",     "Independiente"]
-    }
-  }
 };
 
 // ── Handlers de cascada ────────────────────────────────────────────────────
