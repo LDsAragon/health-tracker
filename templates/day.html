@@ -115,7 +115,7 @@
               </form>
             </div>
           </div>
-          {% set EW_COLORS = {'Ira':'#ef4444','Disgusto':'#f97316','Tristeza':'#84cc16','Felicidad':'#eab308','Sorpresa':'#3b82f6','Miedo':'#a855f7'} %}
+          {% set EW_COLORS = {'Ira':'#ef4444','Disgusto':'#f97316','Tristeza':'#84cc16','Felicidad':'#eab308','Sorpresa':'#3b82f6','Miedo':'#a855f7','Tranquilo':'#10b981','Poderoso':'#d97706'} %}
           {% for field in entry.category_fields %}
           {% set val = entry['values'].get(field.label, '') %}
           {% if val %}
