@@ -452,9 +452,9 @@ function tint(hex, f2) {
   const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
   return `rgb(${~~(r+(255-r)*f2)},${~~(g+(255-g)*f2)},${~~(b+(255-b)*f2)})`;
 }
-// Color sólido para hover — menos lavado que los tints normales (nivel anillo 1/2)
+// Color sólido para hover — casi el color base, apenas un toque más claro hacia afuera
 function solidFill(baseHex, depth) {
-  const f2 = depth === 1 ? 0 : depth === 2 ? 0.10 : 0.18;
+  const f2 = depth === 1 ? 0 : depth === 2 ? 0.05 : 0.10;
   return f2 === 0 ? baseHex : tint(baseHex, f2);
 }
 function f(n) { return Math.round(n * 1000) / 1000; }
