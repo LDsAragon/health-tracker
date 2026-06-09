@@ -37,6 +37,7 @@ function openEWModal(pickerEl) {
   document.getElementById('ew-modal').style.display = 'flex';
   document.addEventListener('keydown',    ewKeyHandler);
   document.addEventListener('mousemove',  _ewTrackMouse);
+  requestAnimationFrame(_measureLabelBgs); // mide tras render (modal ya visible)
 }
 
 function closeEWModal() {
@@ -122,11 +123,21 @@ function applyAngle(angle) {
     if (worldDeg > 180) rot += 180;
     el.setAttribute('transform', `rotate(${f(rot)},${wx},${wy})`);
 
+    if (el._animId) { cancelAnimationFrame(el._animId); el._animId = null; }
     const ring     = +el.dataset.ring;
     const isActive = el.dataset.base === topBase;
     el.style.fill    = 'rgba(0,0,0,0.82)';
     el.style.opacity = ring === 1 ? '1' : (isActive ? '0.92' : '0.62');
-    if (el._bg) el._bg.style.opacity = '0';
+    if (el._bg && el._bgRelX !== undefined) {
+      const cx = parseFloat(el.getAttribute('x'));
+      const cy = parseFloat(el.getAttribute('y'));
+      el._bg.setAttribute('x', cx + el._bgRelX);
+      el._bg.setAttribute('y', cy + el._bgRelY);
+      el._bg.setAttribute('transform', el.getAttribute('transform'));
+      el._bg.style.opacity = '0.25';
+    } else if (el._bg) {
+      el._bg.style.opacity = '0';
+    }
   });
 
   // ── 3. Etiqueta central ───────────────────────────────────────────────
@@ -188,19 +199,11 @@ function ewHover(base, mid, spec, depth, color) {
         el.style.fill = 'rgba(0,0,0,0.90)';
         el.style.opacity = '1';
         const tx = el.getAttribute('x'), ty = el.getAttribute('y');
-        el.setAttribute('transform', `rotate(0,${tx},${ty})`);
-        if (el._bg) {
-          const bb = el.getBBox(), pad = 4;
-          el._bg.setAttribute('x',      bb.x - pad);
-          el._bg.setAttribute('y',      bb.y - pad);
-          el._bg.setAttribute('width',  bb.width  + pad * 2);
-          el._bg.setAttribute('height', bb.height + pad * 2);
-          el._bg.setAttribute('transform', `rotate(0,${tx},${ty})`);
-          el._bg.style.opacity = '1';
-        }
+        _animLabelTo0(el, tx, ty);
+        if (el._bg && el._bgRelX !== undefined) el._bg.style.opacity = '0.92';
       } else {
         el.style.opacity = '0.28';
-        if (el._bg) el._bg.style.opacity = '0';
+        if (el._bg) el._bg.style.opacity = '0.06';
       }
     });
   }
@@ -224,6 +227,50 @@ function ewHoverClear() {
   const hint = document.getElementById('ew-hover-hint');
   if (lbl)  lbl.innerHTML = '';
   if (hint) hint.textContent = 'Rotá para explorar · hover para leer · click para guardar';
+}
+
+// Mide y cachea las dimensiones de los rects de fondo (requiere modal visible)
+function _measureLabelBgs() {
+  const gLabel = document.getElementById('ew-label-g');
+  if (!gLabel) return;
+  gLabel.querySelectorAll('[data-la]').forEach(el => {
+    if (!el._bg || el._bgRelX !== undefined) return;
+    const bb = el.getBBox(), pad = 4;
+    el._bg.setAttribute('width',  bb.width  + pad * 2);
+    el._bg.setAttribute('height', bb.height + pad * 2);
+    el._bgRelX = bb.x - parseFloat(el.getAttribute('x'));
+    el._bgRelY = bb.y - parseFloat(el.getAttribute('y'));
+    el._bg.setAttribute('x', bb.x - pad);
+    el._bg.setAttribute('y', bb.y - pad);
+    el._bg.setAttribute('transform', el.getAttribute('transform'));
+    el._bg.style.opacity = '0.25';
+  });
+}
+
+// Anima label + rect desde la rotación radial actual hasta 0° (horizontal)
+function _animLabelTo0(el, tx, ty) {
+  if (el._animId) { cancelAnimationFrame(el._animId); el._animId = null; }
+  const match   = (el.getAttribute('transform') || '').match(/rotate\(([-\d.]+)/);
+  const fromRot = match ? parseFloat(match[1]) : 0;
+  if (Math.abs(fromRot) < 0.5) {
+    el.setAttribute('transform', `rotate(0,${tx},${ty})`);
+    if (el._bg) el._bg.setAttribute('transform', `rotate(0,${tx},${ty})`);
+    return;
+  }
+  const start = performance.now(), dur = 130;
+  function tick(now) {
+    const t   = Math.min((now - start) / dur, 1);
+    const rot = f(fromRot * Math.pow(1 - t, 3)); // ease-out cúbico
+    el.setAttribute('transform', `rotate(${rot},${tx},${ty})`);
+    if (el._bg && el._bgRelX !== undefined) {
+      el._bg.setAttribute('x', parseFloat(tx) + el._bgRelX);
+      el._bg.setAttribute('y', parseFloat(ty) + el._bgRelY);
+      el._bg.setAttribute('transform', `rotate(${rot},${tx},${ty})`);
+    }
+    if (t < 1) el._animId = requestAnimationFrame(tick);
+    else el._animId = null;
+  }
+  el._animId = requestAnimationFrame(tick);
 }
 
 // ── Selección ─────────────────────────────────────────────────────────────
@@ -352,10 +399,9 @@ function makeLabelBg() {
   const bg = svgEl('rect');
   bg.setAttribute('rx', '3');
   bg.setAttribute('ry', '3');
-  bg.style.fill          = 'rgba(255,255,255,0.90)';
+  bg.style.fill          = 'rgba(255,255,255,0.82)';
   bg.style.opacity       = '0';
   bg.style.pointerEvents = 'none';
-  bg.style.transition    = 'opacity 0.10s ease';
   return bg;
 }
 
