@@ -82,9 +82,9 @@ function applyAngle(angle) {
   gWheel.querySelectorAll('[data-base]').forEach(el => {
     const isActive = el.dataset.base === topBase && el.dataset.depth === '1';
     el.style.opacity     = '1';
-    el.style.stroke      = isActive ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.16)';
-    el.style.strokeWidth = isActive ? '3' : strokeW(el.dataset.depth);
-    el.style.filter      = isActive ? 'brightness(1.22)' : '';
+    el.style.stroke      = isActive ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.16)';
+    el.style.strokeWidth = isActive ? '1.5' : strokeW(el.dataset.depth);
+    el.style.filter      = isActive ? 'brightness(1.15)' : '';
   });
 
   // ── 2. Posición de labels (sin rotación, siempre horizontal) ──────────
@@ -95,8 +95,10 @@ function applyAngle(angle) {
     el.setAttribute('x', f(r * Math.sin(worldRad)));
     el.setAttribute('y', f(-r * Math.cos(worldRad)));
 
-    const ring = +el.dataset.ring;
-    el.style.opacity = ring === 1 ? '1' : (el.dataset.base === topBase ? '0.92' : '0.15');
+    const ring     = +el.dataset.ring;
+    const isActive = el.dataset.base === topBase;
+    el.style.opacity = ring === 1 ? '1' : (isActive ? '0.92' : '0.70');
+    el.style.fill    = isActive ? 'rgba(255,255,255,0.92)' : EMOTION_WHEEL[el.dataset.base].color;
   });
 
   // ── 3. Etiqueta central ───────────────────────────────────────────────
@@ -136,9 +138,9 @@ function ewHover(base, mid, spec, depth, color) {
       const sameBase = eB === base && !inPath;
 
       el.style.opacity     = inPath ? '1'    : sameBase ? '0.5' : '0.08';
-      el.style.stroke      = inPath ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.16)';
-      el.style.strokeWidth = inPath ? '3'    : strokeW(el.dataset.depth);
-      el.style.filter      = inPath ? 'brightness(1.22)' : '';
+      el.style.stroke      = inPath ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.16)';
+      el.style.strokeWidth = inPath ? '1.5'  : strokeW(el.dataset.depth);
+      el.style.filter      = inPath ? 'brightness(1.15)' : '';
     });
   }
 
