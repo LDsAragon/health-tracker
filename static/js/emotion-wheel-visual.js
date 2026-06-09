@@ -264,7 +264,7 @@ function _setLabelRadial(el) {
 function _animLabelTo0(el, tx, ty) {
   if (el._animId) { cancelAnimationFrame(el._animId); el._animId = null; }
   const match   = (el.getAttribute('transform') || '').match(/rotate\(([-\d.]+)/);
-  const fromRot = match ? parseFloat(match[1]) : 0;
+  const fromRot = _norm180(match ? parseFloat(match[1]) : 0); // camino más corto a 0°
   if (Math.abs(fromRot) < 0.5) { el.setAttribute('transform', `rotate(0,${tx},${ty})`); return; }
   const start = performance.now(), dur = 130;
   function tick(now) {
@@ -287,6 +287,7 @@ function _animSectorClone(clone, ewAngle, initA, depth) {
   const wy     = f(-r * Math.cos(wRad));
   let   radAng = wDeg - 90;
   if (wDeg > 180) radAng += 180;
+  radAng = _norm180(radAng); // camino más corto: ningún segmento gira más de 90°
 
   if (Math.abs(radAng) < 0.5) { clone.setAttribute('transform', `rotate(${ewAngle})`); return; }
   const start = performance.now(), dur = 130;
@@ -457,3 +458,5 @@ function solidFill(baseHex, depth) {
   return f2 === 0 ? baseHex : tint(baseHex, f2);
 }
 function f(n) { return Math.round(n * 1000) / 1000; }
+// Normaliza un ángulo al rango (-180, 180] — camino de rotación más corto
+function _norm180(a) { return ((a + 180) % 360 + 360) % 360 - 180; }
