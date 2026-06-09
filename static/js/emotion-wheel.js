@@ -29,7 +29,7 @@ const EMOTION_WHEEL = {
       "Abandonado":  ["Ignorado",     "Discriminado"],
       "Desesperado": ["Impotente",    "Vulnerable"],
       "Deprimido":   ["Inferior",     "Vacío"],
-      "Solitario":   ["Apartado",     "Aislado"],
+      "Solitario":   ["Abandonado",   "Apartado"],
       "Aburrido":    ["Apático",      "Indiferente"]
     }
   },
@@ -39,9 +39,9 @@ const EMOTION_WHEEL = {
       "Optimista": ["Inspirado",    "Receptivo"],
       "Íntimo":    ["Juguetón",     "Sensible"],
       "Pacífico":  ["Esperanzado",  "Amoroso"],
-      "Poderoso":  ["Valiente",     "Importante"],
+      "Poderoso":  ["Provocativo",  "Valiente"],
       "Aceptado":  ["Realizado",    "Respetado"],
-      "Orgulloso": ["Confiado",     "Provocativo"]
+      "Orgulloso": ["Confiado",     "Importante"]
     }
   },
   "Sorpresa": {
