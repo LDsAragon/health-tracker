@@ -37,7 +37,6 @@ function openEWModal(pickerEl) {
   document.getElementById('ew-modal').style.display = 'flex';
   document.addEventListener('keydown',    ewKeyHandler);
   document.addEventListener('mousemove',  _ewTrackMouse);
-  requestAnimationFrame(_measureLabelBgs); // mide tras render (modal ya visible)
 }
 
 function closeEWModal() {
@@ -88,8 +87,10 @@ function animateWheelTo(from, to) {
 function applyAngle(angle) {
   const gWheel = document.getElementById('ew-wheel-g');
   const gLabel = document.getElementById('ew-label-g');
+  const gClone = document.getElementById('ew-hover-clone-g');
   if (!gWheel || !gLabel) return;
 
+  if (gClone && gClone.firstChild) gClone.innerHTML = '';
   gWheel.setAttribute('transform', `rotate(${angle})`);
 
   const bases   = Object.keys(EMOTION_WHEEL);
@@ -128,16 +129,6 @@ function applyAngle(angle) {
     const isActive = el.dataset.base === topBase;
     el.style.fill    = 'rgba(0,0,0,0.82)';
     el.style.opacity = ring === 1 ? '1' : (isActive ? '0.92' : '0.62');
-    if (el._bg && el._bgRelX !== undefined) {
-      const cx = parseFloat(el.getAttribute('x'));
-      const cy = parseFloat(el.getAttribute('y'));
-      el._bg.setAttribute('x', cx + el._bgRelX);
-      el._bg.setAttribute('y', cy + el._bgRelY);
-      el._bg.setAttribute('transform', el.getAttribute('transform'));
-      el._bg.style.opacity = '0.25';
-    } else if (el._bg) {
-      el._bg.style.opacity = '0';
-    }
   });
 
   // ── 3. Etiqueta central ───────────────────────────────────────────────
@@ -164,6 +155,7 @@ function strokeW(depth) {
 
 function ewHover(base, mid, spec, depth, color) {
   const gWheel = document.getElementById('ew-wheel-g');
+  let   cloneSrc = null;
   if (gWheel) {
     gWheel.querySelectorAll('[data-base]').forEach(el => {
       const eB = el.dataset.base, eM = el.dataset.mid,
@@ -174,13 +166,31 @@ function ewHover(base, mid, spec, depth, color) {
         (depth >= 2 && eD === 2 && eM === mid) ||
         (depth >= 3 && eD === 3 && eM === mid && eS === spec)
       );
+      const exactMatch = inPath && eD === depth &&
+        (depth < 2 || eM === mid) && (depth < 3 || eS === spec);
       const sameBase = eB === base && !inPath;
 
-      el.style.opacity     = inPath ? '1'    : sameBase ? '0.5' : '0.08';
+      if (exactMatch) cloneSrc = el;
+      el.style.opacity     = exactMatch ? '0' : inPath ? '1' : sameBase ? '0.5' : '0.08';
       el.style.stroke      = inPath ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.16)';
       el.style.strokeWidth = inPath ? '1.5'  : strokeW(el.dataset.depth);
       el.style.filter      = inPath ? 'brightness(1.15)' : '';
     });
+
+    // Clon visual del sector exacto — rota hasta 90°, sin pointer events
+    const gClone = document.getElementById('ew-hover-clone-g');
+    if (gClone && cloneSrc) {
+      gClone.innerHTML = '';
+      const clone = cloneSrc.cloneNode(true);
+      clone.style.pointerEvents = 'none';
+      clone.style.opacity       = '1';
+      clone.style.filter        = 'brightness(1.12)';
+      clone.style.stroke        = 'rgba(255,255,255,0.55)';
+      clone.style.strokeWidth   = '1.5';
+      gClone.appendChild(clone);
+      const initA = parseFloat(cloneSrc.dataset.initAngle);
+      _animSectorClone(clone, ewState.angle, 90 - initA);
+    }
   }
 
   const gLabel = document.getElementById('ew-label-g');
@@ -196,14 +206,11 @@ function ewHover(base, mid, spec, depth, color) {
       );
 
       if (inPath) {
-        el.style.fill = 'rgba(0,0,0,0.90)';
+        el.style.fill    = 'rgba(0,0,0,0.90)';
         el.style.opacity = '1';
-        const tx = el.getAttribute('x'), ty = el.getAttribute('y');
-        _animLabelTo0(el, tx, ty);
-        if (el._bg && el._bgRelX !== undefined) el._bg.style.opacity = '0.92';
+        _animLabelTo0(el, el.getAttribute('x'), el.getAttribute('y'));
       } else {
         el.style.opacity = '0.28';
-        if (el._bg) el._bg.style.opacity = '0.06';
       }
     });
   }
@@ -229,48 +236,34 @@ function ewHoverClear() {
   if (hint) hint.textContent = 'Rotá para explorar · hover para leer · click para guardar';
 }
 
-// Mide y cachea las dimensiones de los rects de fondo (requiere modal visible)
-function _measureLabelBgs() {
-  const gLabel = document.getElementById('ew-label-g');
-  if (!gLabel) return;
-  gLabel.querySelectorAll('[data-la]').forEach(el => {
-    if (!el._bg || el._bgRelX !== undefined) return;
-    const bb = el.getBBox(), pad = 4;
-    el._bg.setAttribute('width',  bb.width  + pad * 2);
-    el._bg.setAttribute('height', bb.height + pad * 2);
-    el._bgRelX = bb.x - parseFloat(el.getAttribute('x'));
-    el._bgRelY = bb.y - parseFloat(el.getAttribute('y'));
-    el._bg.setAttribute('x', bb.x - pad);
-    el._bg.setAttribute('y', bb.y - pad);
-    el._bg.setAttribute('transform', el.getAttribute('transform'));
-    el._bg.style.opacity = '0.25';
-  });
-}
-
-// Anima label + rect desde la rotación radial actual hasta 0° (horizontal)
+// Anima el label desde su rotación radial actual hasta 0° (horizontal)
 function _animLabelTo0(el, tx, ty) {
   if (el._animId) { cancelAnimationFrame(el._animId); el._animId = null; }
   const match   = (el.getAttribute('transform') || '').match(/rotate\(([-\d.]+)/);
   const fromRot = match ? parseFloat(match[1]) : 0;
-  if (Math.abs(fromRot) < 0.5) {
-    el.setAttribute('transform', `rotate(0,${tx},${ty})`);
-    if (el._bg) el._bg.setAttribute('transform', `rotate(0,${tx},${ty})`);
-    return;
-  }
+  if (Math.abs(fromRot) < 0.5) { el.setAttribute('transform', `rotate(0,${tx},${ty})`); return; }
   const start = performance.now(), dur = 130;
   function tick(now) {
-    const t   = Math.min((now - start) / dur, 1);
-    const rot = f(fromRot * Math.pow(1 - t, 3)); // ease-out cúbico
-    el.setAttribute('transform', `rotate(${rot},${tx},${ty})`);
-    if (el._bg && el._bgRelX !== undefined) {
-      el._bg.setAttribute('x', parseFloat(tx) + el._bgRelX);
-      el._bg.setAttribute('y', parseFloat(ty) + el._bgRelY);
-      el._bg.setAttribute('transform', `rotate(${rot},${tx},${ty})`);
-    }
+    const t = Math.min((now - start) / dur, 1);
+    el.setAttribute('transform', `rotate(${f(fromRot * Math.pow(1 - t, 3))},${tx},${ty})`);
     if (t < 1) el._animId = requestAnimationFrame(tick);
     else el._animId = null;
   }
   el._animId = requestAnimationFrame(tick);
+}
+
+// Anima el clon del sector desde fromRot hasta toRot alrededor del centro (0,0)
+function _animSectorClone(clone, fromRot, toRot) {
+  const delta = toRot - fromRot;
+  if (Math.abs(delta) < 0.5) { clone.setAttribute('transform', `rotate(${toRot})`); return; }
+  const start = performance.now(), dur = 130;
+  function tick(now) {
+    const t    = Math.min((now - start) / dur, 1);
+    const ease = 1 - Math.pow(1 - t, 3);
+    clone.setAttribute('transform', `rotate(${f(fromRot + delta * ease)})`);
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 
 // ── Selección ─────────────────────────────────────────────────────────────
@@ -290,6 +283,7 @@ function buildFullWheel() {
   svg.innerHTML = '';
 
   const gWheel = svgG('ew-wheel-g');
+  const gClone = svgG('ew-hover-clone-g');
   const gLabel = svgG('ew-label-g');
 
   const bases = Object.keys(EMOTION_WHEEL);
@@ -306,9 +300,7 @@ function buildFullWheel() {
     p1.style.cursor      = 'pointer';
     bindSlice(p1, base, null, null, 1, baseColor);
     gWheel.appendChild(p1);
-    const lbl1 = makeLabel(base, BASE_A, (EW.r1i+EW.r1o)/2, '8px', '800', base, 1);
-    const bg1  = makeLabelBg(); lbl1._bg = bg1;
-    gLabel.appendChild(bg1); gLabel.appendChild(lbl1);
+    gLabel.appendChild(makeLabel(base, BASE_A, (EW.r1i+EW.r1o)/2, '8px', '800', base, 1));
 
     mids.forEach((mid, mi) => {
       const MID  = 60 / mids.length; // 10°
@@ -323,8 +315,7 @@ function buildFullWheel() {
       gWheel.appendChild(p2);
       const lbl2 = makeLabel(mid, midA, (EW.r2i+EW.r2o)/2, '6px', '700', base, 2);
       lbl2.dataset.mid = mid;
-      const bg2 = makeLabelBg(); lbl2._bg = bg2;
-      gLabel.appendChild(bg2); gLabel.appendChild(lbl2);
+      gLabel.appendChild(lbl2);
 
       const specs = EMOTION_WHEEL[base].children[mid];
       specs.forEach((spec, si) => {
@@ -342,8 +333,7 @@ function buildFullWheel() {
         const lbl3 = makeLabel(spec, specA, (EW.r3i+EW.r3o)/2, '5.5px', '600', base, 3);
         lbl3.dataset.mid      = mid;
         lbl3.dataset.specific = spec;
-        const bg3 = makeLabelBg(); lbl3._bg = bg3;
-        gLabel.appendChild(bg3); gLabel.appendChild(lbl3);
+        gLabel.appendChild(lbl3);
       });
     });
   });
@@ -359,6 +349,7 @@ function buildFullWheel() {
   gLabel.appendChild(hole);
 
   svg.appendChild(gWheel);
+  svg.appendChild(gClone);
   svg.appendChild(gLabel);
 
   // Selector ◄ fijo a la derecha (90° = eje X positivo)
@@ -393,16 +384,6 @@ function makeLabel(text, initAngle, r, fontSize, fontWeight, base, ring) {
   el.style.userSelect    = 'none';
   el.textContent = text;
   return el;
-}
-
-function makeLabelBg() {
-  const bg = svgEl('rect');
-  bg.setAttribute('rx', '3');
-  bg.setAttribute('ry', '3');
-  bg.style.fill          = 'rgba(255,255,255,0.82)';
-  bg.style.opacity       = '0';
-  bg.style.pointerEvents = 'none';
-  return bg;
 }
 
 function bindSlice(el, base, mid, spec, depth, color) {
