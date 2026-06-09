@@ -166,6 +166,10 @@ function buildEWPicker(label) {
   return `<div class="day-journal-field-input">
     <label>${label}</label>
     <div class="emotion-wheel-picker" data-label="${esc(label)}">
+      <button type="button" class="ew-open-btn"
+              onclick="openEWModal(this.closest('.emotion-wheel-picker'))">
+        🎯 Usar rueda
+      </button>
       <div class="ew-selects">
         <select class="ew-select ew-level1" onchange="ewL2(this)">
           <option value="">Emoción base...</option>${opts}
@@ -188,6 +192,10 @@ function buildEWPickerCompact(label) {
   const opts = Object.keys(EMOTION_WHEEL)
     .map(e => `<option value="${e}">${e}</option>`).join('');
   return `<div class="emotion-wheel-picker ew-compact" data-label="${esc(label)}">
+    <button type="button" class="ew-open-btn"
+            onclick="openEWModal(this.closest('.emotion-wheel-picker'))">
+      🎯 Usar rueda
+    </button>
     <select class="ew-select ew-level1" onchange="ewL2(this)">
       <option value="">Emoción base...</option>${opts}
     </select>

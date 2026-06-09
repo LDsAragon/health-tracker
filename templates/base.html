@@ -35,5 +35,23 @@
     {% block content %}{% endblock %}
   </main>
   <script src="{{ url_for('static', filename='js/emotion-wheel.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/emotion-wheel-visual.js') }}"></script>
+
+  <div id="ew-modal" class="ew-modal-overlay" style="display:none;" onclick="ewOverlayClick(event)">
+    <div class="ew-modal-box">
+      <div class="ew-breadcrumb" id="ew-breadcrumb"></div>
+      <div class="ew-wheel-wrap">
+        <div class="ew-pointer">▼</div>
+        <svg id="ew-svg" viewBox="-110 -110 220 220" width="260" height="260"></svg>
+      </div>
+      <div class="ew-current-label" id="ew-current-label"></div>
+      <div class="ew-modal-actions">
+        <button onclick="selectTopEmotion()">Seleccionar</button>
+        <button onclick="ewBack()">← Volver</button>
+        <button onclick="closeEWModal()">Cancelar</button>
+      </div>
+      <p class="ew-hint">Q / ← rotar izq &nbsp;·&nbsp; E / → rotar der &nbsp;·&nbsp; Enter seleccionar &nbsp;·&nbsp; Esc cancelar</p>
+    </div>
+  </div>
 </body>
 </html>

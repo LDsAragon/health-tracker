@@ -159,6 +159,10 @@
             {% if field.get('type','text') == 'emotion-wheel' %}
             <div class="emotion-wheel-picker" data-label="{{ field.label }}"
                  data-ew-saved="{{ fval }}">
+              <button type="button" class="ew-open-btn"
+                      onclick="openEWModal(this.closest('.emotion-wheel-picker'))">
+                🎯 Usar rueda
+              </button>
               <div class="ew-selects">
                 <select class="ew-select ew-level1" onchange="ewL2(this)">
                   <option value="">Emoción base...</option>
