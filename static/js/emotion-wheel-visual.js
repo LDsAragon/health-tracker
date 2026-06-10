@@ -392,14 +392,11 @@ function ewRenderInfo(base, mid, spec, depth, color) {
   const sec = (label, val) =>
     val ? `<div class="ew-info-sec"><h4>${label}</h4><p>${val}</p></div>` : '';
 
-  let srcLine;
-  if (W.id === 'ek') {
-    srcLine = `Fuente: ${c.fuente || 'Atlas of Emotions'}`; // rueda Ekman: todo del Atlas
-  } else {
-    srcLine = depth >= 2
-      ? `Función y manifestación: Paul Ekman${c.fdef ? ' · Definición: ' + c.fdef : ''} · Matiz: redacción propia`
-      : (c.fuente ? `Fuente: ${c.fuente}` : '');
-  }
+  // Atribución data-driven: cada entrada trae su fuente/origen; sin contenido → sin línea.
+  const _src = [];
+  if (c.fdef)   _src.push(`Definición: ${c.fdef}`);
+  if (c.fuente) _src.push(`Fuente: ${c.fuente}`);
+  const srcLine = _src.join(' · ');
 
   panel.innerHTML =
     `<div class="ew-info-title">${crumb}</div>` +

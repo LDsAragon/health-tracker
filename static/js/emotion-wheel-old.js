@@ -1,74 +1,72 @@
-// Rueda de emociones — Feeling Wheel de Gloria Willcox (1982), traducida al español.
-// 6 centros (adjetivos) × 6 secundarias × 1 terciaria. Misma forma {base:{color,children:{sec:[terc]}}}.
-// La versión vieja (Junto, mal traducida) quedó archivada en emotion-wheel-old.js.
-// ⚠️ Traducciones BORRADOR — a verificar/afinar contra la imagen fuente.
+// Rueda de emociones — 6 emociones base, 6 medias cada una, 2 específicas cada media
 const EMOTION_WHEEL = {
-  "Enojado": {        // Mad
-    color: "#e8643c",
+  "Ira": {
+    color: "#ef4444",
     children: {
-      "Herido":    ["Celoso"],      // Hurt → Jealous
-      "Hostil":    ["Egoísta"],     // Hostile → Selfish
-      "Enfadado":  ["Frustrado"],   // Angry → Frustrated
-      "Rabioso":   ["Furioso"],     // Rage → Furious
-      "Rencoroso": ["Irritado"],    // Hateful → Irritated
-      "Crítico":   ["Escéptico"]    // Critical → Skeptical
+      "Odioso":      ["Resentido",    "Violado"],
+      "Amenazado":   ["Celoso",       "Inseguro"],
+      "Desquiciado": ["Enfurecido",   "Rabioso"],
+      "Agresivo":    ["Provocado",    "Hostil"],
+      "Frustrado":   ["Enfadado",     "Irritado"],
+      "Distante":    ["Retraído",     "Sospechoso"]
     }
   },
-  "Asustado": {       // Scared
-    color: "#b0926a",
+  "Disgusto": {
+    color: "#f97316",
     children: {
-      "Confundido": ["Desconcertado"],  // Confused → Bewildered
-      "Rechazado":  ["Desanimado"],     // Rejected → Discouraged
-      "Indefenso":  ["Insignificante"], // Helpless → Insignificant
-      "Sumiso":     ["Débil"],          // Submissive → Weak
-      "Inseguro":   ["Ridículo"],       // Insecure → Foolish
-      "Ansioso":    ["Apenado"]         // Anxious → Embarrassed
+      "Crítico":      ["Sarcástico",   "Escéptico"],
+      "Desaprobado":  ["Sentencioso",  "Aborrecido"],
+      "Decepcionado": ["Repugnante",   "Rebelado"],
+      "Terrible":     ["Repulsivo",    "Detestable"],
+      "Evasivo":      ["Aversivo",     "Indeciso"],
+      "Culpable":     ["Atormentado",  "Avergonzado"]
     }
   },
-  "Alegre": {         // Joyful
-    color: "#e79ab0",
+  "Tristeza": {
+    color: "#84cc16",
     children: {
-      "Entusiasmado": ["Atrevido"],     // Excited → Daring
-      "Sensual":      ["Fascinado"],    // Sexy → Fascinating
-      "Enérgico":     ["Estimulado"],   // Energetic → Stimulating
-      "Juguetón":     ["Divertido"],    // Playful → Amused
-      "Creativo":     ["Extravagante"], // Creative → Extravagant
-      "Consciente":   ["Encantado"]     // Aware → Delightful
+      "Ansioso":     ["Anhelante",    "Abrumado"],
+      "Abandonado":  ["Ignorado",     "Discriminado"],
+      "Desesperado": ["Impotente",    "Vulnerable"],
+      "Deprimido":   ["Inferior",     "Vacío"],
+      "Solitario":   ["Abandonado",   "Apartado"],
+      "Aburrido":    ["Apático",      "Indiferente"]
     }
   },
-  "Poderoso": {       // Powerful
-    color: "#e8b93f",
+  "Felicidad": {
+    color: "#eab308",
     children: {
-      "Fiel":        ["Seguro"],        // Faithful → Confident
-      "Importante":  ["Inteligente"],   // Important → Intelligent
-      "Esperanzado": ["Digno"],         // Hopeful → Worthwhile
-      "Apreciado":   ["Valioso"],       // Appreciated → Valuable
-      "Respetado":   ["Satisfecho"],    // Respected → Satisfied
-      "Orgulloso":   ["Animado"]        // Proud → Cheerful
+      "Optimista": ["Inspirado",    "Receptivo"],
+      "Íntimo":    ["Juguetón",     "Sensible"],
+      "Pacífico":  ["Esperanzado",  "Amoroso"],
+      "Poderoso":  ["Provocativo",  "Valiente"],
+      "Aceptado":  ["Realizado",    "Respetado"],
+      "Orgulloso": ["Confiado",     "Importante"]
     }
   },
-  "Apacible": {       // Peaceful
-    color: "#6cab6c",
+  "Sorpresa": {
+    color: "#3b82f6",
     children: {
-      "Conforme":    ["Pensativo"],     // Content → Pensive
-      "Considerado": ["Relajado"],      // Thoughtful → Relaxed
-      "Íntimo":      ["Receptivo"],     // Intimate → Responsive
-      "Amoroso":     ["Sereno"],        // Loving → Serene
-      "Confiado":    ["Sentimental"],   // Trusting → Sentimental
-      "Protector":   ["Agradecido"]     // Nurturing → Thankful
+      "Jubiloso":    ["Liberado",     "Eufórico"],
+      "Efusivo":     ["Enérgico",     "Inquieto"],
+      "Asombrado":   ["Pasmado",      "Atónito"],
+      "Confundido":  ["Perplejo",     "Desilusionado"],
+      "Sorprendido": ["Consternado",  "Impresionado"],
+      "Interesado":  ["Curioso",      "Entretenido"]
     }
   },
-  "Triste": {         // Sad
-    color: "#5b8fc7",
+  "Miedo": {
+    color: "#a855f7",
     children: {
-      "Adormecido":  ["Apático"],       // Sleepy → Apathetic
-      "Aburrido":    ["Inferior"],      // Bored → Inferior
-      "Solo":        ["Inadecuado"],    // Lonely → Inadequate
-      "Deprimido":   ["Miserable"],     // Depressed → Miserable
-      "Avergonzado": ["Tonto"],         // Ashamed → Stupid
-      "Culpable":    ["Tímido"]         // Guilty → Bashful
+      "Inseguro":  ["Devastado",    "Apenado"],
+      "Asustado":  ["Aterrado",     "Espantado"],
+      "Sumiso":    ["Pobre",        "Inferior"],
+      "Rechazado": ["Indignado",    "Insignificante"],
+      "Humillado": ["Inadecuado",   "Perturbado"],
+      "Herido":    ["Irrespetado",  "Ridiculizado"]
     }
-  }
+  },
+
 };
 
 // ── Handlers de cascada ────────────────────────────────────────────────────

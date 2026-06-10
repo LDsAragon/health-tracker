@@ -115,7 +115,7 @@
               </form>
             </div>
           </div>
-          {% set EW_COLORS = {'Ira':'#ef4444','Disgusto':'#f97316','Tristeza':'#84cc16','Felicidad':'#eab308','Sorpresa':'#3b82f6','Miedo':'#a855f7'} %}
+          {% set EW_COLORS = {'Enojado':'#e8643c','Asustado':'#b0926a','Alegre':'#e79ab0','Poderoso':'#e8b93f','Apacible':'#6cab6c','Triste':'#5b8fc7'} %}
           {% set EKMAN_COLORS = {'Ira':'#e2403b','Miedo':'#7c5cbf','Tristeza':'#3b6fb5','Asco':'#4f9d69','Disfrute':'#e6b53c'} %}
           {% for field in entry.category_fields %}
           {% set val = entry['values'].get(field.label, '') %}
@@ -156,7 +156,7 @@
               action="{{ url_for('journal_entry_edit', date_str=date_str, entry_id=entry.id) }}"
               onsubmit="return prepareEditValues({{ entry.id }})">
           <input type="hidden" name="values_json" id="jedit-values-{{ entry.id }}">
-          {% set EW_EMOTIONS = ['Ira','Disgusto','Tristeza','Felicidad','Sorpresa','Miedo'] %}
+          {% set EW_EMOTIONS = ['Enojado','Asustado','Alegre','Poderoso','Apacible','Triste'] %}
           {% for field in entry.category_fields %}
           {% set fval = entry['values'].get(field.label, '') %}
           <div class="day-journal-field-input">
