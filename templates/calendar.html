@@ -76,32 +76,6 @@
             </div>
           </form>
 
-          {% if journal_cats %}
-          <div class="cal-journal-add">
-            <button type="button" class="cal-journal-btn" id="jbtn-{{ ds }}"
-                    onclick="toggleJForm('{{ ds }}')">+ registro</button>
-            <div class="cal-journal-form" id="jform-{{ ds }}" style="display:none;">
-              <select class="cal-journal-select" id="jcat-{{ ds }}"
-                      onchange="updateJFields('{{ ds }}', this.value)">
-                <option value="">Categoría...</option>
-                {% for cat in journal_cats %}
-                <option value="{{ cat.id }}">{{ cat.name }}</option>
-                {% endfor %}
-              </select>
-              <div id="jfields-{{ ds }}"></div>
-              <input type="text" class="cal-journal-tags" id="jtags-{{ ds }}"
-                     placeholder="tags (ej: ansiedad, tarde)" autocomplete="off">
-              <div style="display:flex;gap:5px;margin-top:4px;">
-                <button type="button" class="btn-check"
-                        onclick="submitJEntry('{{ ds }}', '{{ url_for('journal_entry_add', date_str=ds) }}', 'calendar')"
-                        style="font-size:12px;padding:4px 10px;">Guardar</button>
-                <button type="button" class="btn-cancel-sm"
-                        onclick="cancelJForm('{{ ds }}')">&#10005;</button>
-              </div>
-            </div>
-          </div>
-          {% endif %}
-
         </div>
       {% endif %}
     {% endfor %}
