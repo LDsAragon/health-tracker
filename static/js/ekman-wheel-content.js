@@ -91,8 +91,8 @@ const EKMAN_CONTENT = {
   "Enjoyment|Relief":           { que: "El placer cuando algo que te tenía en vilo (a menudo miedo) por fin afloja.", fuente: "Atlas of Emotions" },
   "Enjoyment|Peace":            { que: "Sentir que todo está bien y que no hay nada que necesites hacer.", fuente: "Atlas of Emotions" },
   "Enjoyment|Pride":            { que: "Placer por un logro propio (o de alguien que nutriste) que querés que otros conozcan.", fuente: "Atlas of Emotions" },
-  "Enjoyment|Fiero":            { que: "El disfrute de haber superado un desafío que te exigió (palabra italiana).", fuente: "Atlas of Emotions" },
-  "Enjoyment|Naches":           { que: "El orgullo por el logro de un hijo o discípulo (palabra del yidis).", fuente: "Atlas of Emotions" },
+  "Enjoyment|Fiero":            { que: "El gozo de haber superado un desafío que te exigió: tu propio logro, vivido como triunfo.", distinguir: "Ekman lo llama «fiero» (italiano). Es el orgullo por TU logro tras esforzarte; se diferencia del «Triunfo ajeno» (el logro de otro) y del Orgullo general.", fuente: "Atlas of Emotions" },
+  "Enjoyment|Naches":           { que: "El gozo profundo de que un tercero haya conseguido sus objetivos.", distinguir: "Ekman lo llama «naches» (yidis): el orgullo de un padre o mentor por el logro de su hijo o discípulo. Tomado más amplio, también el gozo de ser espectador del éxito ajeno y alegrarte por él, aunque no hayas tenido un rol mentor.", fuente: "Atlas of Emotions" },
   "Enjoyment|Wonder":           { que: "Algo muy sorprendente, bello, increíble o difícil de creer.", fuente: "Atlas of Emotions" },
   "Enjoyment|Excitement":       { que: "Energía que rara vez se siente leve; va de media a alta.", fuente: "Atlas of Emotions" },
   "Enjoyment|Ecstasy":          { que: "Deleite arrebatador; felicidad altísima, casi abrumadora.", fuente: "Atlas of Emotions" }

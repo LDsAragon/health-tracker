@@ -66,8 +66,8 @@ const EKMAN_WHEEL = {
       { en: "Relief",           es: "Alivio" },
       { en: "Peace",            es: "Paz" },
       { en: "Pride",            es: "Orgullo" },
-      { en: "Fiero",            es: "Fiero" },
-      { en: "Naches",           es: "Naches" },
+      { en: "Fiero",            es: "Triunfo propio" },
+      { en: "Naches",           es: "Triunfo ajeno" },
       { en: "Wonder",           es: "Asombro" },
       { en: "Excitement",       es: "Entusiasmo" },
       { en: "Ecstasy",          es: "Éxtasis" }
