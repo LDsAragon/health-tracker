@@ -381,16 +381,22 @@ function ewRenderInfo(base, mid, spec, depth, color) {
   if (midEs)  crumb += ` <span class="ew-sep">›</span> ${midEs}`;
   if (specEs) crumb += ` <span class="ew-sep">›</span> ${specEs}`;
 
-  const art   = EW_ART[baseEs] || 'la';
-  const baseN = W.coreNoun ? `${art} ${baseEs}` : `estar ${baseEs}`; // "la Ira" / "estar Enojado"
-  const nodoEs = specEs || midEs || baseEs;            // segmento activo (en español)
+  const art     = EW_ART[baseEs] || 'la';
+  const baseTxt = W.coreNoun ? `${art} ${baseEs}` : `estar ${baseEs}`; // "el Disfrute" / "estar Enojado"
+  const baseN   = `<span style="color:${color}">${baseTxt}</span>`;     // raíz pintada con su color
+
+  // Nombre del segmento: bilingüe "es/inglés" cuando la rueda es bilingüe (Ekman); pintado de blanco
+  const nodeId  = depth >= 3 ? spec : depth >= 2 ? mid : null;          // id = inglés en la rueda Ekman
+  const nodoEs  = specEs || midEs || baseEs;
+  const nodoTxt = (W.bilingual && nodeId && nodeId !== nodoEs) ? `${nodoEs}/${nodeId}` : nodoEs;
+  const nodeN   = `<span style="color:#fff">${nodoTxt}</span>`;
 
   const manifLabel = `Cómo se manifiesta ${baseN}`;
   const sirveLabel = `Para qué sirve ${baseN}`;
   let queLabel, distLabel;
   if (depth >= 2) {
-    queLabel  = W.nodeStyle === 'noun' ? `Qué es «${nodoEs}»` : `Qué es sentirse ${nodoEs}`;
-    distLabel = `Cómo distinguir «${nodoEs}»`;
+    queLabel  = W.nodeStyle === 'noun' ? `Qué es «${nodeN}»` : `Qué es sentirse ${nodeN}`;
+    distLabel = `Cómo distinguir «${nodeN}»`;
   } else {
     queLabel  = `Qué es ${baseN}`;
     distLabel = `Disparadores y cómo distinguir ${baseN}`;
