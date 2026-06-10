@@ -40,9 +40,10 @@ function ewWheelSpec(id) {
   if (id === 'ek' && typeof EKMAN_WHEEL !== 'undefined') {
     const bases = Object.keys(EKMAN_WHEEL).map(k => {
       const b = EKMAN_WHEEL[k];
+      // id en INGLÉS (keys de EKMAN_CONTENT); label en ESPAÑOL (lo que se dibuja en la rueda)
       return {
-        id: k, label: b.en, es: b.es, color: b.color,
-        children: b.states.map(s => ({ id: s.en, label: s.en, es: s.es, children: [] }))
+        id: k, label: b.es, es: b.es, en: b.en, color: b.color,
+        children: b.states.map(s => ({ id: s.en, label: s.es, es: s.es, en: s.en, children: [] }))
       };
     });
     return { id: 'ek', levels: 2, bases, rings: EK_RINGS, nodeStyle: 'noun', bilingual: true,
@@ -211,7 +212,7 @@ function applyAngle(angle) {
   if (cl) {
     cl.style.color = topNode.color;
     cl.innerHTML = W.bilingual
-      ? `${topNode.label}<span style="display:block;font-size:8px;font-weight:600;opacity:.75">${topNode.es}</span>`
+      ? `${topNode.label}<span style="display:block;font-size:8px;font-weight:600;opacity:.7">${topNode.en}</span>`
       : topNode.label;
   }
 }
@@ -313,10 +314,14 @@ function ewHover(base, mid, spec, depth, color) {
 
   const lbl = document.getElementById('ew-hover-label');
   if (!lbl) return;
+  const W    = ewState.wheel;
   const sep  = '<span class="ew-sep"> › </span>';
-  let   html = `<span style="color:${color};font-weight:700">${base}</span>`;
-  if (depth >= 2) html += sep + `<span style="color:${color};font-weight:700">${mid}</span>`;
-  if (depth >= 3) html += sep + `<span style="color:${color};font-weight:700">${spec}</span>`;
+  const bEs  = _esOf(W, base);
+  const mEs  = depth >= 2 ? _esOf(W, base, mid) : null;
+  const sEs  = depth >= 3 ? _esOf(W, base, mid, spec) : null;
+  let   html = `<span style="color:${color};font-weight:700">${bEs}</span>`;
+  if (mEs) html += sep + `<span style="color:${color};font-weight:700">${mEs}</span>`;
+  if (sEs) html += sep + `<span style="color:${color};font-weight:700">${sEs}</span>`;
   lbl.innerHTML = html;
 
   const hint = document.getElementById('ew-hover-hint');
