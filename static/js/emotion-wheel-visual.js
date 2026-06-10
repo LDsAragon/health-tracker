@@ -1,9 +1,8 @@
-// ── Rueda de emociones — 3 anillos concéntricos ────────────────────────────
-// ew-wheel-g → paths que ROTAN
-// ew-label-g → textos FIJOS (posición orbita, orientación siempre horizontal)
-// Selector (◄) fijo a la derecha (3 en punto, 90°)
+// ── Rueda de emociones — motor data-driven (soporta 2 o 3 anillos) ─────────
+// ew-wheel-g → paths que ROTAN · ew-label-g → textos · Selector (◄) a la derecha (90°)
+// La rueda activa vive en ewState.wheel (spec normalizado): española (3 niveles) o Ekman (2).
 
-let ewState   = { angle: 90, picker: null };
+let ewState   = { angle: 90, picker: null, wheel: null };
 let _ewAnimId = null;
 let _ewMouse  = { x: null, y: null };
 
@@ -16,23 +15,72 @@ function _reapplyHover() {
   while (el && !el.dataset.depth) el = el.parentElement;
   if (el && el.dataset.depth) {
     ewHover(el.dataset.base, el.dataset.mid || null, el.dataset.specific || null,
-            +el.dataset.depth, EMOTION_WHEEL[el.dataset.base].color);
+            +el.dataset.depth, _colorOf(ewState.wheel, el.dataset.base));
   }
 }
 
 // Geometría (viewBox "-180 -180 360 360")
-const EW = {
-  r0:  30,
-  r1i: 32,  r1o: 80,    // base      — label r=56
-  r2i: 84,  r2o: 128,   // media     — label r=106
-  r3i: 132, r3o: 170,   // específica — label r=151
-};
+const EW = { r0: 30, r1i: 32, r1o: 80, r2i: 84, r2o: 128, r3i: 132, r3o: 170 };
 const ACTIVE_DEG = 90; // el sector activo es el que está en 90° (derecha)
+
+// Radios/labels por anillo, según la cantidad de niveles
+const ES_RINGS = {
+  1: { ri: 32,  ro: 80,  lr: 56,  fs: '8px',   fw: '800' },
+  2: { ri: 84,  ro: 128, lr: 106, fs: '6px',   fw: '700' },
+  3: { ri: 132, ro: 170, lr: 151, fs: '5.5px', fw: '600' }
+};
+const EK_RINGS = {                       // 2 niveles → anillo exterior más amplio
+  1: { ri: 32, ro: 80,  lr: 56,  fs: '8px', fw: '800' },
+  2: { ri: 84, ro: 170, lr: 124, fs: '6px', fw: '700' }
+};
+
+// ── Spec de la rueda activa (normaliza ambas estructuras) ──────────────────
+
+function ewWheelSpec(id) {
+  if (id === 'ek' && typeof EKMAN_WHEEL !== 'undefined') {
+    const bases = Object.keys(EKMAN_WHEEL).map(k => {
+      const b = EKMAN_WHEEL[k];
+      return {
+        id: k, label: b.en, es: b.es, color: b.color,
+        children: b.states.map(s => ({ id: s.en, label: s.en, es: s.es, children: [] }))
+      };
+    });
+    return { id: 'ek', levels: 2, bases, rings: EK_RINGS, nodeStyle: 'noun', bilingual: true,
+             content: (typeof EKMAN_CONTENT !== 'undefined' ? EKMAN_CONTENT : {}) };
+  }
+  // Por defecto: rueda española (3 niveles)
+  const bases = Object.keys(EMOTION_WHEEL).map(k => {
+    const b = EMOTION_WHEEL[k];
+    return {
+      id: k, label: k, es: k, color: b.color,
+      children: Object.keys(b.children).map(m => ({
+        id: m, label: m, es: m,
+        children: b.children[m].map(s => ({ id: s, label: s, es: s, children: [] }))
+      }))
+    };
+  });
+  return { id: 'es', levels: 3, bases, rings: ES_RINGS, nodeStyle: 'adj', bilingual: false,
+           content: (typeof EMOTION_CONTENT !== 'undefined' ? EMOTION_CONTENT : {}) };
+}
+
+function _specBase(W, baseId) { return W && W.bases.find(b => b.id === baseId) || null; }
+function _specNode(W, baseId, midId, specId) {
+  const b = _specBase(W, baseId); if (!b) return null;
+  if (!midId) return b;
+  const m = b.children.find(c => c.id === midId); if (!m) return null;
+  if (!specId) return m;
+  return m.children.find(c => c.id === specId) || null;
+}
+function _esOf(W, baseId, midId, specId) {
+  const n = _specNode(W, baseId, midId, specId);
+  return n ? n.es : (specId || midId || baseId);
+}
+function _colorOf(W, baseId) { const b = _specBase(W, baseId); return b ? b.color : '#8892a4'; }
 
 // ── Abrir / cerrar ────────────────────────────────────────────────────────
 
-function openEWModal(pickerEl) {
-  ewState = { angle: 90, picker: pickerEl };
+function openEWModal(pickerEl, wheelId) {
+  ewState = { angle: 90, picker: pickerEl, wheel: ewWheelSpec(wheelId || 'es') };
   buildFullWheel();
   document.getElementById('ew-modal').style.display = 'flex';
   document.addEventListener('keydown',    ewKeyHandler);
@@ -51,6 +99,17 @@ function ewOverlayClick(e) {
   if (e.target === document.getElementById('ew-modal')) closeEWModal();
 }
 
+// Cambiar de rueda en vivo (toggle dentro del modal)
+function ewSwitchWheel(wheelId) {
+  if (!ewState.wheel || ewState.wheel.id === wheelId) return;
+  ewState.angle = 90;
+  ewState.wheel = ewWheelSpec(wheelId);
+  buildFullWheel();
+  document.querySelectorAll('.ew-wheel-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.wheel === wheelId);
+  });
+}
+
 // ── Teclado ───────────────────────────────────────────────────────────────
 
 function ewKeyHandler(e) {
@@ -60,12 +119,13 @@ function ewKeyHandler(e) {
   if (e.key === 'Escape') { e.preventDefault(); closeEWModal(); }
 }
 
-// ── Rotación — snap de 60° con ease-out cúbico ────────────────────────────
+// ── Rotación — snap de un sector con ease-out cúbico ───────────────────────
 
 function rotateWheel(dir) {
   if (_ewAnimId) { cancelAnimationFrame(_ewAnimId); _ewAnimId = null; }
+  const step = 360 / ewState.wheel.bases.length;
   const from = ewState.angle;
-  const to   = from + dir * 60;
+  const to   = from + dir * step;
   ewState.angle = to;
   animateWheelTo(from, to);
 }
@@ -93,15 +153,15 @@ function applyAngle(angle) {
   if (gClone && gClone.firstChild) gClone.innerHTML = '';
   gWheel.setAttribute('transform', `rotate(${angle})`);
 
-  const bases   = Object.keys(EMOTION_WHEEL);
-  const top     = topIdx(angle);
-  const topBase = bases[top];
+  const W        = ewState.wheel;
+  const topNode  = W.bases[topIdx(angle)];
+  const topBase  = topNode.id;
 
   // ── 1. Highlight del sector activo en los paths ───────────────────────
   gWheel.querySelectorAll('[data-base]').forEach(el => {
-    el.removeAttribute('transform'); // limpia rotación individual del hover anterior
+    el.removeAttribute('transform');
     const isActive = el.dataset.base === topBase && el.dataset.depth === '1';
-    if (el.dataset.fill0) el.style.fill = el.dataset.fill0; // restaura color original
+    if (el.dataset.fill0) el.style.fill = el.dataset.fill0;
     el.style.opacity     = '1';
     el.style.stroke      = isActive ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.16)';
     el.style.strokeWidth = isActive ? '1.5' : strokeW(el.dataset.depth);
@@ -119,8 +179,6 @@ function applyAngle(angle) {
     el.setAttribute('x', wx);
     el.setAttribute('y', wy);
 
-    // Orientación radial: texto sigue la dirección de su sector
-    // Mitad izquierda (worldDeg > 180) se voltea para no quedar al revés
     let rot = worldDeg - 90;
     if (worldDeg > 180) rot += 180;
     el.setAttribute('transform', `rotate(${f(rot)},${wx},${wy})`);
@@ -134,14 +192,20 @@ function applyAngle(angle) {
 
   // ── 3. Etiqueta central ───────────────────────────────────────────────
   const cl = document.getElementById('ew-center-label');
-  if (cl) { cl.textContent = topBase; cl.style.color = EMOTION_WHEEL[topBase].color; }
+  if (cl) {
+    cl.style.color = topNode.color;
+    cl.innerHTML = W.bilingual
+      ? `${topNode.label}<span style="display:block;font-size:8px;font-weight:600;opacity:.75">${topNode.es}</span>`
+      : topNode.label;
+  }
 }
 
 // Índice del sector más cercano a ACTIVE_DEG (90°, derecha)
 function topIdx(angle) {
+  const N = ewState.wheel.bases.length, span = 360 / N;
   let best = 0, bestDist = Infinity;
-  for (let i = 0; i < 6; i++) {
-    const pos  = ((i * 60 + angle) % 360 + 360) % 360;
+  for (let i = 0; i < N; i++) {
+    const pos  = ((i * span + angle) % 360 + 360) % 360;
     const diff = Math.abs(((pos - ACTIVE_DEG + 180 + 360) % 360) - 180);
     if (diff < bestDist) { bestDist = diff; best = i; }
   }
@@ -155,15 +219,11 @@ function strokeW(depth) {
 // ── Hover — idéntico visualmente al sector activo ─────────────────────────
 
 function ewHover(base, mid, spec, depth, color) {
-  // Durante el giro, los sectores barren bajo el cursor y disparan mouseover:
-  // ignoramos esos hovers y aplicamos uno solo al terminar (_reapplyHover, con _ewAnimId ya nulo).
-  if (_ewAnimId) return;
+  if (_ewAnimId) return; // durante el giro se ignora; _reapplyHover lo aplica al terminar
 
-  // Ids de segmento de los anillos clonables (2 y 3) — null si no participan
   const id2 = depth >= 2 ? base + '|' + mid : null;
   const id3 = depth >= 3 ? base + '|' + mid + '|' + spec : null;
 
-  // ── Paths: highlight + capturar fuentes para clonar (anillos 2 y 3) ──────
   const gWheel = document.getElementById('ew-wheel-g');
   const srcByRing = {};
   if (gWheel) {
@@ -187,12 +247,11 @@ function ewHover(base, mid, spec, depth, color) {
       el.style.filter      = '';
     });
 
-    // ── Clones por anillo (2 y 3) con persistencia ────────────────────────
     const gClone = document.getElementById('ew-hover-clone-g');
     if (gClone) {
       [[2, id2], [3, id3]].forEach(([ring, id]) => {
         let existing = gClone.querySelector(`[data-lift-ring="${ring}"]`);
-        if (existing && existing.dataset.liftId === (id || '')) return; // sin cambio → no re-animar
+        if (existing && existing.dataset.liftId === (id || '')) return;
         if (existing) existing.remove();
         if (!id || !srcByRing[ring]) return;
         const src   = srcByRing[ring];
@@ -211,7 +270,6 @@ function ewHover(base, mid, spec, depth, color) {
     }
   }
 
-  // ── Labels: inPath → horizontal (idempotente); resto → radial ────────────
   const gLabel = document.getElementById('ew-label-g');
   if (gLabel) {
     gLabel.querySelectorAll('[data-la]').forEach(el => {
@@ -250,22 +308,21 @@ function ewHover(base, mid, spec, depth, color) {
 }
 
 function ewHoverClear() {
-  // Vuelve al estado "activo" (sin hover)
   applyAngle(ewState.angle);
   const lbl  = document.getElementById('ew-hover-label');
   const hint = document.getElementById('ew-hover-hint');
   if (lbl)  lbl.innerHTML = '';
   if (hint) hint.textContent = 'Rotá para explorar · hover para leer · click para guardar';
   // El panel nunca queda vacío: muestra la emoción base activa (centro)
-  const tb = Object.keys(EMOTION_WHEEL)[topIdx(ewState.angle)];
-  ewRenderInfo(tb, null, null, 1, EMOTION_WHEEL[tb].color);
+  const tb = ewState.wheel.bases[topIdx(ewState.angle)];
+  ewRenderInfo(tb.id, null, null, 1, tb.color);
 }
 
 // ── Panel lateral de contexto ─────────────────────────────────────────────
 
 // Resuelve los 4 campos del más profundo disponible, cayendo al ancestro (spec→mid→base)
 function ewContent(base, mid, spec, depth) {
-  const C = (typeof EMOTION_CONTENT !== 'undefined') ? EMOTION_CONTENT : {};
+  const C = (ewState.wheel && ewState.wheel.content) || {};
   const chain = [];
   if (depth >= 3 && spec) chain.push(C[base + '|' + mid + '|' + spec]);
   if (depth >= 2 && mid)  chain.push(C[base + '|' + mid]);
@@ -277,33 +334,41 @@ function ewContent(base, mid, spec, depth) {
   return out;
 }
 
-const EW_ART = { Ira: 'la', Disgusto: 'el', Tristeza: 'la', Felicidad: 'la', Sorpresa: 'la', Miedo: 'el' };
+const EW_ART = { Ira: 'la', Disgusto: 'el', Tristeza: 'la', Felicidad: 'la',
+                 Sorpresa: 'la', Miedo: 'el', Asco: 'el', Disfrute: 'el' };
 
 function ewRenderInfo(base, mid, spec, depth, color) {
   const panel = document.getElementById('ew-info-panel');
   if (!panel) return;
+  const W = ewState.wheel;
   const c = ewContent(base, mid, spec, depth);
 
-  let crumb = `<span style="color:${color}">${base}</span>`;
-  if (depth >= 2 && mid)  crumb += ` <span class="ew-sep">›</span> ${mid}`;
-  if (depth >= 3 && spec) crumb += ` <span class="ew-sep">›</span> ${spec}`;
+  // Breadcrumb en español (la "traducción"); la rueda muestra el idioma propio
+  const baseEs = _esOf(W, base);
+  const midEs  = depth >= 2 ? _esOf(W, base, mid) : null;
+  const specEs = depth >= 3 ? _esOf(W, base, mid, spec) : null;
+  let crumb = `<span style="color:${color}">${baseEs}</span>`;
+  if (midEs)  crumb += ` <span class="ew-sep">›</span> ${midEs}`;
+  if (specEs) crumb += ` <span class="ew-sep">›</span> ${specEs}`;
 
-  const baseN = `${EW_ART[base] || 'la'} ${base}`;           // "la Ira", "el Miedo"
-  const nodo  = depth >= 3 ? spec : depth >= 2 ? mid : base;  // segmento activo
-  // Grupo base (sirve/manifiesta se heredan de la base → siempre la nombran)
+  const art   = EW_ART[baseEs] || 'la';
+  const baseN = `${art} ${baseEs}`;                    // "la Ira", "el Miedo"
+  const nodoEs = specEs || midEs || baseEs;            // segmento activo (en español)
+
   const manifLabel = `Cómo se manifiesta ${baseN}`;
   const sirveLabel = `Para qué sirve ${baseN}`;
-  // Grupo del segmento (qué es / distinguir → el nodo más profundo)
-  const queLabel = depth >= 2 ? `Qué es sentirse ${nodo}` : `Qué es ${baseN}`;
-  const distLabel = depth >= 2
-    ? `Cómo distinguir «${nodo}»`
-    : `Disparadores y cómo distinguir ${baseN}`;
+  let queLabel, distLabel;
+  if (depth >= 2) {
+    queLabel  = W.nodeStyle === 'noun' ? `Qué es «${nodoEs}»` : `Qué es sentirse ${nodoEs}`;
+    distLabel = `Cómo distinguir «${nodoEs}»`;
+  } else {
+    queLabel  = `Qué es ${baseN}`;
+    distLabel = `Disparadores y cómo distinguir ${baseN}`;
+  }
 
   const sec = (label, val) =>
     val ? `<div class="ew-info-sec"><h4>${label}</h4><p>${val}</p></div>` : '';
 
-  // Atribución honesta: en la base es Ekman; en segmentos, función de Ekman +
-  // definición léxica (si está anclada) + matiz de redacción propia.
   const srcLine = depth >= 2
     ? `Función y manifestación: Paul Ekman${c.fdef ? ' · Definición: ' + c.fdef : ''} · Matiz: redacción propia`
     : (c.fuente ? `Fuente: ${c.fuente}` : '');
@@ -330,7 +395,7 @@ function _setLabelRadial(el) {
 function _animLabelTo0(el, tx, ty) {
   if (el._animId) { cancelAnimationFrame(el._animId); el._animId = null; }
   const match   = (el.getAttribute('transform') || '').match(/rotate\(([-\d.]+)/);
-  const fromRot = _norm180(match ? parseFloat(match[1]) : 0); // camino más corto a 0°
+  const fromRot = _norm180(match ? parseFloat(match[1]) : 0);
   if (Math.abs(fromRot) < 0.5) { el.setAttribute('transform', `rotate(0,${tx},${ty})`); return; }
   const start = performance.now(), dur = 130;
   function tick(now) {
@@ -343,10 +408,9 @@ function _animLabelTo0(el, tx, ty) {
 }
 
 // Anima el clon del sector: lo inclina alrededor de su centro hasta quedar horizontal.
-// Mismo giro que el texto (no oscila al sector activo — rota en su lugar).
 function _animSectorClone(clone, ewAngle, initA, depth) {
-  const rMap   = { 1: (EW.r1i+EW.r1o)/2, 2: (EW.r2i+EW.r2o)/2, 3: (EW.r3i+EW.r3o)/2 };
-  const r      = rMap[depth] || rMap[1];
+  const ring   = ewState.wheel.rings[depth] || ewState.wheel.rings[1];
+  const r      = (ring.ri + ring.ro) / 2;
   const wDeg   = ((initA + ewAngle) % 360 + 360) % 360;
   const wRad   = wDeg * Math.PI / 180;
   const wx     = f(r * Math.sin(wRad));
@@ -361,7 +425,6 @@ function _animSectorClone(clone, ewAngle, initA, depth) {
     const t    = Math.min((now - start) / dur, 1);
     const ease = 1 - Math.pow(1 - t, 3);
     const tilt = f(-radAng * ease);
-    // Compone: primero rota la rueda (ewAngle), luego inclina alrededor de (wx,wy)
     clone.setAttribute('transform', `rotate(${tilt},${wx},${wy}) rotate(${ewAngle})`);
     if (t < 1) requestAnimationFrame(tick);
   }
@@ -371,74 +434,77 @@ function _animSectorClone(clone, ewAngle, initA, depth) {
 // ── Selección ─────────────────────────────────────────────────────────────
 
 function ewSelect(base, mid, spec, depth) {
-  let val = base;
-  if (depth >= 2 && mid)  val += ' > ' + mid;
-  if (depth >= 3 && spec) val += ' > ' + spec;
+  const W = ewState.wheel;
+  const parts = [ _esOf(W, base) ];
+  if (depth >= 2 && mid)  parts.push(_esOf(W, base, mid));
+  if (depth >= 3 && spec) parts.push(_esOf(W, base, mid, spec));
+  let val = parts.join(' > ');
+  if (W.id !== 'es') val = W.id + '::' + val; // origen de taxonomía (ej. "ek::Ira > Frustración")
   ewRestore(ewState.picker, val);
   closeEWModal();
 }
 
-// ── Construir SVG ─────────────────────────────────────────────────────────
+// ── Construir SVG (genérico según el spec activo) ──────────────────────────
 
 function buildFullWheel() {
+  const W   = ewState.wheel;
   const svg = document.getElementById('ew-svg');
   svg.innerHTML = '';
-  // Reset total solo al salir de la rueda (no entre sectores → persistencia del hover)
-  svg.onmouseleave = ewHoverClear;
+  svg.onmouseleave = ewHoverClear; // reset total solo al salir de la rueda
 
   const gWheel = svgG('ew-wheel-g');
   const gClone = svgG('ew-hover-clone-g');
   const gLabel = svgG('ew-label-g');
 
-  const bases = Object.keys(EMOTION_WHEEL);
+  const N = W.bases.length, span = 360 / N;
+  const R1 = W.rings[1], R2 = W.rings[2], R3 = W.rings[3];
 
-  bases.forEach((base, bi) => {
-    const baseColor = EMOTION_WHEEL[base].color;
-    const mids      = Object.keys(EMOTION_WHEEL[base].children);
-    const BASE_A    = bi * 60;
+  W.bases.forEach((b, bi) => {
+    const baseColor = b.color;
+    const baseC = bi * span;          // ángulo central de la base
+    const start = baseC - span / 2;
 
     // Anillo 1 — base
-    const p1 = sector(EW.r1i, EW.r1o, BASE_A - 30, BASE_A + 30, baseColor, 0.7);
-    p1.dataset.base      = base; p1.dataset.depth = '1';
-    p1.dataset.initAngle = BASE_A;
-    p1.style.cursor      = 'pointer';
-    bindSlice(p1, base, null, null, 1, baseColor);
+    const p1 = sector(R1.ri, R1.ro, start, start + span, baseColor, 0.7);
+    p1.dataset.base = b.id; p1.dataset.depth = '1'; p1.dataset.initAngle = f(baseC);
+    p1.style.cursor = 'pointer';
+    bindSlice(p1, b.id, null, null, 1, baseColor);
     gWheel.appendChild(p1);
-    gLabel.appendChild(makeLabel(base, BASE_A, (EW.r1i+EW.r1o)/2, '8px', '800', base, 1));
+    gLabel.appendChild(makeLabel(b.label, baseC, R1.lr, R1.fs, R1.fw, b.id, 1, b.es));
 
-    mids.forEach((mid, mi) => {
-      const MID  = 60 / mids.length; // 10°
-      const midA = BASE_A - 30 + (mi + 0.5) * MID;
+    const mids = b.children, M = mids.length, midArc = span / M;
+    mids.forEach((m, mi) => {
+      const mStart = start + mi * midArc;
+      const midC   = mStart + midArc / 2;
       const midColor = tint(baseColor, 0.20 + 0.06 * (mi & 1));
 
-      const p2 = sector(EW.r2i, EW.r2o, BASE_A-30+mi*MID, BASE_A-30+(mi+1)*MID, midColor, 0.45);
-      p2.dataset.base      = base; p2.dataset.mid = mid; p2.dataset.depth = '2';
-      p2.dataset.initAngle = f(midA);
-      p2.style.cursor      = 'pointer';
-      bindSlice(p2, base, mid, null, 2, baseColor);
+      const p2 = sector(R2.ri, R2.ro, mStart, mStart + midArc, midColor, 0.45);
+      p2.dataset.base = b.id; p2.dataset.mid = m.id; p2.dataset.depth = '2'; p2.dataset.initAngle = f(midC);
+      p2.style.cursor = 'pointer';
+      bindSlice(p2, b.id, m.id, null, 2, baseColor);
       gWheel.appendChild(p2);
-      const lbl2 = makeLabel(mid, midA, (EW.r2i+EW.r2o)/2, '6px', '700', base, 2);
-      lbl2.dataset.mid = mid;
+      const lbl2 = makeLabel(m.label, midC, R2.lr, R2.fs, R2.fw, b.id, 2, m.es);
+      lbl2.dataset.mid = m.id;
       gLabel.appendChild(lbl2);
 
-      const specs = EMOTION_WHEEL[base].children[mid];
-      specs.forEach((spec, si) => {
-        const SPEC  = MID / 2; // 5°
-        const specA = BASE_A - 30 + mi*MID + (si+0.5)*SPEC;
-        const specColor = tint(baseColor, 0.36 + 0.08 * (si & 1));
+      if (W.levels >= 3 && m.children.length) {
+        const specs = m.children, K = specs.length, specArc = midArc / K;
+        specs.forEach((s, si) => {
+          const sStart = mStart + si * specArc;
+          const specC  = sStart + specArc / 2;
+          const specColor = tint(baseColor, 0.36 + 0.08 * (si & 1));
 
-        const p3 = sector(EW.r3i, EW.r3o, BASE_A-30+mi*MID+si*SPEC, BASE_A-30+mi*MID+(si+1)*SPEC, specColor, 0.3);
-        p3.dataset.base      = base; p3.dataset.mid = mid;
-        p3.dataset.specific  = spec; p3.dataset.depth = '3';
-        p3.dataset.initAngle = f(specA);
-        p3.style.cursor      = 'pointer';
-        bindSlice(p3, base, mid, spec, 3, baseColor);
-        gWheel.appendChild(p3);
-        const lbl3 = makeLabel(spec, specA, (EW.r3i+EW.r3o)/2, '5.5px', '600', base, 3);
-        lbl3.dataset.mid      = mid;
-        lbl3.dataset.specific = spec;
-        gLabel.appendChild(lbl3);
-      });
+          const p3 = sector(R3.ri, R3.ro, sStart, sStart + specArc, specColor, 0.3);
+          p3.dataset.base = b.id; p3.dataset.mid = m.id; p3.dataset.specific = s.id;
+          p3.dataset.depth = '3'; p3.dataset.initAngle = f(specC);
+          p3.style.cursor = 'pointer';
+          bindSlice(p3, b.id, m.id, s.id, 3, baseColor);
+          gWheel.appendChild(p3);
+          const lbl3 = makeLabel(s.label, specC, R3.lr, R3.fs, R3.fw, b.id, 3, s.es);
+          lbl3.dataset.mid = m.id; lbl3.dataset.specific = s.id;
+          gLabel.appendChild(lbl3);
+        });
+      }
     });
   });
 
@@ -459,9 +525,9 @@ function buildFullWheel() {
   // Selector ◄ fijo a la derecha (90° = eje X positivo)
   const ptr = svgEl('polygon');
   ptr.setAttribute('points', '177,-9 177,9 165,0');
-  ptr.style.fill         = 'rgba(255,255,255,0.92)';
+  ptr.style.fill          = 'rgba(255,255,255,0.92)';
   ptr.style.pointerEvents = 'none';
-  ptr.style.filter       = 'drop-shadow(-1px 0 4px rgba(0,0,0,0.7))';
+  ptr.style.filter        = 'drop-shadow(-1px 0 4px rgba(0,0,0,0.7))';
   svg.appendChild(ptr);
 
   applyAngle(ewState.angle);
@@ -470,7 +536,7 @@ function buildFullWheel() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function makeLabel(text, initAngle, r, fontSize, fontWeight, base, ring) {
+function makeLabel(text, initAngle, r, fontSize, fontWeight, base, ring, esText) {
   const rad = initAngle * Math.PI / 180;
   const el  = svgEl('text');
   el.setAttribute('x', f(r * Math.sin(rad)));
@@ -481,6 +547,7 @@ function makeLabel(text, initAngle, r, fontSize, fontWeight, base, ring) {
   el.dataset.lr   = r;
   el.dataset.base = base;
   el.dataset.ring = ring;
+  if (esText) el.dataset.es = esText;
   el.style.fontSize      = fontSize;
   el.style.fill          = 'rgba(255,255,255,0.92)';
   el.style.fontWeight    = fontWeight;
@@ -506,7 +573,7 @@ function sector(ri, ro, a1deg, a2deg, color, sw) {
     `A${ri} ${ri} 0 ${lg} 0 ${f(ri*Math.sin(a1))} ${f(-ri*Math.cos(a1))}Z`
   );
   p.style.fill        = color;
-  p.dataset.fill0     = color; // color original, para restaurar tras el hover
+  p.dataset.fill0     = color;
   p.style.stroke      = 'rgba(0,0,0,0.16)';
   p.style.strokeWidth = String(sw);
   return p;
