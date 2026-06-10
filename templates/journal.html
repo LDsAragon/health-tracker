@@ -39,6 +39,16 @@
       </label>
     </div>
 
+    <!-- Plantillas rápidas (presets compuestos de campos genéricos) -->
+    <div class="field-group">
+      <label>Plantillas rápidas</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn-undo" onclick="applyPreset('sueno')">😴 Sueño</button>
+        <button type="button" class="btn-undo" onclick="applyPreset('estudio')">📚 Estudio</button>
+        <span style="font-size:11px;color:var(--muted);align-self:center;">prellenan los campos abajo · podés ajustarlos</span>
+      </div>
+    </div>
+
     <!-- Builder de campos -->
     <div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -166,22 +176,53 @@
 {% endif %}
 
 <script>
-function addField(containerId) {
-  const container = document.getElementById(containerId);
+const FIELD_TYPES = [
+  ['text', 'Texto libre'], ['emotion-wheel', '🎡 Rueda de emociones'],
+  ['duracion', '⏱️ Duración'], ['rango', '🕒 Rango horario']
+];
+
+function _fieldRow(label, type, ph) {
+  const esc = s => (s || '').replace(/"/g, '&quot;');
+  const opts = FIELD_TYPES.map(([v, t]) =>
+    '<option value="' + v + '"' + (v === type ? ' selected' : '') + '>' + t + '</option>').join('');
   const row = document.createElement('div');
   row.className = 'journal-field-row';
   row.innerHTML =
-    '<input type="text" name="field_label[]" placeholder="Nombre del campo" style="flex:1.2;">' +
-    '<select name="field_type[]" class="journal-type-select">' +
-    '<option value="text">Texto libre</option>' +
-    '<option value="emotion-wheel">🎡 Rueda de emociones</option>' +
-    '<option value="duracion">⏱️ Duración</option>' +
-    '<option value="rango">🕒 Rango horario</option>' +
-    '</select>' +
-    '<input type="text" name="field_placeholder[]" placeholder="Ayuda (opcional)" style="flex:1;">' +
+    '<input type="text" name="field_label[]" value="' + esc(label) + '" placeholder="Nombre del campo" style="flex:1.2;">' +
+    '<select name="field_type[]" class="journal-type-select">' + opts + '</select>' +
+    '<input type="text" name="field_placeholder[]" value="' + esc(ph) + '" placeholder="Ayuda (opcional)" style="flex:1;">' +
     '<button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>';
+  return row;
+}
+
+function addField(containerId) {
+  const container = document.getElementById(containerId);
+  const row = _fieldRow('', 'text', '');
   container.appendChild(row);
   row.querySelector('input').focus();
+}
+
+// Presets dedicados (widgets) compuestos de los campos genéricos
+const JCAT_PRESETS = {
+  sueno:   { name: 'Sueño',   color: '#3b82f6', fields: [
+    { label: 'Acostarse → Levantarse', type: 'rango', ph: '' },
+    { label: 'Notas',                  type: 'text',  ph: 'cómo dormí, despertares...' }
+  ]},
+  estudio: { name: 'Estudio', color: '#a855f7', fields: [
+    { label: 'Tiempo estudiado', type: 'duracion', ph: '' },
+    { label: 'Qué estudié',      type: 'text',     ph: 'tema, materia...' }
+  ]}
+};
+
+function applyPreset(key) {
+  const p = JCAT_PRESETS[key];
+  if (!p) return;
+  document.getElementById('jcat-name').value = p.name;
+  const radio = document.querySelector('#jcat-add-form input[name="color"][value="' + p.color + '"]');
+  if (radio) radio.checked = true;
+  const c = document.getElementById('jcat-add-fields');
+  c.innerHTML = '';
+  p.fields.forEach(f => c.appendChild(_fieldRow(f.label, f.type, f.ph)));
 }
 
 function removeField(btn) {
