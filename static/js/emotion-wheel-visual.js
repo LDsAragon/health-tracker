@@ -277,21 +277,38 @@ function ewContent(base, mid, spec, depth) {
   return out;
 }
 
+const EW_ART = { Ira: 'la', Disgusto: 'el', Tristeza: 'la', Felicidad: 'la', Sorpresa: 'la', Miedo: 'el' };
+
 function ewRenderInfo(base, mid, spec, depth, color) {
   const panel = document.getElementById('ew-info-panel');
   if (!panel) return;
   const c = ewContent(base, mid, spec, depth);
+
   let crumb = `<span style="color:${color}">${base}</span>`;
   if (depth >= 2 && mid)  crumb += ` <span class="ew-sep">›</span> ${mid}`;
   if (depth >= 3 && spec) crumb += ` <span class="ew-sep">›</span> ${spec}`;
+
+  const baseN = `${EW_ART[base] || 'la'} ${base}`;           // "la Ira", "el Miedo"
+  const nodo  = depth >= 3 ? spec : depth >= 2 ? mid : base;  // segmento activo
+  // Grupo base (sirve/manifiesta se heredan de la base → siempre la nombran)
+  const manifLabel = `Cómo se manifiesta ${baseN}`;
+  const sirveLabel = `Para qué sirve ${baseN}`;
+  // Grupo del segmento (qué es / distinguir → el nodo más profundo)
+  const queLabel = depth >= 2 ? `Qué es sentirse ${nodo}` : `Qué es ${baseN}`;
+  const distLabel = depth >= 2
+    ? `Cómo distinguir «${nodo}»`
+    : `Disparadores y cómo distinguir ${baseN}`;
+
   const sec = (label, val) =>
     val ? `<div class="ew-info-sec"><h4>${label}</h4><p>${val}</p></div>` : '';
+
   panel.innerHTML =
     `<div class="ew-info-title">${crumb}</div>` +
-    sec('Qué es', c.que) +
-    sec('Para qué sirve', c.sirve) +
-    sec('Cómo se manifiesta', c.manifiesta) +
-    sec('Disparadores y cómo distinguirla', c.distinguir) +
+    sec(manifLabel, c.manifiesta) +
+    sec(sirveLabel, c.sirve) +
+    '<div class="ew-info-divider"></div>' +
+    sec(queLabel, c.que) +
+    sec(distLabel, c.distinguir) +
     (c.fuente ? `<div class="ew-info-src">Fuente: ${c.fuente}</div>` : '');
 }
 

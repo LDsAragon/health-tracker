@@ -1466,6 +1466,10 @@ select.journal-cat-select {
   color: var(--text);
   margin: 0;
 }
+.ew-info-divider {
+  border-top: 1px dashed var(--border);
+  margin: 4px 0 11px;
+}
 .ew-info-src {
   font-size: 10px;
   color: var(--muted);
