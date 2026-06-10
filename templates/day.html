@@ -406,9 +406,13 @@ function prepareEditValues(id) {
   return true;
 }
 
-// Restaurar valores de rueda de emociones en formularios de edición existentes
-document.querySelectorAll('.emotion-wheel-picker[data-ew-saved]').forEach(p => {
-  if (p.dataset.ewSaved) ewRestore(p, p.dataset.ewSaved);
+// Restaurar valores de rueda de emociones en formularios de edición existentes.
+// En DOMContentLoaded: este script va dentro de <main>, antes de cargar emotion-wheel.js;
+// si corriera ya, ewRestore aún no existe. DOMContentLoaded dispara tras cargar los externos.
+window.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.emotion-wheel-picker[data-ew-saved]').forEach(p => {
+    if (p.dataset.ewSaved) ewRestore(p, p.dataset.ewSaved);
+  });
 });
 </script>
 {% endblock %}
