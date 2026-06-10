@@ -55,6 +55,7 @@
         <label>Campos del seguimiento</label>
         <button type="button" class="btn-undo" onclick="addField('jcat-add-fields')">+ Agregar campo</button>
       </div>
+      <p style="font-size:11px;color:var(--muted);margin:-4px 0 8px;">En <b>Opciones</b> el campo "Ayuda" son las opciones separadas por coma; en <b>Número</b> es la unidad; en <b>Escala</b> (opcional) son etiquetas separadas por coma (ej. <code>😣,😐,😄</code>), o vacío para 1–5.</p>
       <div id="jcat-add-fields" class="journal-fields-builder">
         <div class="journal-field-row">
           <input type="text" name="field_label[]" placeholder="Nombre del campo (ej: ¿Qué sentí?)" style="flex:1.2;">
@@ -63,8 +64,12 @@
             <option value="emotion-wheel">🎡 Rueda de emociones</option>
             <option value="duracion">⏱️ Duración</option>
             <option value="rango">🕒 Rango horario</option>
+            <option value="escala">📊 Escala</option>
+            <option value="sino">☑️ Sí / No</option>
+            <option value="opciones">🔘 Opciones</option>
+            <option value="numero">🔢 Número</option>
           </select>
-          <input type="text" name="field_placeholder[]" placeholder="Ayuda (opcional)" style="flex:1;">
+          <input type="text" name="field_placeholder[]" placeholder="Ayuda / opciones / unidad" style="flex:1;">
           <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar campo">&#10005;</button>
         </div>
       </div>
@@ -152,8 +157,12 @@
                 <option value="emotion-wheel" {% if ftype == 'emotion-wheel' %}selected{% endif %}>🎡 Rueda de emociones</option>
                 <option value="duracion" {% if ftype == 'duracion' %}selected{% endif %}>⏱️ Duración</option>
                 <option value="rango" {% if ftype == 'rango' %}selected{% endif %}>🕒 Rango horario</option>
+                <option value="escala" {% if ftype == 'escala' %}selected{% endif %}>📊 Escala</option>
+                <option value="sino" {% if ftype == 'sino' %}selected{% endif %}>☑️ Sí / No</option>
+                <option value="opciones" {% if ftype == 'opciones' %}selected{% endif %}>🔘 Opciones</option>
+                <option value="numero" {% if ftype == 'numero' %}selected{% endif %}>🔢 Número</option>
               </select>
-              <input type="text" name="field_placeholder[]" value="{{ f.get('placeholder', '') }}" placeholder="Ayuda" style="flex:1;">
+              <input type="text" name="field_placeholder[]" value="{{ f.get('placeholder', '') }}" placeholder="Ayuda / opciones / unidad" style="flex:1;">
               <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>
             </div>
             {% endfor %}
@@ -178,7 +187,9 @@
 <script>
 const FIELD_TYPES = [
   ['text', 'Texto libre'], ['emotion-wheel', '🎡 Rueda de emociones'],
-  ['duracion', '⏱️ Duración'], ['rango', '🕒 Rango horario']
+  ['duracion', '⏱️ Duración'], ['rango', '🕒 Rango horario'],
+  ['escala', '📊 Escala'], ['sino', '☑️ Sí / No'],
+  ['opciones', '🔘 Opciones'], ['numero', '🔢 Número']
 ];
 
 function _fieldRow(label, type, ph) {

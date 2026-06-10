@@ -194,6 +194,23 @@
             <p class="day-journal-field-value">{{ val | dur_fmt }}</p>
             {% elif field.get('type','text') == 'rango' %}
             <p class="day-journal-field-value">{{ val | rango_fmt }}</p>
+            {% elif field.get('type','text') == 'escala' %}
+            {% set _labels = field.get('placeholder','').split(',') | map('trim') | select | list %}
+            {% if _labels | length >= 2 %}
+            {% set _i = val | int %}
+            <p class="day-journal-field-value">{{ _labels[_i - 1] if _i >= 1 and _i <= (_labels|length) else val }}</p>
+            {% else %}
+            <p class="day-journal-field-value fb-scale-display">
+              {% for i in range(1, 6) %}<span class="fb-dot {% if i <= (val|int) %}filled{% endif %}"></span>{% endfor %}
+              <span class="fb-scale-num">{{ val }}/5</span>
+            </p>
+            {% endif %}
+            {% elif field.get('type','text') == 'sino' %}
+            <p class="day-journal-field-value">{{ '✓ Sí' if val == '1' else '✗ No' }}</p>
+            {% elif field.get('type','text') == 'opciones' %}
+            <span class="day-journal-field-value fb-opt-chip">{{ val }}</span>
+            {% elif field.get('type','text') == 'numero' %}
+            <p class="day-journal-field-value">{{ val }} {{ field.get('placeholder','') }}</p>
             {% else %}
             <p class="day-journal-field-value">{{ val }}</p>
             {% endif %}
@@ -257,6 +274,10 @@
             </div>
             {% elif field.get('type','text') == 'rango' %}
             <div class="time-field" data-tf="rango">
+              <input type="hidden" data-label="{{ field.label }}" value="{{ fval }}">
+            </div>
+            {% elif field.get('type','text') in ['escala','sino','opciones','numero'] %}
+            <div class="field-block" data-fb="{{ field.get('type','text') }}" data-config="{{ field.get('placeholder','') }}">
               <input type="hidden" data-label="{{ field.label }}" value="{{ fval }}">
             </div>
             {% else %}
@@ -506,6 +527,10 @@ function buildFields(containerId, catId) {
     if (type === 'emotion-wheel') return buildEWPicker(f.label);
     if (type === 'duracion') return buildDuracionField(f.label, f.placeholder);
     if (type === 'rango') return buildRangoField(f.label, f.placeholder);
+    if (type === 'escala') return buildEscalaField(f.label, f.placeholder);
+    if (type === 'sino') return buildSinoField(f.label, f.placeholder);
+    if (type === 'opciones') return buildOpcionesField(f.label, f.placeholder);
+    if (type === 'numero') return buildNumeroField(f.label, f.placeholder);
     return '<div class="day-journal-field-input">' +
       '<label>' + f.label + '</label>' +
       '<textarea data-label="' + f.label.replace(/"/g, '&quot;') + '" placeholder="' +

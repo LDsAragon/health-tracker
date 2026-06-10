@@ -328,3 +328,52 @@ def test_badge_aparece_en_calendario(client):
     })
     r = client.get("/calendar/2026/6")
     assert b"chip-journal" in r.data
+
+
+# ── Tipos de campo nuevos (escala / sino / opciones / numero) ────────────────────
+
+def test_agregar_categoria_con_tipos_nuevos(client):
+    r = client.post("/journal/add", data={
+        "name": "Bienestar", "color": "#6366f1",
+        "field_label[]": ["Ánimo", "Cumplí", "Momento", "Peso"],
+        "field_type[]": ["escala", "sino", "opciones", "numero"],
+        "field_placeholder[]": ["", "", "Desayuno, Almuerzo, Cena", "kg"],
+    })
+    assert r.status_code == 302
+    fields = db.get_journal_categories()[0]["fields"]
+    assert [f["type"] for f in fields] == ["escala", "sino", "opciones", "numero"]
+    assert fields[2]["placeholder"] == "Desayuno, Almuerzo, Cena"
+
+def test_entry_round_trip_tipos_nuevos(client):
+    client.post("/journal/add", data={
+        "name": "Bienestar", "color": "#6366f1",
+        "field_label[]": ["Ánimo", "Cumplí", "Momento", "Peso"],
+        "field_type[]": ["escala", "sino", "opciones", "numero"],
+        "field_placeholder[]": ["", "", "Desayuno, Almuerzo, Cena", "kg"],
+    })
+    cid = db.get_journal_categories()[0]["id"]
+    vals = {"Ánimo": "4", "Cumplí": "1", "Momento": "Almuerzo", "Peso": "82"}
+    client.post(f"/day/{DATE}/journal/add", data={
+        "category_id": cid, "values_json": json.dumps(vals), "next": "day",
+    })
+    entry = db.get_journal_entries_for_date(DATE)[0]
+    assert entry["values"] == vals
+    body = client.get(f"/day/{DATE}").data.decode("utf-8")
+    assert "Almuerzo" in body           # opciones (chip)
+    assert "✓ Sí" in body               # sino
+    assert "82 kg" in body              # numero + unidad
+    assert "fb-scale-display" in body   # escala numérica (puntos)
+
+def test_escala_con_etiquetas_muestra_label(client):
+    client.post("/journal/add", data={
+        "name": "Ánimo", "color": "#6366f1",
+        "field_label[]": ["Ánimo"],
+        "field_type[]": ["escala"],
+        "field_placeholder[]": ["Mal, Regular, Bien"],
+    })
+    cid = db.get_journal_categories()[0]["id"]
+    client.post(f"/day/{DATE}/journal/add", data={
+        "category_id": cid, "values_json": json.dumps({"Ánimo": "3"}), "next": "day",
+    })
+    body = client.get(f"/day/{DATE}").data.decode("utf-8")
+    assert "Bien" in body   # 3ª etiqueta de la escala
