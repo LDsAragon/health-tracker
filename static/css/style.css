@@ -1008,6 +1008,13 @@ input:focus { outline: none; border-color: var(--accent); }
 
 .rec-entry { display: flex; flex-direction: column; }
 
+.rec-del-panel {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--red);
+  border-radius: var(--r); padding: 10px 14px; margin-bottom: 8px;
+}
+.rec-del-q { font-size: 13px; color: var(--muted); margin-right: 4px; }
+
 .rec-edit-wrap {
   background: var(--surface);
   border: 1px solid var(--accent);

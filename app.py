@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, make_response, send_file
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import calendar as cal
 import json
 import database as db
@@ -103,7 +103,8 @@ def calendar_view(year=None, month=None):
                 "skipped": ev["id"] in day_done and day_done[ev["id"]]["status"] == "skipped",
                 "completion_note": day_done.get(ev["id"], {}).get("note", ""),
             }
-            for ev in recurring if db.event_applies(ev, d)
+            for ev in recurring
+            if ev.get("show_in_calendar", 1) and db.event_applies(ev, d)
         ]
 
     journal_cats  = db.get_journal_categories()
@@ -294,7 +295,20 @@ def recurring_edit(event_id):
 
 @app.route("/recurring/<int:event_id>/delete", methods=["POST"])
 def recurring_delete(event_id):
-    db.delete_recurring_event(event_id)
+    mode = request.form.get("mode", "all")
+    if mode == "future":
+        # corta a futuro: conserva el historial hasta ayer
+        cutoff = (date.today() - timedelta(days=1)).isoformat()
+        db.end_recurring_event(event_id, cutoff)
+    else:
+        db.delete_recurring_event(event_id)
+    return redirect(url_for("recurring_view"))
+
+
+@app.route("/recurring/<int:event_id>/visibility", methods=["POST"])
+def recurring_visibility(event_id):
+    show = request.form.get("show") == "1"
+    db.set_recurring_visibility(event_id, show)
     return redirect(url_for("recurring_view"))
 
 
@@ -327,7 +341,8 @@ def week_view(date_str):
                 "skipped": ev["id"] in day_done and day_done[ev["id"]]["status"] == "skipped",
                 "completion_note": day_done.get(ev["id"], {}).get("note", ""),
             }
-            for ev in recurring if db.event_applies(ev, d)
+            for ev in recurring
+            if ev.get("show_in_calendar", 1) and db.event_applies(ev, d)
         ]
 
     journal_cats  = db.get_journal_categories()

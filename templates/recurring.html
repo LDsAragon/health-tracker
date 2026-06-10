@@ -130,13 +130,43 @@
           </span>
         {% endif %}
       </div>
-      <div style="display:flex; gap:6px; flex-shrink:0;">
+      <div style="display:flex; gap:6px; flex-shrink:0; align-items:flex-start;">
+        {% if ev.recurrence != 'once' %}
+        <form method="POST" action="{{ url_for('recurring_visibility', event_id=ev.id) }}">
+          <input type="hidden" name="show" value="{{ 0 if ev.show_in_calendar else 1 }}">
+          <button type="submit" class="btn-edit"
+                  title="{{ 'Visible en el calendario — clic para ocultar' if ev.show_in_calendar else 'Oculto del calendario (solo en la vista del día) — clic para mostrar' }}">
+            {{ '👁️' if ev.show_in_calendar else '🚫' }}
+          </button>
+        </form>
+        {% endif %}
         <button type="button" class="btn-edit" onclick="editRec({{ ev.id }})">Editar</button>
+        {% if ev.recurrence == 'once' %}
         <form method="POST" action="{{ url_for('recurring_delete', event_id=ev.id) }}"
-              onsubmit="return confirm('¿Eliminar este evento y todo su historial?');">
+              onsubmit="return confirm('¿Eliminar este evento?');">
+          <input type="hidden" name="mode" value="all">
           <button type="submit" class="btn-delete-sm">Eliminar</button>
         </form>
+        {% else %}
+        <button type="button" class="btn-delete-sm" onclick="toggleDel({{ ev.id }})">Eliminar</button>
+        {% endif %}
       </div>
+    </div>
+
+    <!-- Borrado granular (inline, sin modal) -->
+    <div class="rec-del-panel" id="rec-del-{{ ev.id }}" style="display:none;">
+      <span class="rec-del-q">¿Qué borramos?</span>
+      <form method="POST" action="{{ url_for('recurring_delete', event_id=ev.id) }}"
+            onsubmit="return confirm('Cortar a futuro: se conserva el historial pasado. ¿Confirmás?');">
+        <input type="hidden" name="mode" value="future">
+        <button type="submit" class="btn-edit">Borrar futuros (conservar historial)</button>
+      </form>
+      <form method="POST" action="{{ url_for('recurring_delete', event_id=ev.id) }}"
+            onsubmit="return confirm('Borrar TODO, incluido el historial. ¿Confirmás?');">
+        <input type="hidden" name="mode" value="all">
+        <button type="submit" class="btn-delete-sm">Borrar todo</button>
+      </form>
+      <button type="button" class="btn-cancel" onclick="toggleDel({{ ev.id }})">Cancelar</button>
     </div>
 
     <!-- Edición inline -->
@@ -256,6 +286,11 @@ function showEditFreq(id, val) {
 function editRec(id) {
   document.getElementById('rec-view-' + id).style.display = 'none';
   document.getElementById('rec-edit-' + id).style.display = 'block';
+}
+
+function toggleDel(id) {
+  const p = document.getElementById('rec-del-' + id);
+  p.style.display = (p.style.display === 'none' || !p.style.display) ? 'flex' : 'none';
 }
 
 function cancelRec(id) {

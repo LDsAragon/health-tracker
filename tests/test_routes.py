@@ -140,6 +140,29 @@ def test_eliminar_evento_recurrente(client):
     assert r.status_code == 302
     assert db.get_recurring_events() == []
 
+def test_eliminar_evento_modo_all(client):
+    db.add_recurring_event(EV_BASE)
+    eid = db.get_recurring_events()[0]["id"]
+    client.post(f"/recurring/{eid}/delete", data={"mode": "all"})
+    assert db.get_recurring_events() == []
+
+def test_eliminar_evento_modo_future_conserva_evento(client):
+    db.add_recurring_event(EV_BASE)
+    eid = db.get_recurring_events()[0]["id"]
+    r = client.post(f"/recurring/{eid}/delete", data={"mode": "future"})
+    assert r.status_code == 302
+    events = db.get_recurring_events()
+    assert len(events) == 1                 # el evento sigue (no se borra)
+    assert events[0]["end_date"]            # quedó con fecha de corte
+
+def test_toggle_visibilidad_recurrente(client):
+    db.add_recurring_event(EV_BASE)
+    eid = db.get_recurring_events()[0]["id"]
+    client.post(f"/recurring/{eid}/visibility", data={"show": "0"})
+    assert db.get_recurring_events()[0]["show_in_calendar"] == 0
+    client.post(f"/recurring/{eid}/visibility", data={"show": "1"})
+    assert db.get_recurring_events()[0]["show_in_calendar"] == 1
+
 
 # ── Completaciones ────────────────────────────────────────────────────────────
 

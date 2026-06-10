@@ -56,6 +56,11 @@ def init_db():
             conn.execute("ALTER TABLE recurring_events ADD COLUMN end_date TEXT DEFAULT ''")
     except Exception:
         pass
+    try:
+        with get_db() as conn:
+            conn.execute("ALTER TABLE recurring_events ADD COLUMN show_in_calendar INTEGER DEFAULT 1")
+    except Exception:
+        pass
     with get_db() as conn:
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS journal_categories (
@@ -152,6 +157,27 @@ def delete_recurring_event(event_id: int):
     with get_db() as conn:
         conn.execute("DELETE FROM recurring_events WHERE id = ?", (event_id,))
         conn.execute("DELETE FROM completions WHERE event_id = ?", (event_id,))
+
+
+def end_recurring_event(event_id: int, cutoff: str):
+    """Borra las ocurrencias futuras conservando las pasadas: fija end_date al corte
+    y limpia las completions posteriores (para no dejar huérfanas)."""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE recurring_events SET end_date = ? WHERE id = ?", (cutoff, event_id)
+        )
+        conn.execute(
+            "DELETE FROM completions WHERE event_id = ? AND done_date > ?", (event_id, cutoff)
+        )
+
+
+def set_recurring_visibility(event_id: int, show: bool):
+    """Muestra/oculta el evento en calendario y semana (en la vista del día siempre se ve)."""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE recurring_events SET show_in_calendar = ? WHERE id = ?",
+            (1 if show else 0, event_id),
+        )
 
 
 def event_applies(event: dict, d: date) -> bool:

@@ -103,6 +103,53 @@ def test_delete_recurr_event_cascadea_completaciones(test_db):
     assert db.get_completions_range(DATE, DATE) == {}
 
 
+# ── Borrado granular (cortar a futuro) ──────────────────────────────────────────
+
+def test_end_recurring_event_fija_end_date(test_db):
+    db.add_recurring_event(EV_BASE)
+    eid = db.get_recurring_events()[0]["id"]
+    db.end_recurring_event(eid, "2026-06-08")
+    ev = db.get_recurring_events()[0]
+    assert ev["end_date"] == "2026-06-08"
+
+def test_end_recurring_event_conserva_pasado_corta_futuro(test_db):
+    db.add_recurring_event(EV_BASE)
+    ev = db.get_recurring_events()[0]
+    eid = ev["id"]
+    cutoff = "2026-06-08"
+    db.end_recurring_event(eid, cutoff)
+    ev = db.get_recurring_events()[0]
+    # pasado/igual al corte sigue aplicando; posterior, no
+    assert db.event_applies(ev, date(2026, 6, 7))
+    assert db.event_applies(ev, date(2026, 6, 8))
+    assert not db.event_applies(ev, date(2026, 6, 9))
+
+def test_end_recurring_event_limpia_completions_posteriores(test_db):
+    db.add_recurring_event(EV_BASE)
+    eid = db.get_recurring_events()[0]["id"]
+    db.complete_event(eid, "2026-06-07", "antes")
+    db.complete_event(eid, "2026-06-09", "despues")
+    db.end_recurring_event(eid, "2026-06-08")
+    comps = db.get_completions_range("2026-06-01", "2026-06-30")
+    assert "2026-06-07" in comps          # historial conservado
+    assert "2026-06-09" not in comps      # huérfana futura eliminada
+
+
+# ── Visibilidad en calendario ───────────────────────────────────────────────────
+
+def test_recurring_visibilidad_default_visible(test_db):
+    db.add_recurring_event(EV_BASE)
+    assert db.get_recurring_events()[0]["show_in_calendar"] == 1
+
+def test_set_recurring_visibility_oculta_y_muestra(test_db):
+    db.add_recurring_event(EV_BASE)
+    eid = db.get_recurring_events()[0]["id"]
+    db.set_recurring_visibility(eid, False)
+    assert db.get_recurring_events()[0]["show_in_calendar"] == 0
+    db.set_recurring_visibility(eid, True)
+    assert db.get_recurring_events()[0]["show_in_calendar"] == 1
+
+
 # ── Completaciones ────────────────────────────────────────────────────────────
 
 def test_complete_event_done(test_db):
