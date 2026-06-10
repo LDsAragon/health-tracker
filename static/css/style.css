@@ -321,15 +321,53 @@ a { color: inherit; text-decoration: none; }
 
 .main-day {
   padding: 20px 24px;
-  max-width: 760px;
+  max-width: 1400px;
   margin: 0 auto;
+}
+
+/* Layout del día: panel de objetivos a la izquierda, card centrada */
+.day-layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 760px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.day-card { grid-column: 2; }
+.day-side {
+  grid-column: 1;
+  justify-self: end;
+  width: 100%;
+  max-width: 300px;
+  position: sticky;
+  top: 20px;
+}
+.day-side .day-card-todos {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg);
+}
+
+/* Reordenar secciones de la card: notas rápidas suben al hueco de los objetivos */
+.day-card-notes   { order: 2; }
+.day-card-footer  { order: 3; }
+.day-card-journal { order: 4; }
+
+@media (max-width: 1100px) {
+  .day-layout { grid-template-columns: 1fr; }
+  .day-side {
+    grid-column: 1;
+    justify-self: stretch;
+    max-width: none;
+    position: static;
+  }
 }
 
 .day-topnav {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  max-width: 760px;
+  margin: 0 auto 16px;
 }
 
 .day-arrows { display: flex; gap: 4px; }
