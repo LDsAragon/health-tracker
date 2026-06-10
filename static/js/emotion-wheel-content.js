@@ -92,5 +92,54 @@ const EMOTION_CONTENT = {
   "Triste|Solo":        { que: "Sensación dolorosa de estar desconectado, aunque haya gente alrededor.", distinguir: "La pérdida es de conexión; distinto de estar solo por elección, que no duele.", fuente: "Atlas of the Heart (Brené Brown)" },
   "Triste|Deprimido":   { que: "Abatimiento pesado y persistente, con sensación de vacío.", distinguir: "Como matiz es tristeza honda; la depresión clínica es un trastorno aparte.", fuente: "Atlas of Emotions (Ekman)" },
   "Triste|Avergonzado": { que: "Dolor de creer que algo está mal con vos mismo, no solo con lo que hiciste.", distinguir: "La culpa dice «hice algo malo»; la vergüenza dice «soy malo».", fuente: "Atlas of the Heart (Brené Brown)" },
-  "Triste|Culpable":    { que: "Malestar por algo que hiciste (o creés haber hecho) que va contra tus valores.", distinguir: "La culpa apunta a la conducta («hice algo malo»), no a tu identidad.", fuente: "Atlas of the Heart (Brené Brown)" }
+  "Triste|Culpable":    { que: "Malestar por algo que hiciste (o creés haber hecho) que va contra tus valores.", distinguir: "La culpa apunta a la conducta («hice algo malo»), no a tu identidad.", fuente: "Atlas of the Heart (Brené Brown)" },
+
+  // ── TERCIARIAS (36) — una por secundaria; función/manifestación heredan del centro ──
+  // Enojado
+  "Enojado|Herido|Celoso":      { que: "Temor a perder un vínculo importante frente a un tercero.", distinguir: "Los celos defienden una relación amenazada; la envidia quiere lo que otro tiene.", fuente: "Atlas of the Heart (Brené Brown)" },
+  "Enojado|Hostil|Egoísta":     { que: "Priorizar lo propio sin registrar al otro.", distinguir: "El enojo se cierra en uno mismo.", fuente: "RAE / uso común" },
+  "Enojado|Enfadado|Frustrado": { que: "Malestar por no poder superar un obstáculo pese a intentarlo.", distinguir: "Nace del bloqueo de una meta, no de una injusticia.", fuente: "Atlas of Emotions (Ekman)" },
+  "Enojado|Rabioso|Furioso":    { que: "Enojo encendido, muy intenso.", distinguir: "Cerca del extremo de la ira (furia).", fuente: "Atlas of Emotions (Ekman)" },
+  "Enojado|Rencoroso|Irritado": { que: "Molestia leve y superficial.", distinguir: "Fastidio de baja intensidad, fácil de gatillar y de pasar.", fuente: "Atlas of Emotions (Ekman)" },
+  "Enojado|Crítico|Escéptico":  { que: "Duda y desconfianza ante lo que te presentan.", distinguir: "El enojo se vuelve incredulidad crítica.", fuente: "RAE / uso común" },
+
+  // Asustado
+  "Asustado|Confundido|Desconcertado": { que: "Aturdido, sin entender qué pasa.", distinguir: "Confusión intensa ante lo inesperado.", fuente: "RAE / uso común" },
+  "Asustado|Rechazado|Desanimado":     { que: "Sensación de que no hay manera de afrontarlo.", distinguir: "El miedo apaga las ganas de intentar.", fuente: "Atlas of Emotions (Ekman)" },
+  "Asustado|Indefenso|Insignificante": { que: "Sentir que no valés ni contás para nadie.", distinguir: "El miedo se vive como quedar anulado.", fuente: "RAE / uso común" },
+  "Asustado|Sumiso|Débil":             { que: "Sentirte sin fuerzas ni recursos.", distinguir: "El miedo expone tu fragilidad.", fuente: "RAE / uso común" },
+  "Asustado|Inseguro|Ridículo":        { que: "Temor a quedar en ridículo o a parecer tonto.", distinguir: "El peligro es el juicio y la burla de otros.", fuente: "RAE / uso común" },
+  "Asustado|Ansioso|Apenado":          { que: "Incomodidad por quedar expuesto ante otros.", distinguir: "Más leve y social que la vergüenza profunda.", fuente: "Atlas of the Heart (Brené Brown)" },
+
+  // Alegre
+  "Alegre|Entusiasmado|Atrevido":   { que: "Animarte a algo arriesgado con entusiasmo.", distinguir: "La alegría se anima a desafiar.", fuente: "RAE / uso común" },
+  "Alegre|Sensual|Fascinado":       { que: "Quedar cautivado por algo que te atrae.", distinguir: "La alegría absorta en lo que admira.", fuente: "RAE / uso común" },
+  "Alegre|Enérgico|Estimulado":     { que: "Activado e inspirado por un estímulo.", distinguir: "La alegría que despierta y moviliza.", fuente: "RAE / uso común" },
+  "Alegre|Juguetón|Divertido":      { que: "Disfrute liviano y risueño.", distinguir: "La alegría del humor y el juego.", fuente: "Atlas of the Heart (Brené Brown)" },
+  "Alegre|Creativo|Extravagante":   { que: "Disfrute desbordante, sin medida.", distinguir: "La alegría que se permite el exceso.", fuente: "RAE / uso común" },
+  "Alegre|Consciente|Encantado":    { que: "Deleite y gusto pleno por algo.", distinguir: "La alegría del encanto y el deleite.", fuente: "RAE / uso común" },
+
+  // Poderoso
+  "Poderoso|Fiel|Seguro":          { que: "Confianza firme en tus capacidades.", distinguir: "El poder mira hacia adentro, a tu autoconfianza.", fuente: "Autoeficacia (Bandura)" },
+  "Poderoso|Importante|Inteligente": { que: "Sentirte capaz, lúcido y competente.", distinguir: "El poder ligado a tu capacidad de comprender y resolver.", fuente: "RAE / uso común" },
+  "Poderoso|Esperanzado|Digno":    { que: "Sentir que valés la pena, que merecés y sos suficiente.", distinguir: "El poder de reconocer tu propio valor.", fuente: "RAE / uso común" },
+  "Poderoso|Apreciado|Valioso":    { que: "Sentir que tenés valor para los demás y el mundo.", distinguir: "Cercano a Digno, pero centrado en el valor que aportás.", fuente: "RAE / uso común" },
+  "Poderoso|Respetado|Satisfecho": { que: "Plenitud por haber logrado o cumplido algo.", distinguir: "El poder de lo realizado.", fuente: "Atlas of the Heart (Brené Brown)" },
+  "Poderoso|Orgulloso|Animado":    { que: "Ánimo alto y disposición positiva.", distinguir: "El poder se vive como buen ánimo y empuje.", fuente: "RAE / uso común" },
+
+  // Apacible
+  "Apacible|Conforme|Pensativo":     { que: "Quietud reflexiva, mente en calma pensando.", distinguir: "La paz de la introspección serena.", fuente: "RAE / uso común" },
+  "Apacible|Considerado|Relajado":   { que: "Cuerpo y mente distendidos, sin tensión.", distinguir: "La paz física de soltar la tensión.", fuente: "RAE / uso común" },
+  "Apacible|Íntimo|Receptivo":       { que: "Abierto a recibir y responder con calma.", distinguir: "La paz de la apertura sin defensa.", fuente: "RAE / uso común" },
+  "Apacible|Amoroso|Sereno":         { que: "Calma profunda y estable.", distinguir: "La paz que no se altera fácil.", fuente: "RAE / uso común" },
+  "Apacible|Confiado|Sentimental":   { que: "Ternura y afecto a flor de piel.", distinguir: "La paz teñida de emoción cálida.", fuente: "RAE / uso común" },
+  "Apacible|Protector|Agradecido":   { que: "Reconocer y valorar lo bueno que recibís.", distinguir: "La gratitud, fuente de bienestar y conexión.", fuente: "Atlas of the Heart (Brené Brown)" },
+
+  // Triste
+  "Triste|Adormecido|Apático":    { que: "Falta de ganas, energía e interés.", distinguir: "El desgano apunta a la acción.", fuente: "RAE / uso común" },
+  "Triste|Aburrido|Inferior":     { que: "Sentirte menos que los demás.", distinguir: "La tristeza se centra en la comparación desfavorable.", fuente: "RAE / uso común" },
+  "Triste|Solo|Inadecuado":       { que: "Sentir que no estás a la altura o no encajás.", distinguir: "La tristeza de no dar la talla.", fuente: "RAE / uso común" },
+  "Triste|Deprimido|Miserable":   { que: "Tristeza angustiosa, normalmente prolongada.", distinguir: "Forma honda y sostenida del abatimiento.", fuente: "Atlas of Emotions (Ekman)" },
+  "Triste|Avergonzado|Tonto":     { que: "Sentirte torpe o poco capaz.", distinguir: "La tristeza se vuelve autodescalificación.", fuente: "RAE / uso común" },
+  "Triste|Culpable|Tímido":       { que: "Encogimiento y reparo ante los demás.", distinguir: "La tristeza que se retrae del contacto.", fuente: "RAE / uso común" }
 };
