@@ -15,7 +15,7 @@ const EMOTION_WHEEL = {
     }
   },
   "Asustado": {       // Scared
-    color: "#b0926a",
+    color: "#8e7cc3",
     children: {
       "Confundido": ["Desconcertado"],  // Confused → Bewildered
       "Rechazado":  ["Desanimado"],     // Rejected → Discouraged
