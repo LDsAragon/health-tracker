@@ -224,3 +224,41 @@ def test_backup_descarga_archivo(client):
     r = client.get("/backup")
     assert r.status_code == 200
     assert "attachment" in r.headers.get("Content-Disposition", "")
+
+
+# ── To-dos diarios ──────────────────────────────────────────────────────────────
+
+def test_agregar_todo(client):
+    client.post(f"/day/{DATE}/todo/add", data={"text": "objetivo"})
+    todos = db.get_todos_for_date(DATE)
+    assert len(todos) == 1 and todos[0]["text"] == "objetivo"
+
+def test_todo_vacio_no_se_guarda(client):
+    client.post(f"/day/{DATE}/todo/add", data={"text": "   "})
+    assert db.get_todos_for_date(DATE) == []
+
+def test_toggle_todo_ruta(client):
+    client.post(f"/day/{DATE}/todo/add", data={"text": "x"})
+    tid = db.get_todos_for_date(DATE)[0]["id"]
+    r = client.post(f"/day/{DATE}/todo/{tid}/toggle")
+    assert r.status_code == 302
+    assert db.get_todos_for_date(DATE)[0]["done"] == 1
+
+def test_editar_todo_ruta(client):
+    client.post(f"/day/{DATE}/todo/add", data={"text": "viejo"})
+    tid = db.get_todos_for_date(DATE)[0]["id"]
+    client.post(f"/day/{DATE}/todo/{tid}/edit", data={"text": "nuevo"})
+    assert db.get_todos_for_date(DATE)[0]["text"] == "nuevo"
+
+def test_mover_todo_ruta(client):
+    client.post(f"/day/{DATE}/todo/add", data={"text": "m"})
+    tid = db.get_todos_for_date(DATE)[0]["id"]
+    client.post(f"/day/{DATE}/todo/{tid}/move", data={"new_date": "2026-06-15"})
+    assert db.get_todos_for_date(DATE) == []
+    assert db.get_todos_for_date("2026-06-15")[0]["text"] == "m"
+
+def test_eliminar_todo_ruta(client):
+    client.post(f"/day/{DATE}/todo/add", data={"text": "d"})
+    tid = db.get_todos_for_date(DATE)[0]["id"]
+    client.post(f"/day/{DATE}/todo/{tid}/delete")
+    assert db.get_todos_for_date(DATE) == []

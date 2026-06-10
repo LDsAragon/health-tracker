@@ -161,8 +161,8 @@ def day_view(date_str):
 
     journal_entries = db.get_journal_entries_for_date(date_str)
     journal_cats    = db.get_journal_categories()
+    todos           = db.get_todos_for_date(date_str)
 
-    from datetime import timedelta
     prev_day = (d - timedelta(days=1)).isoformat()
     next_day = (d + timedelta(days=1)).isoformat()
 
@@ -174,6 +174,7 @@ def day_view(date_str):
         day_events=day_events,
         journal_entries=journal_entries,
         journal_cats=journal_cats,
+        todos=todos,
         prev_day=prev_day,
         next_day=next_day,
         today=date.today().isoformat(),
@@ -207,6 +208,42 @@ def note_edit(date_str, note_id):
 @app.route("/day/<date_str>/note/<int:note_id>/delete", methods=["POST"])
 def note_delete(date_str, note_id):
     db.delete_note(note_id)
+    return redirect(url_for("day_view", date_str=date_str))
+
+
+@app.route("/day/<date_str>/todo/add", methods=["POST"])
+def todo_add(date_str):
+    text = request.form.get("text", "").strip()
+    if text:
+        db.add_todo(date_str, text)
+    return redirect(url_for("day_view", date_str=date_str))
+
+
+@app.route("/day/<date_str>/todo/<int:todo_id>/toggle", methods=["POST"])
+def todo_toggle(date_str, todo_id):
+    db.toggle_todo(todo_id)
+    return redirect(url_for("day_view", date_str=date_str))
+
+
+@app.route("/day/<date_str>/todo/<int:todo_id>/edit", methods=["POST"])
+def todo_edit(date_str, todo_id):
+    text = request.form.get("text", "").strip()
+    if text:
+        db.update_todo(todo_id, text)
+    return redirect(url_for("day_view", date_str=date_str))
+
+
+@app.route("/day/<date_str>/todo/<int:todo_id>/move", methods=["POST"])
+def todo_move(date_str, todo_id):
+    new_date = request.form.get("new_date", "").strip()
+    if new_date:
+        db.move_todo(todo_id, new_date)
+    return redirect(url_for("day_view", date_str=date_str))
+
+
+@app.route("/day/<date_str>/todo/<int:todo_id>/delete", methods=["POST"])
+def todo_delete(date_str, todo_id):
+    db.delete_todo(todo_id)
     return redirect(url_for("day_view", date_str=date_str))
 
 

@@ -201,3 +201,66 @@ def test_completion_stats(test_db):
     stats = db.get_completion_stats(events, days=30)
     assert stats[eid]["done"] == 5
     assert stats[eid]["applicable"] == 30
+
+
+# ── To-dos diarios ──────────────────────────────────────────────────────────────
+
+TDATE = "2026-06-09"
+
+def test_add_and_get_todo(test_db):
+    db.add_todo(TDATE, "Caminar 30 min")
+    todos = db.get_todos_for_date(TDATE)
+    assert len(todos) == 1
+    assert todos[0]["text"] == "Caminar 30 min"
+    assert todos[0]["done"] == 0
+
+def test_todo_position_incremental(test_db):
+    db.add_todo(TDATE, "a")
+    db.add_todo(TDATE, "b")
+    todos = db.get_todos_for_date(TDATE)
+    assert [t["position"] for t in todos] == [0, 1]
+    assert [t["text"] for t in todos] == ["a", "b"]
+
+def test_toggle_todo(test_db):
+    db.add_todo(TDATE, "x")
+    tid = db.get_todos_for_date(TDATE)[0]["id"]
+    db.toggle_todo(tid)
+    assert db.get_todos_for_date(TDATE)[0]["done"] == 1
+    db.toggle_todo(tid)
+    assert db.get_todos_for_date(TDATE)[0]["done"] == 0
+
+def test_update_todo(test_db):
+    db.add_todo(TDATE, "viejo")
+    tid = db.get_todos_for_date(TDATE)[0]["id"]
+    db.update_todo(tid, "nuevo")
+    assert db.get_todos_for_date(TDATE)[0]["text"] == "nuevo"
+
+def test_move_todo_cambia_dia(test_db):
+    db.add_todo(TDATE, "mover")
+    tid = db.get_todos_for_date(TDATE)[0]["id"]
+    other = "2026-06-10"
+    db.move_todo(tid, other)
+    assert db.get_todos_for_date(TDATE) == []
+    assert db.get_todos_for_date(other)[0]["text"] == "mover"
+
+def test_move_todo_va_al_final(test_db):
+    db.add_todo("2026-06-10", "existente")
+    db.add_todo(TDATE, "movido")
+    tid = db.get_todos_for_date(TDATE)[0]["id"]
+    db.move_todo(tid, "2026-06-10")
+    todos = db.get_todos_for_date("2026-06-10")
+    assert [t["text"] for t in todos] == ["existente", "movido"]
+
+def test_delete_todo(test_db):
+    db.add_todo(TDATE, "borrar")
+    tid = db.get_todos_for_date(TDATE)[0]["id"]
+    db.delete_todo(tid)
+    assert db.get_todos_for_date(TDATE) == []
+
+def test_todo_counts_range(test_db):
+    db.add_todo(TDATE, "a")
+    db.add_todo(TDATE, "b")
+    tid = db.get_todos_for_date(TDATE)[1]["id"]
+    db.toggle_todo(tid)
+    counts = db.get_todo_counts_range("2026-06-01", "2026-06-30")
+    assert counts[TDATE] == {"done": 1, "total": 2}

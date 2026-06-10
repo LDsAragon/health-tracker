@@ -90,6 +90,56 @@
   </div>
   {% endif %}
 
+  <!-- To-dos / objetivos del día -->
+  <div class="day-card-todos">
+    <h3 class="day-section-title">🎯 Objetivos del día</h3>
+
+    {% if todos %}
+    <ul class="todo-list">
+      {% for t in todos %}
+      <li class="todo-item {% if t.done %}todo-done{% endif %}" id="todo-{{ t.id }}">
+        <div class="todo-row" id="todo-row-{{ t.id }}">
+          <form method="POST" action="{{ url_for('todo_toggle', date_str=date_str, todo_id=t.id) }}" style="display:inline;">
+            <button type="submit" class="todo-check" title="{{ 'Marcar como pendiente' if t.done else 'Marcar como hecho' }}">
+              {% if t.done %}&#10003;{% endif %}
+            </button>
+          </form>
+          <span class="todo-text">{{ t.text }}</span>
+          <div class="todo-actions">
+            <button type="button" class="btn-edit" onclick="editTodo({{ t.id }})" title="Editar">&#9998;</button>
+            <button type="button" class="btn-edit" onclick="moveTodo({{ t.id }})" title="Mover a otro día">&#8594;</button>
+            <form method="POST" action="{{ url_for('todo_delete', date_str=date_str, todo_id=t.id) }}" style="display:inline;"
+                  onsubmit="return confirm('¿Eliminar este objetivo?');">
+              <button type="submit" class="btn-delete" title="Eliminar">&#10005;</button>
+            </form>
+          </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('todo_edit', date_str=date_str, todo_id=t.id) }}"
+              class="todo-inline-form" id="todo-edit-{{ t.id }}" style="display:none;">
+          <input type="text" name="text" value="{{ t.text }}" maxlength="200" required>
+          <button type="submit" class="btn-primary">Guardar</button>
+          <button type="button" class="btn-cancel" onclick="cancelTodo({{ t.id }})">Cancelar</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('todo_move', date_str=date_str, todo_id=t.id) }}"
+              class="todo-inline-form" id="todo-move-{{ t.id }}" style="display:none;">
+          <span class="todo-move-label">Mover a:</span>
+          <input type="date" name="new_date" value="{{ next_day }}" required>
+          <button type="submit" class="btn-primary">Mover</button>
+          <button type="button" class="btn-cancel" onclick="cancelTodoMove({{ t.id }})">Cancelar</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('todo_add', date_str=date_str) }}" class="todo-add-form">
+      <input type="text" name="text" placeholder="Agregar un objetivo..." maxlength="200" required>
+      <button type="submit" class="btn-primary">Agregar</button>
+    </form>
+  </div>
+
   <!-- Registros de journal -->
   {% if journal_entries or journal_cats %}
   <div class="day-card-journal">
@@ -347,6 +397,28 @@ function openEvForm(id) {
 function closeEvForm(id) {
   document.getElementById('ev-form-' + id).style.display = 'none';
   document.getElementById('ev-chip-' + id).style.display = 'flex';
+}
+
+// ── To-dos ──────────────────────────────────────────────────────────────────
+function editTodo(id) {
+  document.getElementById('todo-row-' + id).style.display = 'none';
+  document.getElementById('todo-move-' + id).style.display = 'none';
+  const f = document.getElementById('todo-edit-' + id);
+  f.style.display = 'flex';
+  f.querySelector('input').focus();
+}
+function cancelTodo(id) {
+  document.getElementById('todo-edit-' + id).style.display = 'none';
+  document.getElementById('todo-row-' + id).style.display = 'flex';
+}
+function moveTodo(id) {
+  document.getElementById('todo-row-' + id).style.display = 'none';
+  document.getElementById('todo-edit-' + id).style.display = 'none';
+  document.getElementById('todo-move-' + id).style.display = 'flex';
+}
+function cancelTodoMove(id) {
+  document.getElementById('todo-move-' + id).style.display = 'none';
+  document.getElementById('todo-row-' + id).style.display = 'flex';
 }
 function editDayNote(id) {
   document.getElementById('dview-' + id).style.display = 'none';
