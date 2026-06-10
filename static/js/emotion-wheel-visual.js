@@ -46,6 +46,7 @@ function ewWheelSpec(id) {
       };
     });
     return { id: 'ek', levels: 2, bases, rings: EK_RINGS, nodeStyle: 'noun', bilingual: true,
+             coreNoun: true, // centros sustantivos (la Ira, el Miedo)
              content: (typeof EKMAN_CONTENT !== 'undefined' ? EKMAN_CONTENT : {}) };
   }
   // Por defecto: rueda española (3 niveles)
@@ -60,6 +61,7 @@ function ewWheelSpec(id) {
     };
   });
   return { id: 'es', levels: 3, bases, rings: ES_RINGS, nodeStyle: 'adj', bilingual: false,
+           coreNoun: false, // centros adjetivos (estar Enojado, estar Triste)
            content: (typeof EMOTION_CONTENT !== 'undefined' ? EMOTION_CONTENT : {}) };
 }
 
@@ -375,7 +377,7 @@ function ewRenderInfo(base, mid, spec, depth, color) {
   if (specEs) crumb += ` <span class="ew-sep">›</span> ${specEs}`;
 
   const art   = EW_ART[baseEs] || 'la';
-  const baseN = `${art} ${baseEs}`;                    // "la Ira", "el Miedo"
+  const baseN = W.coreNoun ? `${art} ${baseEs}` : `estar ${baseEs}`; // "la Ira" / "estar Enojado"
   const nodoEs = specEs || midEs || baseEs;            // segmento activo (en español)
 
   const manifLabel = `Cómo se manifiesta ${baseN}`;
