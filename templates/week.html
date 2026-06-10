@@ -59,6 +59,12 @@
       {% for badge in journal_badges.get(ds, []) %}
       <span class="chip chip-journal" style="--c: {{ badge.color }};">{{ badge.name }}</span>
       {% endfor %}
+
+      {% set tc = todo_counts.get(ds) %}
+      {% if tc %}
+      <span class="cal-todo-badge {% if tc.done == tc.total %}cal-todo-done{% endif %}"
+            title="Objetivos del día">&#10003; {{ tc.done }}/{{ tc.total }}</span>
+      {% endif %}
     </a>
 
     <form class="cal-quick-form" method="POST"

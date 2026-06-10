@@ -120,6 +120,8 @@ def calendar_view(year=None, month=None):
         if badges:
             journal_badges[ds_str] = badges
 
+    todo_counts = db.get_todo_counts_range(month_start, month_end)
+
     prev_month = month - 1 if month > 1 else 12
     prev_year  = year if month > 1 else year - 1
     next_month = month % 12 + 1
@@ -137,6 +139,7 @@ def calendar_view(year=None, month=None):
         next_year=next_year, next_month=next_month,
         journal_cats=journal_cats,
         journal_badges=journal_badges,
+        todo_counts=todo_counts,
     )
 
 
@@ -395,6 +398,8 @@ def week_view(date_str):
         if badges:
             journal_badges[ds_str] = badges
 
+    todo_counts = db.get_todo_counts_range(start, end)
+
     prev_week = (monday - timedelta(days=7)).isoformat()
     next_week = (monday + timedelta(days=7)).isoformat()
 
@@ -418,6 +423,7 @@ def week_view(date_str):
         anchor_month_url=url_for("calendar_view", year=anchor.year, month=anchor.month),
         journal_cats=journal_cats,
         journal_badges=journal_badges,
+        todo_counts=todo_counts,
     )
 
 

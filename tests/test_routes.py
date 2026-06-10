@@ -262,3 +262,19 @@ def test_eliminar_todo_ruta(client):
     tid = db.get_todos_for_date(DATE)[0]["id"]
     client.post(f"/day/{DATE}/todo/{tid}/delete")
     assert db.get_todos_for_date(DATE) == []
+
+def test_contador_todos_en_calendario(client):
+    client.post(f"/day/{DATE}/todo/add", data={"text": "a"})
+    client.post(f"/day/{DATE}/todo/add", data={"text": "b"})
+    r = client.get("/calendar/2026/6")
+    assert b"cal-todo-badge" in r.data
+    assert b"0/2" in r.data
+
+def test_contador_todos_en_semana(client):
+    client.post(f"/day/{DATE}/todo/add", data={"text": "a"})
+    r = client.get(f"/week/{DATE}")
+    assert b"cal-todo-badge" in r.data
+
+def test_sin_todos_no_hay_badge_en_calendario(client):
+    r = client.get("/calendar/2026/6")
+    assert b"cal-todo-badge" not in r.data
