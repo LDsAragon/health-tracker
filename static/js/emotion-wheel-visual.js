@@ -325,12 +325,18 @@ function ewHoverClear() {
 // Resuelve los 4 campos del más profundo disponible, cayendo al ancestro (spec→mid→base)
 function ewContent(base, mid, spec, depth) {
   const C = (ewState.wheel && ewState.wheel.content) || {};
+  const deepest = depth >= 3 ? C[base + '|' + mid + '|' + spec]
+                : depth >= 2 ? C[base + '|' + mid]
+                :              C[base];
   const chain = [];
   if (depth >= 3 && spec) chain.push(C[base + '|' + mid + '|' + spec]);
   if (depth >= 2 && mid)  chain.push(C[base + '|' + mid]);
   chain.push(C[base]);
   const out = {};
-  ['que', 'sirve', 'manifiesta', 'distinguir', 'fuente', 'fdef'].forEach(field => {
+  // Propios del nodo (NO heredan → evita repetir el de la base en estados sin distinguir)
+  ['que', 'distinguir', 'fdef'].forEach(field => { if (deepest && deepest[field]) out[field] = deepest[field]; });
+  // Heredables del ancestro (función/manifestación son de la base)
+  ['sirve', 'manifiesta', 'fuente'].forEach(field => {
     for (const obj of chain) { if (obj && obj[field]) { out[field] = obj[field]; break; } }
   });
   return out;
