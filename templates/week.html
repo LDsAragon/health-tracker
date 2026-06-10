@@ -41,7 +41,7 @@
   {% set day_notes = notes_by_date.get(ds, []) %}
   {% set day_evs   = events_by_date.get(ds, []) %}
 
-  <div class="cal-cell {% if is_today %}is-today{% endif %}">
+  <div class="cal-cell todo-dropzone {% if is_today %}is-today{% endif %}" data-date="{{ ds }}">
 
     <a href="{{ url_for('day_view', date_str=ds) }}" class="cal-cell-body">
       <span class="cal-num {% if is_today %}today-num{% endif %}">{{ d.day }}</span>
@@ -66,6 +66,19 @@
             title="Objetivos del día">&#10003; {{ tc.done }}/{{ tc.total }}</span>
       {% endif %}
     </a>
+
+    {% set day_todos = todos_by_date.get(ds, []) %}
+    {% if day_todos %}
+    <div class="week-todos">
+      {% for t in day_todos %}
+      <div class="week-todo {% if t.done %}todo-done{% endif %}"
+           draggable="true" data-id="{{ t.id }}" data-date="{{ ds }}" title="Arrastrar a otro día">
+        <span class="week-todo-grip">&#x2630;</span>
+        <span class="week-todo-text">{{ t.text }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
 
     <form class="cal-quick-form" method="POST"
           action="{{ url_for('note_add', date_str=ds) }}">
@@ -118,6 +131,45 @@ function apply(h) { document.documentElement.style.setProperty('--cell-height', 
 const saved = localStorage.getItem(PREF);
 if (saved) { slider.value = saved; apply(saved); } else { apply(slider.value); }
 slider.addEventListener('input', () => { apply(slider.value); localStorage.setItem(PREF, slider.value); });
+
+// Drag & drop de to-dos entre días
+(function () {
+  let dragId = null, dragDate = null;
+
+  document.addEventListener('dragstart', function (e) {
+    const t = e.target.closest('.week-todo');
+    if (!t) return;
+    dragId = t.dataset.id;
+    dragDate = t.dataset.date;
+    t.classList.add('week-todo-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  document.addEventListener('dragend', function (e) {
+    const t = e.target.closest('.week-todo');
+    if (t) t.classList.remove('week-todo-dragging');
+    document.querySelectorAll('.todo-dropzone.drop-over')
+            .forEach(z => z.classList.remove('drop-over'));
+  });
+  document.querySelectorAll('.todo-dropzone').forEach(function (zone) {
+    zone.addEventListener('dragover', function (e) {
+      if (dragId === null) return;
+      e.preventDefault();
+      if (zone.dataset.date !== dragDate) zone.classList.add('drop-over');
+    });
+    zone.addEventListener('dragleave', function () { zone.classList.remove('drop-over'); });
+    zone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      zone.classList.remove('drop-over');
+      const target = zone.dataset.date;
+      if (dragId === null || target === dragDate) return;
+      fetch('/todos/' + dragId + '/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'date=' + target,
+      }).then(() => location.reload());
+    });
+  });
+})();
 
 const JCATS = {{ journal_cats | tojson }};
 

@@ -286,3 +286,17 @@ def test_reordenar_todos_ruta(client):
     r = client.post(f"/day/{DATE}/todos/reorder", data={"order": f"{ids[1]},{ids[0]}"})
     assert r.status_code == 204
     assert [t["text"] for t in db.get_todos_for_date(DATE)] == ["b", "a"]
+
+def test_mover_todo_ajax(client):
+    client.post(f"/day/{DATE}/todo/add", data={"text": "m"})
+    tid = db.get_todos_for_date(DATE)[0]["id"]
+    r = client.post(f"/todos/{tid}/move", data={"date": "2026-06-15"})
+    assert r.status_code == 204
+    assert db.get_todos_for_date(DATE) == []
+    assert db.get_todos_for_date("2026-06-15")[0]["text"] == "m"
+
+def test_todos_aparecen_en_semana(client):
+    client.post(f"/day/{DATE}/todo/add", data={"text": "semana visible"})
+    r = client.get(f"/week/{DATE}")
+    assert b"week-todo" in r.data
+    assert "semana visible".encode() in r.data

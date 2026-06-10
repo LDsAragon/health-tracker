@@ -281,3 +281,12 @@ def test_reorder_todos_acotado_al_dia(test_db):
     propio = db.get_todos_for_date(TDATE)[0]["id"]
     db.reorder_todos(TDATE, [ajeno, propio])   # el ajeno no debe verse afectado
     assert db.get_todos_for_date("2026-06-10")[0]["text"] == "ajeno"
+
+def test_get_todos_range(test_db):
+    db.add_todo("2026-06-08", "lun")
+    db.add_todo("2026-06-09", "mar")
+    db.add_todo("2026-07-01", "fuera")
+    r = db.get_todos_range("2026-06-01", "2026-06-30")
+    assert "2026-06-08" in r and "2026-06-09" in r
+    assert "2026-07-01" not in r
+    assert r["2026-06-08"][0]["text"] == "lun"

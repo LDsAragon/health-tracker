@@ -464,6 +464,19 @@ def reorder_todos(todo_date: str, ordered_ids: list):
             )
 
 
+def get_todos_range(start: str, end: str) -> dict:
+    """Returns {date_str: [todo, ...]} ordenados por position."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM todos WHERE todo_date BETWEEN ? AND ? ORDER BY todo_date, position, id",
+            (start, end),
+        ).fetchall()
+    result: dict = {}
+    for r in rows:
+        result.setdefault(r["todo_date"], []).append(dict(r))
+    return result
+
+
 def get_todo_counts_range(start: str, end: str) -> dict:
     """Returns {date_str: {done, total}} para el indicador del calendario."""
     with get_db() as conn:

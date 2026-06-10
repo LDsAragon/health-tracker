@@ -259,6 +259,15 @@ def todos_reorder(date_str):
     return ("", 204)
 
 
+@app.route("/todos/<int:todo_id>/move", methods=["POST"])
+def todo_move_ajax(todo_id):
+    """Mover un to-do a otro día (drag entre días en la vista semanal)."""
+    new_date = request.form.get("date", "").strip()
+    if new_date:
+        db.move_todo(todo_id, new_date)
+    return ("", 204)
+
+
 @app.route("/day/<date_str>/event/<int:event_id>/complete", methods=["POST"])
 def event_complete(date_str, event_id):
     note = request.form.get("note", "").strip()
@@ -407,7 +416,8 @@ def week_view(date_str):
         if badges:
             journal_badges[ds_str] = badges
 
-    todo_counts = db.get_todo_counts_range(start, end)
+    todo_counts  = db.get_todo_counts_range(start, end)
+    todos_by_date = db.get_todos_range(start, end)
 
     prev_week = (monday - timedelta(days=7)).isoformat()
     next_week = (monday + timedelta(days=7)).isoformat()
@@ -433,6 +443,7 @@ def week_view(date_str):
         journal_cats=journal_cats,
         journal_badges=journal_badges,
         todo_counts=todo_counts,
+        todos_by_date=todos_by_date,
     )
 
 
