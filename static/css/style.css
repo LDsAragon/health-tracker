@@ -1204,11 +1204,12 @@ select.journal-cat-select {
   width: 56px; background: var(--surface2); border: 1px solid var(--border);
   color: var(--text); border-radius: 6px; padding: 5px 7px; font-size: 13px;
 }
-.tf-row input[type="time"] {
+.tf-sel {
   background: var(--surface2); border: 1px solid var(--border);
   color: var(--text); border-radius: 6px; padding: 5px 7px; font-size: 13px;
 }
-.tf-row input:focus { outline: none; border-color: var(--accent); }
+.tf-sel option { background: var(--surface); color: var(--text); }
+.tf-row input:focus, .tf-sel:focus { outline: none; border-color: var(--accent); }
 .tf-u { font-size: 12px; color: var(--muted); }
 .tf-rh-calc { font-size: 12px; font-weight: 600; color: var(--accent); margin-left: 4px; }
 

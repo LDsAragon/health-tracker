@@ -1,7 +1,7 @@
-// Campos de tiempo estructurados: "duracion" (h/min) y "rango" (desde–hasta con cálculo).
+// Campos de tiempo estructurados: "duracion" (h/min) y "rango" (desde–hasta con cálculo, 24h).
 // Patrón (como la rueda): inputs visibles + un <input type="hidden" data-label> con el valor canónico.
 //   duracion → minutos totales como string  ("90")
-//   rango    → "HH:MM-HH:MM"                  ("02:00-09:00")  (cruce de medianoche soportado)
+//   rango    → "HH:MM-HH:MM" en 24h          ("23:00-08:00")  (cruce de medianoche soportado)
 // El colector lee input[data-label]; restoreTimeFields() rellena los inputs desde el hidden (edición).
 
 function _tfEsc(s) { return String(s).replace(/"/g, '&quot;'); }
@@ -17,39 +17,69 @@ function tfFmtDur(mins) {
   return parts.join(' ') || '0 min';
 }
 
-// "HH:MM","HH:MM" → minutos de diferencia (cruce de medianoche: 02:00→09:00 = 420)
+// "HH:MM","HH:MM" → minutos de diferencia (cruce de medianoche: 23:00→08:00 = 540)
 function tfRangeMin(from, to) {
   const a = from.split(':'), b = to.split(':');
   const fa = (+a[0]) * 60 + (+a[1]), tb = (+b[0]) * 60 + (+b[1]);
   return ((tb - fa) % 1440 + 1440) % 1440;
 }
 
+// ── Selects de hora 24h (HH 00–23, MM en pasos de 5) ───────────────────────
+function _tfSelOpts(max, step) {
+  let o = '<option value="">–</option>';
+  for (let i = 0; i < max; i += step) {
+    const v = String(i).padStart(2, '0');
+    o += '<option value="' + v + '">' + v + '</option>';
+  }
+  return o;
+}
+function tfRangoRow() {
+  const hh = _tfSelOpts(24, 1), mm = _tfSelOpts(60, 5);
+  return '<div class="tf-row">' +
+    '<select class="tf-sel tf-rh-fh">' + hh + '</select><span class="tf-u">:</span>' +
+    '<select class="tf-sel tf-rh-fm">' + mm + '</select>' +
+    '<span class="tf-u">→</span>' +
+    '<select class="tf-sel tf-rh-th">' + hh + '</select><span class="tf-u">:</span>' +
+    '<select class="tf-sel tf-rh-tm">' + mm + '</select>' +
+    '<span class="tf-rh-calc"></span>' +
+  '</div>';
+}
+
 // ── Builders (para formularios armados por JS) ─────────────────────────────
 function buildDuracionField(label, ph) {
-  const l = _tfEsc(label);
   return '<div class="day-journal-field-input time-field" data-tf="duracion">' +
     '<label>' + label + '</label>' +
     '<div class="tf-row">' +
       '<input type="number" class="tf-dur-h" min="0" max="99" placeholder="h"><span class="tf-u">h</span>' +
       '<input type="number" class="tf-dur-m" min="0" max="59" placeholder="min"><span class="tf-u">min</span>' +
     '</div>' +
-    '<input type="hidden" data-label="' + l + '">' +
+    '<input type="hidden" data-label="' + _tfEsc(label) + '">' +
   '</div>';
 }
 
 function buildRangoField(label, ph) {
-  const l = _tfEsc(label);
   return '<div class="day-journal-field-input time-field" data-tf="rango">' +
-    '<label>' + label + '</label>' +
-    '<div class="tf-row">' +
-      '<input type="time" class="tf-rh-from"><span class="tf-u">→</span>' +
-      '<input type="time" class="tf-rh-to"><span class="tf-rh-calc"></span>' +
-    '</div>' +
-    '<input type="hidden" data-label="' + l + '">' +
+    '<label>' + label + '</label>' + tfRangoRow() +
+    '<input type="hidden" data-label="' + _tfEsc(label) + '">' +
   '</div>';
 }
 
-// ── Sincronización inputs → hidden (delegada, sirve para campos dinámicos y estáticos) ──
+// Asegura los selects de rango (para el form de edición, que llega como shell + hidden)
+function _tfEnsureRango(tf) {
+  if (tf.dataset.tf !== 'rango' || tf.querySelector('.tf-row')) return;
+  const hidden = tf.querySelector('input[data-label]');
+  const tmp = document.createElement('div');
+  tmp.innerHTML = tfRangoRow();
+  tf.insertBefore(tmp.firstChild, hidden);
+}
+
+function _tfRangoVals(tf) {
+  const g = c => { const el = tf.querySelector(c); return el ? el.value : ''; };
+  const fh = g('.tf-rh-fh'), fm = g('.tf-rh-fm'), th = g('.tf-rh-th'), tm = g('.tf-rh-tm');
+  return { from: (fh && fm) ? fh + ':' + fm : '', to: (th && tm) ? th + ':' + tm : '' };
+}
+
+// ── Sincronización inputs → hidden (delegada) ──────────────────────────────
 function _tfSync(tf) {
   const hidden = tf.querySelector('input[data-label]');
   if (!hidden) return;
@@ -59,22 +89,24 @@ function _tfSync(tf) {
     const total = h * 60 + m;
     hidden.value = total > 0 ? String(total) : '';
   } else if (tf.dataset.tf === 'rango') {
-    const f = tf.querySelector('.tf-rh-from').value;
-    const t = tf.querySelector('.tf-rh-to').value;
+    const { from, to } = _tfRangoVals(tf);
     const calc = tf.querySelector('.tf-rh-calc');
-    if (f && t) { hidden.value = f + '-' + t; calc.textContent = '· ' + tfFmtDur(tfRangeMin(f, t)); }
-    else        { hidden.value = '';          calc.textContent = ''; }
+    if (from && to) { hidden.value = from + '-' + to; if (calc) calc.textContent = '· ' + tfFmtDur(tfRangeMin(from, to)); }
+    else            { hidden.value = '';              if (calc) calc.textContent = ''; }
   }
 }
 
-document.addEventListener('input', function (e) {
+function _tfOnEvt(e) {
   const tf = e.target.closest && e.target.closest('.time-field');
   if (tf) _tfSync(tf);
-});
+}
+document.addEventListener('input', _tfOnEvt);   // number inputs
+document.addEventListener('change', _tfOnEvt);  // selects
 
-// ── Restaurar (edición): parsea el hidden y rellena los inputs visibles ────
+// ── Restaurar (edición): construye selects si faltan y rellena desde el hidden ──
 function restoreTimeFields(root) {
   (root || document).querySelectorAll('.time-field').forEach(tf => {
+    if (tf.dataset.tf === 'rango') _tfEnsureRango(tf);
     const hidden = tf.querySelector('input[data-label]');
     const v = hidden && hidden.value;
     if (!v) return;
@@ -83,11 +115,13 @@ function restoreTimeFields(root) {
       tf.querySelector('.tf-dur-h').value = Math.floor(total / 60) || '';
       tf.querySelector('.tf-dur-m').value = (total % 60) || '';
     } else if (tf.dataset.tf === 'rango') {
-      const parts = v.split('-');
-      if (parts[0]) tf.querySelector('.tf-rh-from').value = parts[0];
-      if (parts[1]) tf.querySelector('.tf-rh-to').value = parts[1];
-      if (parts[0] && parts[1]) {
-        tf.querySelector('.tf-rh-calc').textContent = '· ' + tfFmtDur(tfRangeMin(parts[0], parts[1]));
+      const p = v.split('-');
+      const f = (p[0] || '').split(':'), t = (p[1] || '').split(':');
+      const set = (c, val) => { const el = tf.querySelector(c); if (el && val != null) el.value = val; };
+      set('.tf-rh-fh', f[0]); set('.tf-rh-fm', f[1]); set('.tf-rh-th', t[0]); set('.tf-rh-tm', t[1]);
+      if (p[0] && p[1]) {
+        const calc = tf.querySelector('.tf-rh-calc');
+        if (calc) calc.textContent = '· ' + tfFmtDur(tfRangeMin(p[0], p[1]));
       }
     }
   });

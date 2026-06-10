@@ -201,10 +201,6 @@
             </div>
             {% elif field.get('type','text') == 'rango' %}
             <div class="time-field" data-tf="rango">
-              <div class="tf-row">
-                <input type="time" class="tf-rh-from"><span class="tf-u">→</span>
-                <input type="time" class="tf-rh-to"><span class="tf-rh-calc"></span>
-              </div>
               <input type="hidden" data-label="{{ field.label }}" value="{{ fval }}">
             </div>
             {% else %}
