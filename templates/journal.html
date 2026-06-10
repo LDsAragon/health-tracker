@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Categorías de registro{% endblock %}
+{% block title %}Categorías de seguimiento{% endblock %}
 
 {% set COLORS = ['#6366f1','#22c55e','#3b82f6','#f97316','#ef4444','#a855f7','#ec4899','#eab308','#14b8a6'] %}
 
 {% block content %}
 <div class="page-top">
-  <h1 class="page-title">Categorías de registro</h1>
-  <p class="page-sub">Definí categorías con campos guiados para llevar registros estructurados.</p>
+  <h1 class="page-title">Categorías de seguimiento</h1>
+  <p class="page-sub">Definí categorías con campos guiados para llevar seguimientos estructurados.</p>
 </div>
 
 <!-- ── Agregar categoría ── -->
@@ -52,7 +52,7 @@
     <!-- Builder de campos -->
     <div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <label>Campos del registro</label>
+        <label>Campos del seguimiento</label>
         <button type="button" class="btn-undo" onclick="addField('jcat-add-fields')">+ Agregar campo</button>
       </div>
       <div id="jcat-add-fields" class="journal-fields-builder">
@@ -97,7 +97,7 @@
       </div>
       <button class="btn-edit" onclick="editJCat({{ cat.id }})">Editar</button>
       <form method="POST" action="{{ url_for('journal_category_delete', cat_id=cat.id) }}"
-            onsubmit="return confirm('¿Eliminar categoría y todos sus registros?');"
+            onsubmit="return confirm('¿Eliminar categoría y todos sus seguimientos?');"
             style="display:inline;">
         <button type="submit" class="btn-delete-sm">Eliminar</button>
       </form>

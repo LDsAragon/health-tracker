@@ -148,6 +148,7 @@
   <!-- Registros de journal -->
   {% if journal_entries or journal_cats %}
   <div class="day-card-journal">
+    <h3 class="day-section-title">📊 Seguimientos</h3>
 
     {% if journal_entries %}
     <div class="day-journal-list">
@@ -165,7 +166,7 @@
               <button class="btn-edit" onclick="editJEntry({{ entry.id }})">Editar</button>
               <form method="POST"
                     action="{{ url_for('journal_entry_delete', date_str=date_str, entry_id=entry.id) }}"
-                    onsubmit="return confirm('¿Eliminar este registro?');" style="display:inline;">
+                    onsubmit="return confirm('¿Eliminar este seguimiento?');" style="display:inline;">
                 <button type="submit" class="btn-delete">&#10005;</button>
               </form>
             </div>
@@ -283,7 +284,7 @@
     {% if journal_cats %}
     <div class="day-journal-add-wrap">
       <button type="button" class="day-journal-add-toggle" id="jday-toggle"
-              onclick="toggleDayJournal()">+ Agregar registro</button>
+              onclick="toggleDayJournal()">+ Agregar seguimiento</button>
       <div id="jday-form-wrap" style="display:none;">
         <form id="jday-form" method="POST"
               action="{{ url_for('journal_entry_add', date_str=date_str) }}"
@@ -316,6 +317,8 @@
 
   </div>
   {% endif %}
+
+  <h3 class="day-section-title day-qn-title">📝 Notas rápidas</h3>
 
   <!-- Notas -->
   <div class="day-card-notes">
