@@ -51,6 +51,8 @@
           <select name="field_type[]" class="journal-type-select">
             <option value="text">Texto libre</option>
             <option value="emotion-wheel">🎡 Rueda de emociones</option>
+            <option value="duracion">⏱️ Duración</option>
+            <option value="rango">🕒 Rango horario</option>
           </select>
           <input type="text" name="field_placeholder[]" placeholder="Ayuda (opcional)" style="flex:1;">
           <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar campo">&#10005;</button>
@@ -136,8 +138,10 @@
             <div class="journal-field-row">
               <input type="text" name="field_label[]" value="{{ f.label }}" placeholder="Nombre del campo" style="flex:1.2;">
               <select name="field_type[]" class="journal-type-select">
-                <option value="text" {% if ftype != 'emotion-wheel' %}selected{% endif %}>Texto libre</option>
+                <option value="text" {% if ftype == 'text' %}selected{% endif %}>Texto libre</option>
                 <option value="emotion-wheel" {% if ftype == 'emotion-wheel' %}selected{% endif %}>🎡 Rueda de emociones</option>
+                <option value="duracion" {% if ftype == 'duracion' %}selected{% endif %}>⏱️ Duración</option>
+                <option value="rango" {% if ftype == 'rango' %}selected{% endif %}>🕒 Rango horario</option>
               </select>
               <input type="text" name="field_placeholder[]" value="{{ f.get('placeholder', '') }}" placeholder="Ayuda" style="flex:1;">
               <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>
@@ -171,6 +175,8 @@ function addField(containerId) {
     '<select name="field_type[]" class="journal-type-select">' +
     '<option value="text">Texto libre</option>' +
     '<option value="emotion-wheel">🎡 Rueda de emociones</option>' +
+    '<option value="duracion">⏱️ Duración</option>' +
+    '<option value="rango">🕒 Rango horario</option>' +
     '</select>' +
     '<input type="text" name="field_placeholder[]" placeholder="Ayuda (opcional)" style="flex:1;">' +
     '<button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>';

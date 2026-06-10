@@ -134,6 +134,8 @@ function updateJFields(ds, catId) {
   container.innerHTML = cat.fields.map(f => {
     const type = f.type || 'text';
     if (type === 'emotion-wheel') return buildEWPickerCompact(f.label);
+    if (type === 'duracion') return buildDuracionField(f.label, f.placeholder);
+    if (type === 'rango') return buildRangoField(f.label, f.placeholder);
     return '<label class="cal-journal-field-label">' + f.label + '</label>' +
       '<textarea data-label="' + f.label.replace(/"/g, '&quot;') + '"' +
       ' placeholder="' + (f.placeholder || '').replace(/"/g, '&quot;') + '"' +
@@ -145,8 +147,8 @@ function submitJEntry(ds, url, next) {
   if (!catId) return;
   const container = document.getElementById('jfields-' + ds);
   const values = {};
-  container.querySelectorAll('textarea[data-label]').forEach(ta => {
-    values[ta.dataset.label] = ta.value;
+  container.querySelectorAll('textarea[data-label], input[data-label]').forEach(el => {
+    values[el.dataset.label] = el.value;
   });
   collectEWValues(container, values);
   const tags = document.getElementById('jtags-' + ds).value;

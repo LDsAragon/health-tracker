@@ -1198,6 +1198,20 @@ select.journal-cat-select {
   letter-spacing: .05em;
 }
 
+/* Campos de tiempo (duración / rango horario) */
+.tf-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tf-row input[type="number"] {
+  width: 56px; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 6px; padding: 5px 7px; font-size: 13px;
+}
+.tf-row input[type="time"] {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 6px; padding: 5px 7px; font-size: 13px;
+}
+.tf-row input:focus { outline: none; border-color: var(--accent); }
+.tf-u { font-size: 12px; color: var(--muted); }
+.tf-rh-calc { font-size: 12px; font-weight: 600; color: var(--accent); margin-left: 4px; }
+
 .day-journal-add-wrap {
   border-top: 1px solid var(--border);
   padding-top: 10px;

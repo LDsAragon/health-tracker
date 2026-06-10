@@ -34,6 +34,39 @@ def fechacorta_filter(s):
         return s
 
 
+@app.template_filter('dur_fmt')
+def dur_fmt_filter(s):
+    """Minutos ('90') → '1 h 30 min'. Vacío/0 → ''."""
+    try:
+        m = int(s)
+    except (ValueError, TypeError):
+        return s
+    if m <= 0:
+        return ''
+    h, mm = divmod(m, 60)
+    parts = []
+    if h:
+        parts.append(f"{h} h")
+    if mm:
+        parts.append(f"{mm} min")
+    return " ".join(parts) or "0 min"
+
+
+@app.template_filter('rango_fmt')
+def rango_fmt_filter(s):
+    """'02:00-09:00' → '02:00 → 09:00 · 7 h' (cruce de medianoche soportado)."""
+    if not s or '-' not in s:
+        return s
+    try:
+        a, b = s.split('-', 1)
+        ah, am = (int(x) for x in a.split(':'))
+        bh, bm = (int(x) for x in b.split(':'))
+        dur = ((bh * 60 + bm) - (ah * 60 + am)) % 1440
+        return f"{a} → {b} · {dur_fmt_filter(str(dur))}"
+    except (ValueError, TypeError):
+        return s
+
+
 @app.before_request
 def setup():
     db.init_db()

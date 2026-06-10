@@ -134,6 +134,10 @@
               {% endfor %}
               {% if is_ek %}<span class="ew-display-src">Ekman</span>{% endif %}
             </div>
+            {% elif field.get('type','text') == 'duracion' %}
+            <p class="day-journal-field-value">{{ val | dur_fmt }}</p>
+            {% elif field.get('type','text') == 'rango' %}
+            <p class="day-journal-field-value">{{ val | rango_fmt }}</p>
             {% else %}
             <p class="day-journal-field-value">{{ val }}</p>
             {% endif %}
@@ -186,6 +190,22 @@
               </div>
               <div class="ew-ek-chip" style="display:none;"></div>
               <input type="hidden" data-ew-value="">
+            </div>
+            {% elif field.get('type','text') == 'duracion' %}
+            <div class="time-field" data-tf="duracion">
+              <div class="tf-row">
+                <input type="number" class="tf-dur-h" min="0" max="99" placeholder="h"><span class="tf-u">h</span>
+                <input type="number" class="tf-dur-m" min="0" max="59" placeholder="min"><span class="tf-u">min</span>
+              </div>
+              <input type="hidden" data-label="{{ field.label }}" value="{{ fval }}">
+            </div>
+            {% elif field.get('type','text') == 'rango' %}
+            <div class="time-field" data-tf="rango">
+              <div class="tf-row">
+                <input type="time" class="tf-rh-from"><span class="tf-u">→</span>
+                <input type="time" class="tf-rh-to"><span class="tf-rh-calc"></span>
+              </div>
+              <input type="hidden" data-label="{{ field.label }}" value="{{ fval }}">
             </div>
             {% else %}
             <textarea data-label="{{ field.label }}" rows="3"
@@ -352,6 +372,8 @@ function buildFields(containerId, catId) {
   container.innerHTML = cat.fields.map(f => {
     const type = (f.type || 'text');
     if (type === 'emotion-wheel') return buildEWPicker(f.label);
+    if (type === 'duracion') return buildDuracionField(f.label, f.placeholder);
+    if (type === 'rango') return buildRangoField(f.label, f.placeholder);
     return '<div class="day-journal-field-input">' +
       '<label>' + f.label + '</label>' +
       '<textarea data-label="' + f.label.replace(/"/g, '&quot;') + '" placeholder="' +
@@ -379,8 +401,8 @@ function toggleDayJournal() {
 function collectValues(containerId) {
   const container = document.getElementById(containerId);
   const values = {};
-  container.querySelectorAll('textarea[data-label]').forEach(ta => {
-    values[ta.dataset.label] = ta.value;
+  container.querySelectorAll('textarea[data-label], input[data-label]').forEach(el => {
+    values[el.dataset.label] = el.value;
   });
   collectEWValues(container, values);
   return JSON.stringify(values);
