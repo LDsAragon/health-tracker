@@ -325,7 +325,7 @@
     {% for note in notes %}
     <div class="day-note {% if note.color %}day-note-colored{% endif %}"
          {% if note.color %}style="--c: {{ note.color }};"{% endif %}
-         id="dnote-{{ note.id }}">
+         id="dnote-{{ note.id }}" data-color="{{ note.color }}">
 
       <!-- Vista -->
       <div class="day-note-view" id="dview-{{ note.id }}">
@@ -349,12 +349,14 @@
         <div class="note-form-footer">
           <div class="color-picker-row">
             <label class="color-opt-none">
-              <input type="radio" name="color" value="" {% if not note.color %}checked{% endif %}>
+              <input type="radio" name="color" value="" {% if not note.color %}checked{% endif %}
+                     onchange="previewNoteColor({{ note.id }}, '')">
               <span class="color-circle color-none">&#10006;</span>
             </label>
             {% for c in COLORS %}
             <label class="color-opt">
-              <input type="radio" name="color" value="{{ c }}" {% if note.color == c %}checked{% endif %}>
+              <input type="radio" name="color" value="{{ c }}" {% if note.color == c %}checked{% endif %}
+                     onchange="previewNoteColor({{ note.id }}, '{{ c }}')">
               <span class="color-circle" style="background:{{ c }};"></span>
             </label>
             {% endfor %}
@@ -478,6 +480,17 @@ function editDayNote(id) {
 function cancelDayNote(id) {
   document.getElementById('dedit-' + id).style.display = 'none';
   document.getElementById('dview-' + id).style.display = 'flex';
+  const note = document.getElementById('dnote-' + id);
+  applyNoteColor(note, note.dataset.color || '');   // revertir al color guardado
+  document.getElementById('dedit-' + id).reset();     // y restaurar el radio elegido
+}
+// Pinta la nota con el color (vacío = sin color) — significador en vivo de la selección
+function applyNoteColor(note, color) {
+  if (color) { note.style.setProperty('--c', color); note.classList.add('day-note-colored'); }
+  else       { note.style.removeProperty('--c');      note.classList.remove('day-note-colored'); }
+}
+function previewNoteColor(id, color) {
+  applyNoteColor(document.getElementById('dnote-' + id), color);
 }
 
 // Journal
