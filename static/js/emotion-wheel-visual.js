@@ -271,7 +271,7 @@ function ewContent(base, mid, spec, depth) {
   if (depth >= 2 && mid)  chain.push(C[base + '|' + mid]);
   chain.push(C[base]);
   const out = {};
-  ['que', 'sirve', 'manifiesta', 'distinguir', 'fuente'].forEach(field => {
+  ['que', 'sirve', 'manifiesta', 'distinguir', 'fuente', 'fdef'].forEach(field => {
     for (const obj of chain) { if (obj && obj[field]) { out[field] = obj[field]; break; } }
   });
   return out;
@@ -302,6 +302,12 @@ function ewRenderInfo(base, mid, spec, depth, color) {
   const sec = (label, val) =>
     val ? `<div class="ew-info-sec"><h4>${label}</h4><p>${val}</p></div>` : '';
 
+  // Atribución honesta: en la base es Ekman; en segmentos, función de Ekman +
+  // definición léxica (si está anclada) + matiz de redacción propia.
+  const srcLine = depth >= 2
+    ? `Función y manifestación: Paul Ekman${c.fdef ? ' · Definición: ' + c.fdef : ''} · Matiz: redacción propia`
+    : (c.fuente ? `Fuente: ${c.fuente}` : '');
+
   panel.innerHTML =
     `<div class="ew-info-title">${crumb}</div>` +
     sec(manifLabel, c.manifiesta) +
@@ -309,7 +315,7 @@ function ewRenderInfo(base, mid, spec, depth, color) {
     '<div class="ew-info-divider"></div>' +
     sec(queLabel, c.que) +
     sec(distLabel, c.distinguir) +
-    (c.fuente ? `<div class="ew-info-src">Fuente: ${c.fuente}</div>` : '');
+    (srcLine ? `<div class="ew-info-src">${srcLine}</div>` : '');
 }
 
 // Restaura un label a su orientación radial de reposo (snap, sin animar)

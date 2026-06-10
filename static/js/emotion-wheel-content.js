@@ -50,12 +50,12 @@ const EMOTION_CONTENT = {
 
   // ── MEDIAS (36) — definición del matiz; función y manifestación heredan de la base ──
   // IRA
-  "Ira|Odioso":      { que: "Hostilidad intensa y sostenida hacia alguien, con deseo de que le vaya mal.", distinguir: "Más dirigida a una persona y más duradera que la irritación pasajera; suele cargar rencor acumulado." },
-  "Ira|Amenazado":   { que: "Sensación de que algo o alguien pone en riesgo lo que valorás (tu lugar, un vínculo, tu seguridad).", distinguir: "Mezcla ira con miedo: la ira aparece para defender lo amenazado. Si predomina el peligro y no la defensa, mirá Miedo." },
-  "Ira|Desquiciado": { que: "Ira desbordada en la que sentís que perdés el control.", distinguir: "Es el extremo más intenso de la ira (furia), donde la reacción supera a la causa." },
-  "Ira|Agresivo":    { que: "Impulso de avanzar contra el obstáculo o la persona, de atacar o confrontar.", distinguir: "Acentúa la tendencia a la acción y al ataque de la ira, más que el sentir interno." },
-  "Ira|Frustrado":   { que: "Malestar por encontrar un obstáculo entre vos y lo que querés lograr.", distinguir: "Es la forma más cotidiana y de menor intensidad de la ira; nace del bloqueo de una meta, no tanto de una injusticia." },
-  "Ira|Distante":    { que: "Te apartás y te cerrás, manteniendo distancia de los demás.", distinguir: "La ira acá se vuelve fría: en vez de confrontar, te retirás y desconfiás." },
+  "Ira|Odioso":      { que: "Animadversión intensa hacia alguien; en el uso corriente, estar arisco y de muy mal carácter.", distinguir: "Más dirigida a una persona y más duradera que la irritación pasajera; suele cargar rencor acumulado.", fdef: "Wikcionario" },
+  "Ira|Amenazado":   { que: "Sentir que alguien da a entender que va a hacerte un mal, o que algo representa un peligro para lo que valorás.", distinguir: "Mezcla ira con miedo: la ira aparece para defender lo amenazado. Si predomina el peligro y no la defensa, mirá Miedo.", fdef: "Wikcionario" },
+  "Ira|Desquiciado": { que: "Sacado de quicio: tan trastornado por la ira que perdés el equilibrio y el control.", distinguir: "Es el extremo más intenso de la ira (furia), donde la reacción supera a la causa.", fdef: "Wikcionario" },
+  "Ira|Agresivo":    { que: "Con agresividad, como si fueras a agredir o arremeter contra alguien.", distinguir: "Acentúa la tendencia a la acción y al ataque de la ira, más que el sentir interno.", fdef: "Wikcionario" },
+  "Ira|Frustrado":   { que: "Malestar por no lograr superar un obstáculo que se interpone con lo que querés, pese a intentarlo.", distinguir: "Es la forma más cotidiana y de menor intensidad de la ira; nace del bloqueo de una meta, no tanto de una injusticia.", fdef: "Wikcionario · Atlas of Emotions" },
+  "Ira|Distante":    { que: "Que evita la comunicación, el trato y la cercanía emocional; te mantenés alejado.", distinguir: "La ira acá se vuelve fría: en vez de confrontar, te retirás y desconfiás.", fdef: "Wikcionario" },
 
   // DISGUSTO
   "Disgusto|Crítico":      { que: "Rechazo que se expresa juzgando o señalando defectos.", distinguir: "Disgusto canalizado en juicio hacia ideas o personas; más mental que visceral." },
@@ -99,18 +99,18 @@ const EMOTION_CONTENT = {
 
   // ── ESPECÍFICAS (72) — definición + distinción frente a su hermana del par ──
   // IRA
-  "Ira|Odioso|Resentido":        { que: "Enojo guardado por una herida o injusticia que no se resolvió.", distinguir: "A diferencia de «violado», el daño quedó macerando en el tiempo." },
-  "Ira|Odioso|Violado":          { que: "Sensación de que cruzaron un límite tuyo o te pasaron por encima.", distinguir: "El foco está en la transgresión de tu espacio o derechos, más que en el rencor acumulado." },
-  "Ira|Amenazado|Celoso":        { que: "Temor a perder un vínculo o un lugar frente a un tercero.", distinguir: "Hay un rival concreto; mezcla ira con miedo a la pérdida." },
-  "Ira|Amenazado|Inseguro":      { que: "Sensación de no estar firme ni protegido en tu posición.", distinguir: "No hay un rival puntual como en los celos; es una falta de respaldo difusa." },
-  "Ira|Desquiciado|Enfurecido":  { que: "Ira muy intensa y encendida.", distinguir: "Furia caliente y explosiva." },
-  "Ira|Desquiciado|Rabioso":     { que: "Ira descontrolada y casi ciega.", distinguir: "Aún más desbordada que «enfurecido»: cuesta razonar." },
-  "Ira|Agresivo|Provocado":      { que: "Sentir que te incitaron o pincharon para reaccionar.", distinguir: "La agresividad responde a un estímulo externo puntual." },
-  "Ira|Agresivo|Hostil":         { que: "Actitud de antagonismo sostenido hacia alguien.", distinguir: "Es una disposición a atacar más estable, no una reacción puntual." },
-  "Ira|Frustrado|Enfadado":      { que: "Enojo manifiesto por algo que salió mal o te molestó.", distinguir: "Más marcado y expresado que la irritación." },
-  "Ira|Frustrado|Irritado":      { que: "Molestia leve y superficial.", distinguir: "Fastidio de baja intensidad, fácil de gatillar y de pasar." },
-  "Ira|Distante|Retraído":       { que: "Te recogés y evitás el contacto.", distinguir: "El acento está en el repliegue." },
-  "Ira|Distante|Sospechoso":     { que: "Desconfianza: esperás malas intenciones en el otro.", distinguir: "El acento está en la desconfianza, no solo en alejarte." },
+  "Ira|Odioso|Resentido":        { que: "Que siente resentimiento: guardás dolor o enojo por algo que viviste como injusto.", distinguir: "A diferencia de «violado», el daño quedó macerando en el tiempo.", fdef: "Wikcionario" },
+  "Ira|Odioso|Violado":          { que: "Sentir que cruzaron tus límites o pasaron por encima de tus derechos.", distinguir: "El foco está en la transgresión de tu espacio o derechos, más que en el rencor acumulado." },
+  "Ira|Amenazado|Celoso":        { que: "Que tiene celos: temés perder a alguien querido frente a un tercero.", distinguir: "Hay un rival concreto; mezcla ira con miedo a la pérdida.", fdef: "Wikcionario" },
+  "Ira|Amenazado|Inseguro":      { que: "Que siente que le falta seguridad o respaldo, sin confianza firme en su posición.", distinguir: "No hay un rival puntual como en los celos; es una falta de respaldo difusa.", fdef: "Wikcionario" },
+  "Ira|Desquiciado|Enfurecido":  { que: "Lleno de furia, con la ira encendida al máximo.", distinguir: "Furia caliente y explosiva.", fdef: "Wikcionario" },
+  "Ira|Desquiciado|Rabioso":     { que: "Colérico, con un enfado muy grande y vehemente.", distinguir: "Aún más desbordada que «enfurecido»: cuesta razonar.", fdef: "Wikcionario" },
+  "Ira|Agresivo|Provocado":      { que: "Incitado o pinchado por algo o alguien hasta reaccionar.", distinguir: "La agresividad responde a un estímulo externo puntual.", fdef: "Wikcionario" },
+  "Ira|Agresivo|Hostil":         { que: "Que se comporta como enemigo o en contra, en actitud de antagonismo.", distinguir: "Es una disposición a atacar más estable, no una reacción puntual.", fdef: "Wikcionario" },
+  "Ira|Frustrado|Enfadado":      { que: "Contrariado o disgustado por algo que salió mal o te molestó.", distinguir: "Más marcado y expresado que la irritación.", fdef: "Wikcionario" },
+  "Ira|Frustrado|Irritado":      { que: "De mal humor por una molestia; enojo leve y superficial.", distinguir: "Fastidio de baja intensidad, fácil de gatillar y de pasar.", fdef: "Wikcionario · Atlas of Emotions" },
+  "Ira|Distante|Retraído":       { que: "De poco contacto social: te recogés y rehuís el trato.", distinguir: "El acento está en el repliegue.", fdef: "Wikcionario" },
+  "Ira|Distante|Sospechoso":     { que: "Suspicaz: desconfiás y esperás malas intenciones en el otro.", distinguir: "El acento está en la desconfianza, no solo en alejarte.", fdef: "Wikcionario" },
 
   // DISGUSTO
   "Disgusto|Crítico|Sarcástico":       { que: "Rechazo expresado con ironía mordaz.", distinguir: "Ataca con humor hiriente." },
