@@ -24,23 +24,14 @@ function tfRangeMin(from, to) {
   return ((tb - fa) % 1440 + 1440) % 1440;
 }
 
-// ── Selects de hora 24h (HH 00–23, MM en pasos de 5) ───────────────────────
-function _tfSelOpts(max, step) {
-  let o = '<option value="">–</option>';
-  for (let i = 0; i < max; i += step) {
-    const v = String(i).padStart(2, '0');
-    o += '<option value="' + v + '">' + v + '</option>';
-  }
-  return o;
-}
+// ── Fila de Rango: inputs numéricos HH:MM → HH:MM (24h, sin overlay) ────────
 function tfRangoRow() {
-  const hh = _tfSelOpts(24, 1), mm = _tfSelOpts(60, 5);
+  const hi = (cls, mx, ph) =>
+    '<input type="number" class="' + cls + '" min="0" max="' + mx + '" placeholder="' + ph + '">';
   return '<div class="tf-row">' +
-    '<select class="tf-sel tf-rh-fh">' + hh + '</select><span class="tf-u">:</span>' +
-    '<select class="tf-sel tf-rh-fm">' + mm + '</select>' +
+    hi('tf-rh-fh', 23, 'hh') + '<span class="tf-u">:</span>' + hi('tf-rh-fm', 59, 'mm') +
     '<span class="tf-u">→</span>' +
-    '<select class="tf-sel tf-rh-th">' + hh + '</select><span class="tf-u">:</span>' +
-    '<select class="tf-sel tf-rh-tm">' + mm + '</select>' +
+    hi('tf-rh-th', 23, 'hh') + '<span class="tf-u">:</span>' + hi('tf-rh-tm', 59, 'mm') +
     '<span class="tf-rh-calc"></span>' +
   '</div>';
 }
@@ -64,7 +55,7 @@ function buildRangoField(label, ph) {
   '</div>';
 }
 
-// Asegura los selects de rango (para el form de edición, que llega como shell + hidden)
+// Asegura los inputs de rango (para el form de edición, que llega como shell + hidden)
 function _tfEnsureRango(tf) {
   if (tf.dataset.tf !== 'rango' || tf.querySelector('.tf-row')) return;
   const hidden = tf.querySelector('input[data-label]');
@@ -74,9 +65,13 @@ function _tfEnsureRango(tf) {
 }
 
 function _tfRangoVals(tf) {
-  const g = c => { const el = tf.querySelector(c); return el ? el.value : ''; };
-  const fh = g('.tf-rh-fh'), fm = g('.tf-rh-fm'), th = g('.tf-rh-th'), tm = g('.tf-rh-tm');
-  return { from: (fh && fm) ? fh + ':' + fm : '', to: (th && tm) ? th + ':' + tm : '' };
+  const val = c => { const el = tf.querySelector(c); return el && el.value !== '' ? el.value : null; };
+  const cp  = (x, mx) => String(Math.min(mx, Math.max(0, parseInt(x, 10) || 0))).padStart(2, '0');
+  const fh = val('.tf-rh-fh'), fm = val('.tf-rh-fm'), th = val('.tf-rh-th'), tm = val('.tf-rh-tm');
+  return {
+    from: (fh !== null && fm !== null) ? cp(fh, 23) + ':' + cp(fm, 59) : '',
+    to:   (th !== null && tm !== null) ? cp(th, 23) + ':' + cp(tm, 59) : ''
+  };
 }
 
 // ── Sincronización inputs → hidden (delegada) ──────────────────────────────
@@ -100,10 +95,10 @@ function _tfOnEvt(e) {
   const tf = e.target.closest && e.target.closest('.time-field');
   if (tf) _tfSync(tf);
 }
-document.addEventListener('input', _tfOnEvt);   // number inputs
-document.addEventListener('change', _tfOnEvt);  // selects
+document.addEventListener('input', _tfOnEvt);
+document.addEventListener('change', _tfOnEvt);
 
-// ── Restaurar (edición): construye selects si faltan y rellena desde el hidden ──
+// ── Restaurar (edición): construye los inputs de rango si faltan y rellena desde el hidden ──
 function restoreTimeFields(root) {
   (root || document).querySelectorAll('.time-field').forEach(tf => {
     if (tf.dataset.tf === 'rango') _tfEnsureRango(tf);
