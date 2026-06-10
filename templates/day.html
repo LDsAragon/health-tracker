@@ -95,10 +95,11 @@
     <h3 class="day-section-title">🎯 Objetivos del día</h3>
 
     {% if todos %}
-    <ul class="todo-list">
+    <ul class="todo-list" id="todo-list">
       {% for t in todos %}
-      <li class="todo-item {% if t.done %}todo-done{% endif %}" id="todo-{{ t.id }}">
+      <li class="todo-item {% if t.done %}todo-done{% endif %}" id="todo-{{ t.id }}" data-id="{{ t.id }}" draggable="true">
         <div class="todo-row" id="todo-row-{{ t.id }}">
+          <span class="todo-grip" title="Arrastrar para reordenar">&#x2630;</span>
           <form method="POST" action="{{ url_for('todo_toggle', date_str=date_str, todo_id=t.id) }}" style="display:inline;">
             <button type="submit" class="todo-check" title="{{ 'Marcar como pendiente' if t.done else 'Marcar como hecho' }}">
               {% if t.done %}&#10003;{% endif %}
@@ -420,6 +421,48 @@ function cancelTodoMove(id) {
   document.getElementById('todo-move-' + id).style.display = 'none';
   document.getElementById('todo-row-' + id).style.display = 'flex';
 }
+
+// Drag & drop para reordenar dentro del día
+(function () {
+  const ul = document.getElementById('todo-list');
+  if (!ul) return;
+  const REORDER_URL = "{{ url_for('todos_reorder', date_str=date_str) }}";
+  let dragging = null;
+
+  ul.addEventListener('dragstart', function (e) {
+    const li = e.target.closest('.todo-item');
+    if (!li) return;
+    dragging = li;
+    li.classList.add('todo-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  ul.addEventListener('dragend', function () {
+    if (!dragging) return;
+    dragging.classList.remove('todo-dragging');
+    dragging = null;
+    persistOrder();
+  });
+
+  ul.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    if (!dragging) return;
+    const over = e.target.closest('.todo-item');
+    if (!over || over === dragging) return;
+    const rect = over.getBoundingClientRect();
+    const after = (e.clientY - rect.top) > rect.height / 2;
+    ul.insertBefore(dragging, after ? over.nextSibling : over);
+  });
+
+  function persistOrder() {
+    const ids = Array.from(ul.querySelectorAll('.todo-item')).map(li => li.dataset.id);
+    fetch(REORDER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'order=' + ids.join(','),
+    });
+  }
+})();
 function editDayNote(id) {
   document.getElementById('dview-' + id).style.display = 'none';
   document.getElementById('dedit-' + id).style.display = 'flex';

@@ -264,3 +264,20 @@ def test_todo_counts_range(test_db):
     db.toggle_todo(tid)
     counts = db.get_todo_counts_range("2026-06-01", "2026-06-30")
     assert counts[TDATE] == {"done": 1, "total": 2}
+
+def test_reorder_todos(test_db):
+    db.add_todo(TDATE, "a")
+    db.add_todo(TDATE, "b")
+    db.add_todo(TDATE, "c")
+    ids = [t["id"] for t in db.get_todos_for_date(TDATE)]   # a, b, c
+    db.reorder_todos(TDATE, [ids[2], ids[0], ids[1]])        # c, a, b
+    todos = db.get_todos_for_date(TDATE)
+    assert [t["text"] for t in todos] == ["c", "a", "b"]
+
+def test_reorder_todos_acotado_al_dia(test_db):
+    db.add_todo(TDATE, "propio")
+    db.add_todo("2026-06-10", "ajeno")
+    ajeno = db.get_todos_for_date("2026-06-10")[0]["id"]
+    propio = db.get_todos_for_date(TDATE)[0]["id"]
+    db.reorder_todos(TDATE, [ajeno, propio])   # el ajeno no debe verse afectado
+    assert db.get_todos_for_date("2026-06-10")[0]["text"] == "ajeno"

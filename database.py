@@ -454,6 +454,16 @@ def delete_todo(todo_id: int):
         conn.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
 
 
+def reorder_todos(todo_date: str, ordered_ids: list):
+    """Asigna position según el orden recibido (acotado a ese día)."""
+    with get_db() as conn:
+        for pos, tid in enumerate(ordered_ids):
+            conn.execute(
+                "UPDATE todos SET position = ? WHERE id = ? AND todo_date = ?",
+                (pos, int(tid), todo_date),
+            )
+
+
 def get_todo_counts_range(start: str, end: str) -> dict:
     """Returns {date_str: {done, total}} para el indicador del calendario."""
     with get_db() as conn:

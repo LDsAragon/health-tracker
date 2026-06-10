@@ -278,3 +278,11 @@ def test_contador_todos_en_semana(client):
 def test_sin_todos_no_hay_badge_en_calendario(client):
     r = client.get("/calendar/2026/6")
     assert b"cal-todo-badge" not in r.data
+
+def test_reordenar_todos_ruta(client):
+    client.post(f"/day/{DATE}/todo/add", data={"text": "a"})
+    client.post(f"/day/{DATE}/todo/add", data={"text": "b"})
+    ids = [t["id"] for t in db.get_todos_for_date(DATE)]
+    r = client.post(f"/day/{DATE}/todos/reorder", data={"order": f"{ids[1]},{ids[0]}"})
+    assert r.status_code == 204
+    assert [t["text"] for t in db.get_todos_for_date(DATE)] == ["b", "a"]

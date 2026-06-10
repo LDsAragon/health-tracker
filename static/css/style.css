@@ -1126,6 +1126,14 @@ select.journal-cat-select {
 .todo-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .todo-item { display: flex; flex-direction: column; gap: 4px; }
 .todo-row { display: flex; align-items: center; gap: 10px; }
+.todo-item { border-radius: 8px; }
+.todo-item.todo-dragging { opacity: .5; }
+.todo-grip {
+  flex-shrink: 0; cursor: grab; color: var(--muted);
+  font-size: 12px; line-height: 1; opacity: .45; user-select: none;
+}
+.todo-grip:active { cursor: grabbing; }
+.todo-row:hover .todo-grip { opacity: .8; }
 .todo-check {
   flex-shrink: 0; width: 20px; height: 20px; border-radius: 6px;
   border: 1.5px solid var(--border); background: var(--surface2);

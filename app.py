@@ -250,6 +250,15 @@ def todo_delete(date_str, todo_id):
     return redirect(url_for("day_view", date_str=date_str))
 
 
+@app.route("/day/<date_str>/todos/reorder", methods=["POST"])
+def todos_reorder(date_str):
+    order = request.form.get("order", "")
+    ids = [int(x) for x in order.split(",") if x.strip().isdigit()]
+    if ids:
+        db.reorder_todos(date_str, ids)
+    return ("", 204)
+
+
 @app.route("/day/<date_str>/event/<int:event_id>/complete", methods=["POST"])
 def event_complete(date_str, event_id):
     note = request.form.get("note", "").strip()
