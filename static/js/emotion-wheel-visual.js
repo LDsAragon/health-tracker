@@ -83,6 +83,8 @@ function openEWModal(pickerEl, wheelId) {
   ewState = { angle: 90, picker: pickerEl, wheel: ewWheelSpec(wheelId || 'es') };
   buildFullWheel();
   document.getElementById('ew-modal').style.display = 'flex';
+  document.querySelectorAll('.ew-wheel-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.wheel === ewState.wheel.id));
   document.addEventListener('keydown',    ewKeyHandler);
   document.addEventListener('mousemove',  _ewTrackMouse);
 }

@@ -116,18 +116,23 @@
             </div>
           </div>
           {% set EW_COLORS = {'Ira':'#ef4444','Disgusto':'#f97316','Tristeza':'#84cc16','Felicidad':'#eab308','Sorpresa':'#3b82f6','Miedo':'#a855f7'} %}
+          {% set EKMAN_COLORS = {'Ira':'#e2403b','Miedo':'#7c5cbf','Tristeza':'#3b6fb5','Asco':'#4f9d69','Disfrute':'#e6b53c'} %}
           {% for field in entry.category_fields %}
           {% set val = entry['values'].get(field.label, '') %}
           {% if val %}
           <div class="day-journal-field">
             <span class="day-journal-field-label">{{ field.label }}</span>
             {% if field.get('type','text') == 'emotion-wheel' %}
-            {% set ew_color = EW_COLORS.get(val.split(' > ')[0], '#8892a4') %}
+            {% set is_ek = val.startswith('ek::') %}
+            {% set clean = val[4:] if is_ek else val %}
+            {% set base0 = clean.split(' > ')[0] %}
+            {% set ew_color = (EKMAN_COLORS.get(base0) if is_ek else EW_COLORS.get(base0)) or '#8892a4' %}
             <div class="ew-display" style="--ew-c: {{ ew_color }};">
-              {% for part in val.split(' > ') %}
+              {% for part in clean.split(' > ') %}
               <span class="ew-display-chip">{{ part }}</span>
               {% if not loop.last %}<span class="ew-display-sep">›</span>{% endif %}
               {% endfor %}
+              {% if is_ek %}<span class="ew-display-src">Ekman</span>{% endif %}
             </div>
             {% else %}
             <p class="day-journal-field-value">{{ val }}</p>
@@ -159,10 +164,12 @@
             {% if field.get('type','text') == 'emotion-wheel' %}
             <div class="emotion-wheel-picker" data-label="{{ field.label }}"
                  data-ew-saved="{{ fval }}">
-              <button type="button" class="ew-open-btn"
-                      onclick="openEWModal(this.closest('.emotion-wheel-picker'))">
-                🎯 Usar rueda
-              </button>
+              <div class="ew-open-btns">
+                <button type="button" class="ew-open-btn"
+                        onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Rueda</button>
+                <button type="button" class="ew-open-btn ew-open-btn-ek"
+                        onclick="openEWModal(this.closest('.emotion-wheel-picker'),'ek')">🧭 Rueda Ekman</button>
+              </div>
               <div class="ew-selects">
                 <select class="ew-select ew-level1" onchange="ewL2(this)">
                   <option value="">Emoción base...</option>
@@ -177,6 +184,7 @@
                   <option value="">Aún más específico...</option>
                 </select>
               </div>
+              <div class="ew-ek-chip" style="display:none;"></div>
               <input type="hidden" data-ew-value="">
             </div>
             {% else %}

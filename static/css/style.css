@@ -1387,21 +1387,68 @@ select.journal-cat-select {
 
 /* ── RUEDA DE EMOCIONES — MODAL VISUAL ───────────────────────────── */
 
+.ew-open-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .ew-open-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   background: var(--surface2);
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 12px;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  margin-bottom: 6px;
-  transition: border-color .15s;
+  transition: border-color .15s, background .15s;
 }
 .ew-open-btn:hover { border-color: var(--accent); }
+.ew-open-btn-ek:hover { border-color: #e6b53c; }
+
+/* Chip de solo lectura cuando el valor viene de la rueda Ekman */
+.ew-ek-chip {
+  margin-top: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: color-mix(in srgb, #e6b53c 16%, transparent);
+  border: 1px solid color-mix(in srgb, #e6b53c 38%, transparent);
+}
+.ew-ek-chip::before { content: "🧭 "; }
+
+/* Badge "Ekman" en el display de la entrada guardada */
+.ew-display-src {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* Toggle de rueda dentro del modal */
+.ew-wheel-tabs { display: flex; gap: 6px; }
+.ew-wheel-tab {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.ew-wheel-tab:hover { color: var(--text); }
+.ew-wheel-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
 
 .ew-modal-overlay {
   position: fixed;

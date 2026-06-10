@@ -138,6 +138,22 @@ function _ewColor(el, color) {
 
 function ewRestore(picker, val) {
   if (!val) return;
+  const hid     = picker.querySelector('[data-ew-value]');
+  const selects = picker.querySelector('.ew-selects');
+  const chip    = picker.querySelector('.ew-ek-chip');
+
+  // Valor de la rueda Ekman: "ek::Ira > Frustración" → chip de solo lectura, sin cascada
+  if (val.indexOf('ek::') === 0) {
+    const path = val.slice(4);
+    if (hid) hid.value = val;
+    if (selects) selects.style.display = 'none';
+    if (chip) { chip.style.display = ''; chip.textContent = path; chip.dataset.origin = 'ek'; }
+    return;
+  }
+  // Valor de la rueda española (sin prefijo): cascada normal
+  if (chip)    chip.style.display = 'none';
+  if (selects) selects.style.display = '';
+
   const parts = val.split(' > ');
   const l1 = picker.querySelector('.ew-level1');
   if (!parts[0] || !EMOTION_WHEEL[parts[0]]) return;
@@ -166,10 +182,12 @@ function buildEWPicker(label) {
   return `<div class="day-journal-field-input">
     <label>${label}</label>
     <div class="emotion-wheel-picker" data-label="${esc(label)}">
-      <button type="button" class="ew-open-btn"
-              onclick="openEWModal(this.closest('.emotion-wheel-picker'))">
-        🎯 Usar rueda
-      </button>
+      <div class="ew-open-btns">
+        <button type="button" class="ew-open-btn"
+                onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Rueda</button>
+        <button type="button" class="ew-open-btn ew-open-btn-ek"
+                onclick="openEWModal(this.closest('.emotion-wheel-picker'),'ek')">🧭 Rueda Ekman</button>
+      </div>
       <div class="ew-selects">
         <select class="ew-select ew-level1" onchange="ewL2(this)">
           <option value="">Emoción base...</option>${opts}
@@ -181,6 +199,7 @@ function buildEWPicker(label) {
           <option value="">Aún más específico...</option>
         </select>
       </div>
+      <div class="ew-ek-chip" style="display:none;"></div>
       <input type="hidden" data-ew-value="">
     </div>
   </div>`;
@@ -192,10 +211,12 @@ function buildEWPickerCompact(label) {
   const opts = Object.keys(EMOTION_WHEEL)
     .map(e => `<option value="${e}">${e}</option>`).join('');
   return `<div class="emotion-wheel-picker ew-compact" data-label="${esc(label)}">
-    <button type="button" class="ew-open-btn"
-            onclick="openEWModal(this.closest('.emotion-wheel-picker'))">
-      🎯 Usar rueda
-    </button>
+    <div class="ew-open-btns">
+      <button type="button" class="ew-open-btn"
+              onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Rueda</button>
+      <button type="button" class="ew-open-btn ew-open-btn-ek"
+              onclick="openEWModal(this.closest('.emotion-wheel-picker'),'ek')">🧭 Ekman</button>
+    </div>
     <select class="ew-select ew-level1" onchange="ewL2(this)">
       <option value="">Emoción base...</option>${opts}
     </select>
@@ -205,6 +226,7 @@ function buildEWPickerCompact(label) {
     <select class="ew-select ew-level3" style="display:none;">
       <option value="">Aún más específico...</option>
     </select>
+    <div class="ew-ek-chip" style="display:none;"></div>
     <input type="hidden" data-ew-value="">
   </div>`;
 }
