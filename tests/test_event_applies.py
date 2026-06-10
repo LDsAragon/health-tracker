@@ -87,3 +87,17 @@ def test_every_n_antes_de_start():
 def test_every_n_despues_de_end():
     e = ev("every:3", start=LUNES.isoformat(), end=(LUNES + timedelta(days=3)).isoformat())
     assert not event_applies(e, LUNES + timedelta(days=6))
+
+
+# ── Una sola vez (evento único) ────────────────────────────────────────────────
+
+def test_once_en_start():
+    assert event_applies(ev("once", start=LUNES.isoformat()), LUNES)
+
+def test_once_otro_dia():
+    e = ev("once", start=LUNES.isoformat())
+    assert not event_applies(e, MARTES)
+    assert not event_applies(e, LUNES + timedelta(days=7))
+
+def test_once_antes_de_start():
+    assert not event_applies(ev("once", start=MARTES.isoformat()), LUNES)

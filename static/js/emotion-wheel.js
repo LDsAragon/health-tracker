@@ -186,7 +186,7 @@ function buildEWPicker(label) {
     <div class="emotion-wheel-picker" data-label="${esc(label)}">
       <div class="ew-open-btns">
         <button type="button" class="ew-open-btn"
-                onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Rueda</button>
+                onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Rueda Willcox</button>
         <button type="button" class="ew-open-btn ew-open-btn-ek"
                 onclick="openEWModal(this.closest('.emotion-wheel-picker'),'ek')">🧭 Rueda Ekman</button>
       </div>
@@ -215,7 +215,7 @@ function buildEWPickerCompact(label) {
   return `<div class="emotion-wheel-picker ew-compact" data-label="${esc(label)}">
     <div class="ew-open-btns">
       <button type="button" class="ew-open-btn"
-              onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Rueda</button>
+              onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Willcox</button>
       <button type="button" class="ew-open-btn ew-open-btn-ek"
               onclick="openEWModal(this.closest('.emotion-wheel-picker'),'ek')">🧭 Ekman</button>
     </div>

@@ -23,6 +23,17 @@ def humantime_filter(ts):
         return ''
 
 
+@app.template_filter('fechacorta')
+def fechacorta_filter(s):
+    """'2026-06-10' → '10/06/2026' (formato local, sin ISO/anglicismo)."""
+    if not s:
+        return ''
+    try:
+        return date.fromisoformat(s).strftime('%d/%m/%Y')
+    except (ValueError, TypeError):
+        return s
+
+
 @app.before_request
 def setup():
     db.init_db()
@@ -200,14 +211,16 @@ def recurring_view():
 @app.route("/recurring/add", methods=["POST"])
 def recurring_add():
     rtype = request.form.get("rtype", "daily")
-    if rtype == "daily":
-        recurrence = "daily"
-    elif rtype == "weekly":
+    if rtype == "weekly":
         days = request.form.getlist("weekdays")
         recurrence = "weekly:" + ",".join(sorted(days)) if days else "daily"
-    else:
+    elif rtype == "every":
         n = int(request.form.get("interval_days", 2))
         recurrence = f"every:{n}"
+    elif rtype == "once":
+        recurrence = "once"
+    else:
+        recurrence = "daily"
 
     title = request.form.get("title", "").strip()
     if title:
@@ -224,14 +237,16 @@ def recurring_add():
 @app.route("/recurring/<int:event_id>/edit", methods=["POST"])
 def recurring_edit(event_id):
     rtype = request.form.get("rtype", "daily")
-    if rtype == "daily":
-        recurrence = "daily"
-    elif rtype == "weekly":
+    if rtype == "weekly":
         days = request.form.getlist("weekdays")
         recurrence = "weekly:" + ",".join(sorted(days)) if days else "daily"
-    else:
+    elif rtype == "every":
         n = int(request.form.get("interval_days", 2))
         recurrence = f"every:{n}"
+    elif rtype == "once":
+        recurrence = "once"
+    else:
+        recurrence = "daily"
     title = request.form.get("title", "").strip()
     if title:
         db.update_recurring_event(event_id, {

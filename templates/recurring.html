@@ -55,6 +55,10 @@
           <input type="radio" name="rtype" value="every" onchange="showFreq(this.value)">
           <span>Cada N días</span>
         </label>
+        <label class="freq-opt">
+          <input type="radio" name="rtype" value="once" onchange="showFreq(this.value)">
+          <span>Una sola vez</span>
+        </label>
       </div>
 
       <div id="freq-weekly" class="freq-detail" style="display:none;">
@@ -98,7 +102,9 @@
       <div class="rec-info">
         <span class="rec-title">{{ ev.title }}</span>
         <span class="rec-rule">
-          {% if ev.recurrence == 'daily' %}
+          {% if ev.recurrence == 'once' %}
+            Una sola vez
+          {% elif ev.recurrence == 'daily' %}
             Todos los días
           {% elif ev.recurrence.startswith('weekly:') %}
             {% set day_map = {'0':'Lu','1':'Ma','2':'Mi','3':'Ju','4':'Vi','5':'Sá','6':'Do'} %}
@@ -107,7 +113,11 @@
           {% elif ev.recurrence.startswith('every:') %}
             Cada {{ ev.recurrence.split(':')[1] }} días
           {% endif %}
-          · desde {{ ev.start_date }}{% if ev.end_date %} hasta {{ ev.end_date }}{% endif %}
+          {% if ev.recurrence == 'once' %}
+            · el {{ ev.start_date | fechacorta }}
+          {% else %}
+            · desde {{ ev.start_date | fechacorta }}{% if ev.end_date %} hasta {{ ev.end_date | fechacorta }}{% endif %}
+          {% endif %}
         </span>
         {% set s = stats.get(ev.id, {}) %}
         {% if s.applicable %}
@@ -180,6 +190,12 @@
                      {% if ev.recurrence.startswith('every:') %}checked{% endif %}
                      onchange="showEditFreq({{ ev.id }}, this.value)">
               <span>Cada N días</span>
+            </label>
+            <label class="freq-opt">
+              <input type="radio" name="rtype" value="once"
+                     {% if ev.recurrence == 'once' %}checked{% endif %}
+                     onchange="showEditFreq({{ ev.id }}, this.value)">
+              <span>Una sola vez</span>
             </label>
           </div>
 

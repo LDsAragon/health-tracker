@@ -166,6 +166,8 @@ def event_applies(event: dict, d: date) -> bool:
         if d > end:
             return False
     rec = event["recurrence"]
+    if rec == "once":
+        return d == start
     if rec == "daily":
         return True
     if rec.startswith("weekly:"):
