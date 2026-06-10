@@ -20,7 +20,7 @@ def init_db():
                 note_date   TEXT NOT NULL,
                 content     TEXT NOT NULL,
                 color       TEXT DEFAULT '',
-                created_at  TEXT DEFAULT (datetime('now'))
+                created_at  TEXT DEFAULT (datetime('now','localtime'))
             );
 
             CREATE TABLE IF NOT EXISTS recurring_events (
@@ -77,7 +77,7 @@ def init_db():
                 entry_date  TEXT NOT NULL,
                 values_json TEXT DEFAULT '{}',
                 tags        TEXT DEFAULT '',
-                created_at  TEXT DEFAULT (datetime('now'))
+                created_at  TEXT DEFAULT (datetime('now','localtime'))
             );
             CREATE TABLE IF NOT EXISTS todos (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,7 +85,7 @@ def init_db():
                 text        TEXT NOT NULL,
                 done        INTEGER DEFAULT 0,
                 position    INTEGER DEFAULT 0,
-                created_at  TEXT DEFAULT (datetime('now'))
+                created_at  TEXT DEFAULT (datetime('now','localtime'))
             );
         """)
 
@@ -95,7 +95,8 @@ def init_db():
 def add_note(note_date: str, content: str, color: str = ""):
     with get_db() as conn:
         conn.execute(
-            "INSERT INTO notes (note_date, content, color) VALUES (?, ?, ?)",
+            "INSERT INTO notes (note_date, content, color, created_at)"
+            " VALUES (?, ?, ?, datetime('now','localtime'))",
             (note_date, content, color),
         )
 
@@ -379,7 +380,8 @@ def get_journal_entries_range(start: str, end: str) -> dict:
 def add_journal_entry(data: dict):
     with get_db() as conn:
         conn.execute(
-            "INSERT INTO journal_entries (category_id, entry_date, values_json, tags) VALUES (?,?,?,?)",
+            "INSERT INTO journal_entries (category_id, entry_date, values_json, tags, created_at)"
+            " VALUES (?,?,?,?, datetime('now','localtime'))",
             (data["category_id"], data["entry_date"],
              data.get("values_json", "{}"), data.get("tags", "")),
         )
@@ -421,7 +423,8 @@ def add_todo(todo_date: str, text: str):
     with get_db() as conn:
         pos = _next_todo_position(conn, todo_date)
         conn.execute(
-            "INSERT INTO todos (todo_date, text, position) VALUES (?,?,?)",
+            "INSERT INTO todos (todo_date, text, position, created_at)"
+            " VALUES (?,?,?, datetime('now','localtime'))",
             (todo_date, text, pos),
         )
 
