@@ -47,12 +47,8 @@
         <button type="button" class="btn-undo" onclick="applyPreset('sueno')">😴 Sueño</button>
         <button type="button" class="btn-undo" onclick="applyPreset('estudio')">📚 Estudio</button>
         <button type="button" class="btn-undo" onclick="applyPreset('alimentacion')">🍎 Alimentación</button>
-        <button type="button" class="btn-undo" onclick="applyPreset('animo')">🙂 Ánimo</button>
-        <button type="button" class="btn-undo" onclick="applyPreset('mejoryo')">🌱 Mejor yo</button>
         <button type="button" class="btn-undo" onclick="applyPreset('social')">👥 Social</button>
         <button type="button" class="btn-undo" onclick="applyPreset('aficiones')">🎨 Aficiones</button>
-        <button type="button" class="btn-undo" onclick="applyPreset('belleza')">✨ Belleza</button>
-        <button type="button" class="btn-undo" onclick="applyPreset('productividad')">✅ Productividad</button>
       </div>
       <p style="font-size:11px;color:var(--muted);margin:6px 0 0;">Prellenan los campos abajo · podés ajustarlos antes de guardar.</p>
     </div>
@@ -244,16 +240,6 @@ const JCAT_PRESETS = {
     { label: 'Saciedad',    type: 'escala',   ph: '' },
     { label: 'Antojos',     type: 'text',     ph: '' }
   ]},
-  animo: { name: 'Ánimo', color: '#eab308', fields: [
-    { label: 'Ánimo',   type: 'escala', ph: '😣,😕,😐,🙂,😄' },
-    { label: 'Energía', type: 'escala', ph: '' },
-    { label: 'Notas',   type: 'text',   ph: '' }
-  ]},
-  mejoryo: { name: 'Mejor yo', color: '#14b8a6', fields: [
-    { label: '¿Qué hice por mí hoy?', type: 'text', ph: '' },
-    { label: '¿Lo cumplí?',           type: 'sino', ph: '' },
-    { label: 'Aprendizaje',           type: 'text', ph: '' }
-  ]},
   social: { name: 'Social', color: '#f97316', fields: [
     { label: '¿Con quién?',       type: 'opciones', ph: 'Familia, Amigos, Pareja, Trabajo, Solo' },
     { label: 'Actividad',         type: 'text',     ph: '' },
@@ -265,17 +251,6 @@ const JCAT_PRESETS = {
     { label: 'Tiempo dedicado', type: 'duracion', ph: '' },
     { label: 'Disfrute',        type: 'escala',   ph: '' }
   ]},
-  belleza: { name: 'Belleza', color: '#ef4444', fields: [
-    { label: '¿Qué hice?',      type: 'text', ph: 'skincare, pelo, uñas...' },
-    { label: 'Rutina completa', type: 'sino', ph: '' },
-    { label: 'Notas',           type: 'text', ph: '' }
-  ]},
-  productividad: { name: 'Productividad', color: '#3b82f6', fields: [
-    { label: 'Foco',             type: 'escala',   ph: '' },
-    { label: 'Tiempo enfocado',  type: 'duracion', ph: '' },
-    { label: 'Lo más importante', type: 'text',    ph: '' },
-    { label: 'Distracciones',    type: 'text',     ph: '' }
-  ]}
 };
 
 function applyPreset(key) {
