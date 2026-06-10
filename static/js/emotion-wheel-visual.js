@@ -77,6 +77,18 @@ function _esOf(W, baseId, midId, specId) {
 }
 function _colorOf(W, baseId) { const b = _specBase(W, baseId); return b ? b.color : '#8892a4'; }
 
+// Distinción por intensidad (Atlas ordena los estados de leve→intenso; los arrays lo respetan)
+function _ekIntensity(W, baseId, stateId) {
+  const b = _specBase(W, baseId); if (!b) return '';
+  const arr = b.children, i = arr.findIndex(s => s.id === stateId);
+  if (i < 0) return '';
+  const name = b.es.toLowerCase();
+  const emo  = (EW_ART[b.es] === 'el') ? `del ${name}` : `de la ${name}`; // "de la ira", "del miedo"
+  if (i === 0)            return `El estado más leve ${emo}; más suave que «${arr[i+1].es}».`;
+  if (i === arr.length-1) return `El estado más intenso ${emo}; más fuerte que «${arr[i-1].es}».`;
+  return `Más intenso que «${arr[i-1].es}», más leve que «${arr[i+1].es}».`;
+}
+
 // ── Abrir / cerrar ────────────────────────────────────────────────────────
 
 function openEWModal(pickerEl, wheelId) {
@@ -351,6 +363,9 @@ function ewRenderInfo(base, mid, spec, depth, color) {
   const W = ewState.wheel;
   const c = ewContent(base, mid, spec, depth);
 
+  // Ekman: si el estado no trae distinción propia, derivar la intensidad del Atlas
+  if (W.id === 'ek' && depth >= 2 && !c.distinguir) c.distinguir = _ekIntensity(W, base, mid);
+
   // Breadcrumb en español (la "traducción"); la rueda muestra el idioma propio
   const baseEs = _esOf(W, base);
   const midEs  = depth >= 2 ? _esOf(W, base, mid) : null;
@@ -377,9 +392,14 @@ function ewRenderInfo(base, mid, spec, depth, color) {
   const sec = (label, val) =>
     val ? `<div class="ew-info-sec"><h4>${label}</h4><p>${val}</p></div>` : '';
 
-  const srcLine = depth >= 2
-    ? `Función y manifestación: Paul Ekman${c.fdef ? ' · Definición: ' + c.fdef : ''} · Matiz: redacción propia`
-    : (c.fuente ? `Fuente: ${c.fuente}` : '');
+  let srcLine;
+  if (W.id === 'ek') {
+    srcLine = `Fuente: ${c.fuente || 'Atlas of Emotions'}`; // rueda Ekman: todo del Atlas
+  } else {
+    srcLine = depth >= 2
+      ? `Función y manifestación: Paul Ekman${c.fdef ? ' · Definición: ' + c.fdef : ''} · Matiz: redacción propia`
+      : (c.fuente ? `Fuente: ${c.fuente}` : '');
+  }
 
   panel.innerHTML =
     `<div class="ew-info-title">${crumb}</div>` +
