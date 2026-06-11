@@ -266,15 +266,15 @@
 }
 
 .day-add-input {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
   color: var(--text);
   font-size: 14px;
   font-family: inherit;
-  padding: 6px 2px;
+  padding: 10px 12px;
   width: 100%;
-  resize: none;
+  resize: vertical;
   transition: border-color .15s;
 }
 .day-add-input:focus { outline: none; border-color: var(--accent); }
