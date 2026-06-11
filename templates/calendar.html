@@ -39,7 +39,7 @@
 
           <!-- Área clickeable → vista del día -->
           <a href="{{ url_for('day.day_view', date_str=ds, ref='cal') }}" class="cal-cell-body">
-            <span class="cal-num {% if is_today %}today-num{% endif %}">{{ day_num }}</span>
+            <span class="cal-num {% if is_today %}today-num{% endif %}"><span class="cal-agenda-dow">{{ dow_names[loop.index0] }} </span>{{ day_num }}</span>
 
             {% for ev in day_evs %}
             <span class="chip {% if ev.done %}chip-done{% elif ev.skipped %}chip-skipped{% endif %}"

@@ -458,6 +458,19 @@ def test_guardar_inicio_semana(client):
     client.post("/ajustes/guardar", data={"week_start": "sun"})
     assert db.get_setting("week_start") == "sun"
 
+def test_agenda_dow_por_celda(client):
+    # El weekday por celda (visible solo en modo agenda) sale en mes y semana.
+    mes = client.get("/calendar/2026/6").data.decode("utf-8")
+    sem = client.get("/week/2026-06-11").data.decode("utf-8")
+    assert 'cal-agenda-dow">Jueves' in mes   # 2026-06-11 es jueves
+    assert 'cal-agenda-dow">Jueves' in sem
+
+def test_agenda_dow_respeta_inicio_de_semana(client):
+    # Con semana iniciando en domingo, la primera columna del mes es Domingo.
+    client.post("/ajustes/guardar", data={"week_start": "sun"})
+    mes = client.get("/calendar/2026/6").data.decode("utf-8")
+    assert 'cal-agenda-dow">Domingo' in mes
+
 def test_calendario_inicio_domingo(client):
     db.set_setting("week_start", "sun")
     body = client.get("/calendar/2026/6").data.decode("utf-8")

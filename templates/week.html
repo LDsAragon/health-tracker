@@ -44,7 +44,7 @@
   <div class="cal-cell todo-dropzone {% if is_today %}is-today{% endif %}" data-date="{{ ds }}">
 
     <a href="{{ url_for('day.day_view', date_str=ds, ref='week') }}" class="cal-cell-body">
-      <span class="cal-num {% if is_today %}today-num{% endif %}">{{ d.day }}</span>
+      <span class="cal-num {% if is_today %}today-num{% endif %}"><span class="cal-agenda-dow">{{ DOW[d.weekday()] }} </span>{{ d.day }}</span>
 
       {% for ev in day_evs %}
       <span class="chip {% if ev.done %}chip-done{% elif ev.skipped %}chip-skipped{% endif %}"

@@ -148,6 +148,7 @@
   margin-bottom: 2px;
 }
 .today-num { color: var(--accent); font-size: 20px; }
+.cal-agenda-dow { display: none; }   /* weekday por celda: solo en modo agenda */
 
 /* Input de nota rápida al fondo de la celda */
 .cal-quick-form {
@@ -256,5 +257,6 @@
   .cal-cell.cal-empty { display: none; }   /* sin días de relleno */
   .cal-cell { min-height: auto; border-right: none; }
   .cal-cell-body { min-height: 60px; }
+  .cal-agenda-dow { display: inline; font-size: 14px; font-weight: 600; }  /* "Lunes 5" */
 }
 
