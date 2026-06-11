@@ -307,7 +307,7 @@
     {% if journal_cats %}
     <div class="day-journal-add-wrap">
       <button type="button" class="day-journal-add-toggle" id="jday-toggle"
-              onclick="toggleDayJournal()">+ Agregar nota especial</button>
+              onclick="openEspecial()">+ Agregar nota especial</button>
       <div id="jday-form-wrap" style="display:none;">
         <form id="jday-form" method="POST"
               action="{{ url_for('journal_entry_add', date_str=date_str) }}"
@@ -331,7 +331,7 @@
           </div>
           <div style="display:flex;gap:8px;margin-top:12px;">
             <button type="submit" class="btn-add">Guardar</button>
-            <button type="button" class="btn-cancel" onclick="toggleDayJournal()">Cancelar</button>
+            <button type="button" class="btn-cancel" onclick="closeEspecial()">Cancelar</button>
           </div>
         </form>
       </div>
@@ -396,10 +396,9 @@
   </div>
 
   <!-- Input de nota al fondo — como la celda del calendario -->
-  {% if journal_cats %}
+  <div class="day-card-footer-wrap">
   <button type="button" class="day-journal-add-toggle" id="rapida-collapsed" style="display:none;"
-          onclick="toggleDayJournal()">+ Agregar nota rápida</button>
-  {% endif %}
+          onclick="openRapida()">+ Agregar nota rápida</button>
   <form class="day-card-footer" id="rapida-form" method="POST" action="{{ url_for('note_add', date_str=date_str) }}">
     <div class="day-add-row">
       <div class="color-picker-row">
@@ -417,8 +416,12 @@
     </div>
     <textarea name="content" class="day-add-input" rows="2"
               placeholder="Escribí una nota..."></textarea>
-    <button type="submit" class="day-add-btn">Agregar</button>
+    <div style="display:flex; gap:8px; align-self:flex-end;">
+      <button type="submit" class="day-add-btn">Agregar</button>
+      <button type="button" class="btn-cancel" onclick="collapseRapida()">Cancelar</button>
+    </div>
   </form>
+  </div>
 
 </div>
 </div>
@@ -547,25 +550,27 @@ function buildFields(containerId, catId) {
 
 function updateDayFields(catId) { buildFields('jday-fields', catId); }
 
-function toggleDayJournal() {
-  const wrap  = document.getElementById('jday-form-wrap');
-  const btn   = document.getElementById('jday-toggle');
-  const rForm = document.getElementById('rapida-form');       // nota rápida (en su lugar)
-  const rBtn  = document.getElementById('rapida-collapsed');  // su botón colapsado
-  if (wrap.style.display === 'none') {        // abrir nota especial
-    wrap.style.display = 'block';
-    btn.style.display = 'none';
-    if (rForm) rForm.style.display = 'none';  // colapsar nota rápida
-    if (rBtn)  rBtn.style.display = 'block';
-  } else {                                    // cerrar nota especial
-    wrap.style.display = 'none';
-    btn.style.display = 'block';
-    if (rForm) rForm.style.display = '';      // restaurar nota rápida
-    if (rBtn)  rBtn.style.display = 'none';
-    document.getElementById('jday-cat').value = '';
-    document.getElementById('jday-fields').innerHTML = '';
+// Alternancia: solo una alta activa a la vez (cada una colapsable en su lugar).
+function _setRapida(open) {
+  const f = document.getElementById('rapida-form');
+  const b = document.getElementById('rapida-collapsed');
+  if (f) f.style.display = open ? '' : 'none';
+  if (b) b.style.display = open ? 'none' : 'block';
+}
+function _setEspecial(open) {
+  const w = document.getElementById('jday-form-wrap');
+  const t = document.getElementById('jday-toggle');
+  if (w) w.style.display = open ? 'block' : 'none';
+  if (t) t.style.display = open ? 'none' : 'block';
+  if (!open) {
+    const c = document.getElementById('jday-cat'); if (c) c.value = '';
+    const fl = document.getElementById('jday-fields'); if (fl) fl.innerHTML = '';
   }
 }
+function openEspecial()    { _setEspecial(true);  _setRapida(false); }
+function closeEspecial()   { _setEspecial(false); _setRapida(true);  }
+function openRapida()      { _setRapida(true);    _setEspecial(false); }
+function collapseRapida()  { _setRapida(false); }
 
 function collectValues(containerId) {
   const container = document.getElementById(containerId);
