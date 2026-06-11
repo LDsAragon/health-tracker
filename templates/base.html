@@ -19,11 +19,11 @@
     <div class="nav-links">
       <a href="{{ url_for('recurring_view') }}"
          class="nav-link {% if request.endpoint == 'recurring_view' %}active{% endif %}">
-        Eventos
+        Rutinas
       </a>
       <a href="{{ url_for('journal_view') }}"
          class="nav-link {% if request.endpoint == 'journal_view' %}active{% endif %}">
-        Seguimientos
+        Notas especiales
       </a>
       <a href="{{ url_for('export_view') }}"
          class="nav-link {% if request.endpoint in ('export_view', 'export_download') %}active{% endif %}">

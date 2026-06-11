@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Categorías de seguimiento{% endblock %}
+{% block title %}Notas especiales{% endblock %}
 
 {% set COLORS = ['#6366f1','#22c55e','#3b82f6','#f97316','#ef4444','#a855f7','#ec4899','#eab308','#14b8a6'] %}
 
 {% block content %}
 <div class="page-top">
-  <h1 class="page-title">Categorías de seguimiento</h1>
-  <p class="page-sub">Definí categorías con campos guiados para llevar seguimientos estructurados.</p>
+  <h1 class="page-title">Notas especiales</h1>
+  <p class="page-sub">Configurá tus tipos de nota especial: campos guiados para registrar de forma estructurada (lo opuesto a una nota rápida suelta).</p>
 </div>
 
 <!-- ── Agregar categoría ── -->
@@ -56,7 +56,7 @@
     <!-- Builder de campos -->
     <div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <label>Campos del seguimiento</label>
+        <label>Campos de la nota</label>
         <button type="button" class="btn-undo" onclick="addField('jcat-add-fields')">+ Agregar campo</button>
       </div>
       <p style="font-size:11px;color:var(--muted);margin:-4px 0 8px;">En <b>Opciones</b> el campo "Ayuda" son las opciones separadas por coma; en <b>Número</b> es la unidad; en <b>Escala</b> (opcional) son etiquetas separadas por coma (ej. <code>😣,😐,😄</code>), o vacío para 1–5.</p>
@@ -106,7 +106,7 @@
       </div>
       <button class="btn-edit" onclick="editJCat({{ cat.id }})">Editar</button>
       <form method="POST" action="{{ url_for('journal_category_delete', cat_id=cat.id) }}"
-            onsubmit="return confirm('¿Eliminar categoría y todos sus seguimientos?');"
+            onsubmit="return confirm('¿Eliminar esta categoría y todas sus notas?');"
             style="display:inline;">
         <button type="submit" class="btn-delete-sm">Eliminar</button>
       </form>

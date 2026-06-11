@@ -171,7 +171,7 @@ def test_get_entries_range_includes_show_in_calendar(test_db):
 def test_pagina_journal(client):
     r = client.get("/journal")
     assert r.status_code == 200
-    assert b"Categor" in r.data
+    assert "Notas especiales".encode() in r.data
 
 
 def test_agregar_categoria(client):
