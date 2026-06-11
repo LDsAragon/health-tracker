@@ -325,6 +325,36 @@ def test_setting_huerfano_cae_al_default(test_db):
     db.set_setting("theme", "cobre")          # tema eliminado
     assert db.get_all_settings()["theme"] == "indigo"
 
+def test_is_valid_db_rechaza_basura(test_db, tmp_path):
+    bad = tmp_path / "bad.db"
+    bad.write_bytes(b"no soy una base de datos")
+    assert db.is_valid_db(str(bad)) is False
+
+def test_snapshot_es_db_valida(test_db, tmp_path):
+    snap = str(tmp_path / "snap.db")
+    db.snapshot_to(snap)
+    assert db.is_valid_db(snap) is True
+
+def test_restore_reemplaza_y_hace_prerestore(test_db, tmp_path):
+    db.add_note("2026-06-11", "original")
+    snap = str(tmp_path / "snap.db")
+    db.snapshot_to(snap)                       # snapshot con 1 nota
+    db.add_note("2026-06-11", "nueva")         # ahora hay 2 en la DB activa
+    assert len(db.get_notes_for_date("2026-06-11")) == 2
+    ok, _ = db.restore_from(snap)              # restauro el snapshot (1 nota)
+    assert ok is True
+    assert len(db.get_notes_for_date("2026-06-11")) == 1
+    # se generó un pre-restore backup junto a la DB
+    assert any(p.name.startswith("health-prerestore-") for p in tmp_path.iterdir())
+
+def test_restore_invalido_no_toca_nada(test_db, tmp_path):
+    db.add_note("2026-06-11", "intacta")
+    bad = tmp_path / "bad.db"
+    bad.write_bytes(b"basura")
+    ok, _ = db.restore_from(str(bad))
+    assert ok is False
+    assert len(db.get_notes_for_date("2026-06-11")) == 1   # sigue ahí
+
 def test_week_start_default(test_db):
     assert db.get_setting("week_start") == "mon"
 

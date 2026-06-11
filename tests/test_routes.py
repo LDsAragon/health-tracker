@@ -379,6 +379,39 @@ def test_journal_preserva_back(client):
     assert r.status_code == 302
     assert "calendar" in r.headers["Location"] and "journal" in r.headers["Location"]
 
+def test_backup_descarga_db_valida(client):
+    r = client.get("/backup")
+    assert r.status_code == 200
+    assert "attachment" in r.headers.get("Content-Disposition", "")
+    assert r.data[:16] == b"SQLite format 3\x00"
+
+def test_restore_valido_reemplaza_datos(client, tmp_path):
+    import io
+    other = str(tmp_path / "other.db")
+    db.snapshot_to(other)                      # copia válida de la DB de test
+    import sqlite3
+    con = sqlite3.connect(other)
+    con.execute("INSERT INTO notes (note_date, content) VALUES ('2026-06-11','desde-backup')")
+    con.commit(); con.close()
+    data = open(other, "rb").read()
+    r = client.post("/restore", data={"dbfile": (io.BytesIO(data), "backup.db")},
+                    content_type="multipart/form-data")
+    assert r.status_code == 302
+    assert "datos=ok" in r.headers["Location"]
+    assert any(n["content"] == "desde-backup" for n in db.get_notes_for_date("2026-06-11"))
+
+def test_restore_invalido_rechazado(client):
+    import io
+    r = client.post("/restore", data={"dbfile": (io.BytesIO(b"no db"), "x.db")},
+                    content_type="multipart/form-data")
+    assert r.status_code == 302
+    assert "err-invalid" in r.headers["Location"]
+
+def test_restore_sin_archivo(client):
+    r = client.post("/restore", data={}, content_type="multipart/form-data")
+    assert r.status_code == 302
+    assert "err-nofile" in r.headers["Location"]
+
 def test_guardar_inicio_semana(client):
     client.post("/ajustes/guardar", data={"week_start": "sun"})
     assert db.get_setting("week_start") == "sun"

@@ -33,11 +33,10 @@
 </div>
 
 <div class="export-form-wrap" style="margin-top:24px;">
-  <p style="font-size:14px; color:var(--muted); margin-bottom:14px;">
-    Backup completo de la base de datos — guardá este archivo por las dudas.
+  <p style="font-size:14px; color:var(--muted);">
+    ¿Buscás el backup completo de la base de datos? Ahora vive en
+    <a href="{{ url_for('main.settings_view') }}" style="color:var(--accent);text-decoration:underline;">⚙️ Ajustes → Datos</a>
+    (con restauración incluida).
   </p>
-  <a href="{{ url_for('main.backup_download') }}" class="btn-primary" style="display:inline-block;">
-    Descargar backup (.db)
-  </a>
 </div>
 {% endblock %}

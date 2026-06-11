@@ -117,7 +117,9 @@ def week_view(date_str):
 
 @bp.route("/ajustes")
 def settings_view():
-    return render_template("settings.html", themes=THEMES, back=safe_back(request.args.get("back")))
+    return render_template("settings.html", themes=THEMES,
+                           back=safe_back(request.args.get("back")),
+                           datos=request.args.get("datos"))
 
 
 @bp.route("/ajustes/guardar", methods=["POST"])
@@ -256,11 +258,41 @@ def export_download():
 
 @bp.route("/backup")
 def backup_download():
-    import os
-    db_path = os.path.abspath(db.db_path())
-    today   = date.today().isoformat()
-    return send_file(db_path, as_attachment=True,
-                     download_name=f"health-backup-{today}.db")
+    # Snapshot consistente (incluye datos del WAL) a un temp; se envía y se borra.
+    import os, io, tempfile
+    fd, tmp = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    try:
+        db.snapshot_to(tmp)
+        with open(tmp, "rb") as f:
+            data = f.read()
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    today = date.today().isoformat()
+    return send_file(io.BytesIO(data), as_attachment=True,
+                     download_name=f"health-backup-{today}.db",
+                     mimetype="application/octet-stream")
+
+
+@bp.route("/restore", methods=["POST"])
+def restore_upload():
+    # Restaura la DB desde un .db subido. Destructivo: reemplaza todos los datos.
+    import os, tempfile
+    f = request.files.get("dbfile")
+    if not f or not f.filename:
+        return redirect(url_for("main.settings_view", datos="err-nofile"))
+    base = os.path.dirname(os.path.abspath(db.db_path())) or "."
+    fd, tmp = tempfile.mkstemp(suffix=".db", dir=base)   # mismo dir → os.replace atómico
+    os.close(fd)
+    try:
+        f.save(tmp)
+        ok, _msg = db.restore_from(tmp)
+    finally:
+        for p in (tmp, tmp + "-wal", tmp + "-shm"):
+            if os.path.exists(p):
+                os.remove(p)
+    return redirect(url_for("main.settings_view", datos="ok" if ok else "err-invalid"))
 
 
 # ── Search ─────────────────────────────────────────────────────────────────────

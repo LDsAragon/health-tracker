@@ -1,5 +1,5 @@
 """Paquete de acceso a datos. Re-exporta todo para que `import database as db` no cambie."""
-from .conn import get_db, db_path, DB_PATH, _columns
+from .conn import get_db, db_path, DB_PATH, _columns, snapshot_to, is_valid_db, restore_from
 from .schema import SCHEMA, MIGRATIONS, init_db
 from .notes import (
     add_note, update_note, delete_note,
