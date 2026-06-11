@@ -473,13 +473,7 @@ def reorder_todos(todo_date: str, ordered_ids: list):
 
 # ── Ajustes (clave/valor) ────────────────────────────────────────────────────────
 
-DEFAULT_SETTINGS = {
-    "date_format": "dmy",   # dmy = dd/mm/aaaa · mdy = mm/dd/aaaa · ymd = aaaa-mm-dd
-    "time_format": "24h",   # 24h | 12h (AM/PM)
-    "theme":       "indigo",  # ver THEMES en static/css (data-theme); indigo = :root
-    "week_start":  "mon",   # mon | sun
-    "start_view":  "month", # month | week | today (qué abre "/")
-}
+from appconfig import DEFAULT_SETTINGS   # esquema único en appconfig.py
 
 def get_setting(key: str, default: str = "") -> str:
     with get_db() as conn:
