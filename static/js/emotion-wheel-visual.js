@@ -92,11 +92,29 @@ function _ekIntensity(W, baseId, stateId) {
   return `Más intenso que «${arr[i-1].es}», más leve que «${arr[i+1].es}».`;
 }
 
+// ── Ajuste al viewport efectivo ───────────────────────────────────────────
+// Los vh/vw y media queries no se enteran del zoom web (CSS zoom en :root):
+// medimos la ventana real, la dividimos por el zoom y publicamos el espacio
+// disponible como variables CSS (--ew-w/--ew-h) + la clase .ew-stack que
+// apila el panel lateral cuando el ancho efectivo no alcanza.
+function ewFitModal() {
+  const overlay = document.getElementById('ew-modal');
+  if (!overlay) return;
+  const z = parseFloat(document.documentElement.style.zoom) || 1;
+  const w = window.innerWidth / z, h = window.innerHeight / z;
+  overlay.style.setProperty('--ew-w', w + 'px');
+  overlay.style.setProperty('--ew-h', h + 'px');
+  overlay.classList.toggle('ew-stack', w < 980);
+}
+window.addEventListener('resize', ewFitModal);
+window.addEventListener('app-zoom', ewFitModal);
+
 // ── Abrir / cerrar ────────────────────────────────────────────────────────
 
 function openEWModal(pickerEl, wheelId) {
   ewState = { angle: 90, picker: pickerEl, wheel: ewWheelSpec(wheelId || 'es') };
   buildFullWheel();
+  ewFitModal();
   document.getElementById('ew-modal').style.display = 'flex';
   document.querySelectorAll('.ew-wheel-tab').forEach(t =>
     t.classList.toggle('active', t.dataset.wheel === ewState.wheel.id));

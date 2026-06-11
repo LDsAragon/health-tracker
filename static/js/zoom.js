@@ -6,7 +6,12 @@
   var zoom = parseFloat(localStorage.getItem(KEY)) || 1;
 
   function clamp(z) { return Math.min(MAX, Math.max(MIN, Math.round(z * 100) / 100)); }
-  function apply() { document.documentElement.style.zoom = zoom; }
+  function apply() {
+    document.documentElement.style.zoom = zoom;
+    // Aviso para los que dimensionan con px/vh y necesitan compensar el zoom
+    // (los vh/vw y media queries no se enteran del CSS zoom) — ej. la rueda.
+    window.dispatchEvent(new CustomEvent('app-zoom', { detail: zoom }));
+  }
   function set(z) { zoom = clamp(z); apply(); localStorage.setItem(KEY, String(zoom)); }
 
   apply();   // aplica el zoom guardado lo antes posible (script en <head>)
