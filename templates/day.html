@@ -11,13 +11,13 @@
 <!-- Nav superior -->
 <div class="day-topnav">
   {% if ref == 'week' %}
-  <a href="{{ url_for('week_view', date_str=date_str) }}" class="back-link">&#8592; Semana</a>
+  <a href="{{ url_for('main.week_view', date_str=date_str) }}" class="back-link">&#8592; Semana</a>
   {% else %}
-  <a href="{{ url_for('calendar_view', year=d.year, month=d.month) }}" class="back-link">&#8592; {{ MONTHS[d.month-1]|capitalize }} {{ d.year }}</a>
+  <a href="{{ url_for('main.calendar_view', year=d.year, month=d.month) }}" class="back-link">&#8592; {{ MONTHS[d.month-1]|capitalize }} {{ d.year }}</a>
   {% endif %}
   <div class="day-arrows">
-    <a href="{{ url_for('day_view', date_str=prev_day, ref=ref) }}" class="nav-arrow" title="Día anterior">&#8592;</a>
-    <a href="{{ url_for('day_view', date_str=next_day, ref=ref) }}" class="nav-arrow" title="Día siguiente">&#8594;</a>
+    <a href="{{ url_for('day.day_view', date_str=prev_day, ref=ref) }}" class="nav-arrow" title="Día anterior">&#8592;</a>
+    <a href="{{ url_for('day.day_view', date_str=next_day, ref=ref) }}" class="nav-arrow" title="Día siguiente">&#8594;</a>
   </div>
 </div>
 
@@ -34,7 +34,7 @@
       <li class="todo-item {% if t.done %}todo-done{% endif %}" id="todo-{{ t.id }}" data-id="{{ t.id }}" draggable="true">
         <div class="todo-row" id="todo-row-{{ t.id }}">
           <span class="todo-grip" title="Arrastrar para reordenar">&#x2630;</span>
-          <form method="POST" action="{{ url_for('todo_toggle', date_str=date_str, todo_id=t.id) }}" style="display:inline;">
+          <form method="POST" action="{{ url_for('day.todo_toggle', date_str=date_str, todo_id=t.id) }}" style="display:inline;">
             <button type="submit" class="todo-check" title="{{ 'Marcar como pendiente' if t.done else 'Marcar como hecho' }}">
               {% if t.done %}&#10003;{% endif %}
             </button>
@@ -43,21 +43,21 @@
           <div class="todo-actions">
             <button type="button" class="btn-edit" onclick="editTodo({{ t.id }})" title="Editar">&#9998;</button>
             <button type="button" class="btn-edit" onclick="moveTodo({{ t.id }})" title="Mover a otro día">&#8594;</button>
-            <form method="POST" action="{{ url_for('todo_delete', date_str=date_str, todo_id=t.id) }}" style="display:inline;"
+            <form method="POST" action="{{ url_for('day.todo_delete', date_str=date_str, todo_id=t.id) }}" style="display:inline;"
                   onsubmit="return confirm('¿Eliminar esta tarea?');">
               <button type="submit" class="btn-delete" title="Eliminar">&#10005;</button>
             </form>
           </div>
         </div>
 
-        <form method="POST" action="{{ url_for('todo_edit', date_str=date_str, todo_id=t.id) }}"
+        <form method="POST" action="{{ url_for('day.todo_edit', date_str=date_str, todo_id=t.id) }}"
               class="todo-inline-form" id="todo-edit-{{ t.id }}" style="display:none;">
           <input type="text" name="text" value="{{ t.text }}" maxlength="200" required>
           <button type="submit" class="btn-primary">Guardar</button>
           <button type="button" class="btn-cancel" onclick="cancelTodo({{ t.id }})">Cancelar</button>
         </form>
 
-        <form method="POST" action="{{ url_for('todo_move', date_str=date_str, todo_id=t.id) }}"
+        <form method="POST" action="{{ url_for('day.todo_move', date_str=date_str, todo_id=t.id) }}"
               class="todo-inline-form" id="todo-move-{{ t.id }}" style="display:none;">
           <span class="todo-move-label">Mover a:</span>
           {{ date_field('new_date', next_day, required=True) }}
@@ -69,7 +69,7 @@
     </ul>
     {% endif %}
 
-    <form method="POST" action="{{ url_for('todo_add', date_str=date_str) }}" class="todo-add-form">
+    <form method="POST" action="{{ url_for('day.todo_add', date_str=date_str) }}" class="todo-add-form">
       <input type="text" name="text" placeholder="Agregar una tarea..." maxlength="200" required>
       <button type="submit" class="btn-primary">Agregar</button>
     </form>
@@ -102,7 +102,7 @@
         {% if ev.completion_note %}
         <span class="day-chip-note">— {{ ev.completion_note }}</span>
         {% endif %}
-        <form method="POST" action="{{ url_for('event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
+        <form method="POST" action="{{ url_for('day.event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
           <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
         </form>
       </div>
@@ -114,7 +114,7 @@
         {% if ev.completion_note %}
         <span class="day-chip-note">— {{ ev.completion_note }}</span>
         {% endif %}
-        <form method="POST" action="{{ url_for('event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
+        <form method="POST" action="{{ url_for('day.event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
           <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
         </form>
       </div>
@@ -132,11 +132,11 @@
                placeholder="comentario opcional...">
         <button type="submit"
                 formmethod="POST"
-                formaction="{{ url_for('event_complete', date_str=date_str, event_id=ev.id) }}"
+                formaction="{{ url_for('day.event_complete', date_str=date_str, event_id=ev.id) }}"
                 class="btn-check">&#10003; Hecho</button>
         <button type="submit"
                 formmethod="POST"
-                formaction="{{ url_for('event_skip', date_str=date_str, event_id=ev.id) }}"
+                formaction="{{ url_for('day.event_skip', date_str=date_str, event_id=ev.id) }}"
                 class="btn-skip">&#8212; Salteé</button>
         <button type="button" class="btn-cancel-sm" onclick="closeEvForm({{ ev.id }})">&#10005;</button>
       </form>
@@ -167,7 +167,7 @@
             <div class="day-note-actions" style="margin-left:auto;">
               <button class="btn-edit" onclick="editJEntry({{ entry.id }})">Editar</button>
               <form method="POST"
-                    action="{{ url_for('journal_entry_delete', date_str=date_str, entry_id=entry.id) }}"
+                    action="{{ url_for('day.journal_entry_delete', date_str=date_str, entry_id=entry.id) }}"
                     onsubmit="return confirm('¿Eliminar esta nota especial?');" style="display:inline;">
                 <button type="submit" class="btn-delete">&#10005;</button>
               </form>
@@ -232,7 +232,7 @@
         <!-- Edición -->
         <form id="jedit-{{ entry.id }}" class="day-journal-edit-form" style="display:none;"
               method="POST"
-              action="{{ url_for('journal_entry_edit', date_str=date_str, entry_id=entry.id) }}"
+              action="{{ url_for('day.journal_entry_edit', date_str=date_str, entry_id=entry.id) }}"
               onsubmit="return prepareEditValues({{ entry.id }})">
           <input type="hidden" name="values_json" id="jedit-values-{{ entry.id }}">
           {% set EW_EMOTIONS = ['Enojado','Asustado','Alegre','Poderoso','Apacible','Triste'] %}
@@ -310,7 +310,7 @@
               onclick="openEspecial()">+ Agregar nota especial</button>
       <div id="jday-form-wrap" style="display:none;">
         <form id="jday-form" method="POST"
-              action="{{ url_for('journal_entry_add', date_str=date_str) }}"
+              action="{{ url_for('day.journal_entry_add', date_str=date_str) }}"
               onsubmit="return prepareNewValues()">
           <input type="hidden" name="next" value="day">
           <input type="hidden" name="values_json" id="jday-values-json">
@@ -358,7 +358,7 @@
         </div>
         <div class="day-note-actions">
           <button class="btn-edit" onclick="editDayNote({{ note.id }})">Editar</button>
-          <form method="POST" action="{{ url_for('note_delete', date_str=date_str, note_id=note.id) }}"
+          <form method="POST" action="{{ url_for('day.note_delete', date_str=date_str, note_id=note.id) }}"
                 onsubmit="return confirm('¿Eliminar?');" style="display:inline;">
             <button type="submit" class="btn-delete">&#10005;</button>
           </form>
@@ -367,7 +367,7 @@
 
       <!-- Edición -->
       <form class="day-note-edit" id="dedit-{{ note.id }}" style="display:none;"
-            method="POST" action="{{ url_for('note_edit', date_str=date_str, note_id=note.id) }}">
+            method="POST" action="{{ url_for('day.note_edit', date_str=date_str, note_id=note.id) }}">
         <textarea name="content" class="note-edit-ta" rows="3">{{ note.content }}</textarea>
         <div class="note-form-footer">
           <div class="color-picker-row">
@@ -399,7 +399,7 @@
   <div class="day-card-footer-wrap">
   <button type="button" class="day-journal-add-toggle" id="rapida-collapsed" style="display:none;"
           onclick="openRapida()">+ Agregar nota rápida</button>
-  <form class="day-card-footer" id="rapida-form" method="POST" action="{{ url_for('note_add', date_str=date_str) }}">
+  <form class="day-card-footer" id="rapida-form" method="POST" action="{{ url_for('day.note_add', date_str=date_str) }}">
     <textarea name="content" class="day-add-input" rows="2"
               placeholder="Escribí una nota..."></textarea>
     <div class="day-add-bottom">
@@ -429,7 +429,7 @@
 <script>
 window.DAY_CTX = {
   today: "{{ date_str }}",
-  reorderUrl: "{{ url_for('todos_reorder', date_str=date_str) }}",
+  reorderUrl: "{{ url_for('day.todos_reorder', date_str=date_str) }}",
   cats: {{ journal_cats | tojson }},
 };
 </script>

@@ -9,9 +9,9 @@
 
 <div class="cal-header">
   <div class="cal-nav">
-    <a href="{{ url_for('week_view', date_str=prev_week) }}" class="nav-arrow">&#8592;</a>
+    <a href="{{ url_for('main.week_view', date_str=prev_week) }}" class="nav-arrow">&#8592;</a>
     <h1 class="cal-title" style="min-width:0;">{{ week_label }}</h1>
-    <a href="{{ url_for('week_view', date_str=next_week) }}" class="nav-arrow">&#8594;</a>
+    <a href="{{ url_for('main.week_view', date_str=next_week) }}" class="nav-arrow">&#8594;</a>
   </div>
   <div style="display:flex; align-items:center; gap:16px;">
     <div class="size-control">
@@ -20,7 +20,7 @@
       <span class="size-label">&#9632;</span>
     </div>
     <a href="{{ anchor_month_url }}" class="btn-view-toggle">Mes</a>
-    <a href="{{ url_for('day_view', date_str=today) }}" class="btn-today">Hoy</a>
+    <a href="{{ url_for('day.day_view', date_str=today) }}" class="btn-today">Hoy</a>
   </div>
 </div>
 
@@ -43,7 +43,7 @@
 
   <div class="cal-cell todo-dropzone {% if is_today %}is-today{% endif %}" data-date="{{ ds }}">
 
-    <a href="{{ url_for('day_view', date_str=ds, ref='week') }}" class="cal-cell-body">
+    <a href="{{ url_for('day.day_view', date_str=ds, ref='week') }}" class="cal-cell-body">
       <span class="cal-num {% if is_today %}today-num{% endif %}">{{ d.day }}</span>
 
       {% for ev in day_evs %}
@@ -81,7 +81,7 @@
     {% endif %}
 
     <form class="cal-quick-form" method="POST"
-          action="{{ url_for('note_add', date_str=ds) }}">
+          action="{{ url_for('day.note_add', date_str=ds) }}">
       <input type="hidden" name="next" value="week">
       <input type="text" name="content" class="cal-quick-input"
              placeholder="+ escribí una nota..." autocomplete="off">

@@ -5,9 +5,9 @@
 {% block content %}
 <div class="cal-header">
   <div class="cal-nav">
-    <a href="{{ url_for('calendar_view', year=prev_year, month=prev_month) }}" class="nav-arrow">&#8592;</a>
+    <a href="{{ url_for('main.calendar_view', year=prev_year, month=prev_month) }}" class="nav-arrow">&#8592;</a>
     <h1 class="cal-title">{{ month_name }} {{ year }}</h1>
-    <a href="{{ url_for('calendar_view', year=next_year, month=next_month) }}" class="nav-arrow">&#8594;</a>
+    <a href="{{ url_for('main.calendar_view', year=next_year, month=next_month) }}" class="nav-arrow">&#8594;</a>
   </div>
   <div style="display:flex; align-items:center; gap:16px;">
     <div class="size-control">
@@ -15,8 +15,8 @@
       <input type="range" id="cell-size" min="120" max="500" step="10" value="180">
       <span class="size-label">&#9632;</span>
     </div>
-    <a href="{{ url_for('week_view', date_str=today) }}" class="btn-view-toggle">Semana</a>
-    <a href="{{ url_for('day_view', date_str=today) }}" class="btn-today">Hoy</a>
+    <a href="{{ url_for('main.week_view', date_str=today) }}" class="btn-view-toggle">Semana</a>
+    <a href="{{ url_for('day.day_view', date_str=today) }}" class="btn-today">Hoy</a>
   </div>
 </div>
 
@@ -38,7 +38,7 @@
         <div class="cal-cell {% if is_today %}is-today{% endif %}">
 
           <!-- Área clickeable → vista del día -->
-          <a href="{{ url_for('day_view', date_str=ds, ref='cal') }}" class="cal-cell-body">
+          <a href="{{ url_for('day.day_view', date_str=ds, ref='cal') }}" class="cal-cell-body">
             <span class="cal-num {% if is_today %}today-num{% endif %}">{{ day_num }}</span>
 
             {% for ev in day_evs %}
@@ -64,7 +64,7 @@
 
           <!-- Input de nota rápida directo en el calendario -->
           <form class="cal-quick-form" method="POST"
-                action="{{ url_for('note_add', date_str=ds) }}">
+                action="{{ url_for('day.note_add', date_str=ds) }}">
             <input type="hidden" name="next" value="calendar">
             <input type="text" name="content" class="cal-quick-input"
                    placeholder="+ escribí una nota..." autocomplete="off">

@@ -11,7 +11,7 @@
 
 <!-- ── Agregar categoría ── -->
 <div class="rec-form-wrap">
-  <form class="rec-form" method="POST" action="{{ url_for('journal_category_add') }}"
+  <form class="rec-form" method="POST" action="{{ url_for('journal.journal_category_add') }}"
         id="jcat-add-form" onsubmit="return validateJournalForm('jcat-add-form')">
 
     <div class="field-row">
@@ -100,7 +100,7 @@
         </span>
       </div>
       <button class="btn-edit" onclick="editJCat({{ cat.id }})">Editar</button>
-      <form method="POST" action="{{ url_for('journal_category_delete', cat_id=cat.id) }}"
+      <form method="POST" action="{{ url_for('journal.journal_category_delete', cat_id=cat.id) }}"
             onsubmit="return confirm('¿Eliminar esta categoría y todas sus notas?');"
             style="display:inline;">
         <button type="submit" class="btn-delete-sm">Eliminar</button>
@@ -110,7 +110,7 @@
     <!-- Formulario de edición inline -->
     <div class="rec-edit-wrap" id="jcat-edit-{{ cat.id }}" style="display:none;">
       <form class="rec-form" method="POST"
-            action="{{ url_for('journal_category_edit', cat_id=cat.id) }}"
+            action="{{ url_for('journal.journal_category_edit', cat_id=cat.id) }}"
             id="jcat-edit-form-{{ cat.id }}"
             onsubmit="return validateJournalForm('jcat-edit-form-{{ cat.id }}')">
 

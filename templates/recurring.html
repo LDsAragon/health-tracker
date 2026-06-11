@@ -10,7 +10,7 @@
 
 <!-- FORM -->
 <div class="rec-form-wrap">
-  <form method="POST" action="{{ url_for('recurring_add') }}" class="rec-form" id="rec-add-form">
+  <form method="POST" action="{{ url_for('recurring.recurring_add') }}" class="rec-form" id="rec-add-form">
 
     <div class="field-group">
       <label>Nombre del evento</label>
@@ -133,7 +133,7 @@
       </div>
       <div style="display:flex; gap:6px; flex-shrink:0; align-items:flex-start;">
         {% if ev.recurrence != 'once' %}
-        <form method="POST" action="{{ url_for('recurring_visibility', event_id=ev.id) }}">
+        <form method="POST" action="{{ url_for('recurring.recurring_visibility', event_id=ev.id) }}">
           <input type="hidden" name="show" value="{{ 0 if ev.show_in_calendar else 1 }}">
           <button type="submit" class="btn-edit"
                   title="{{ 'Visible en el calendario — clic para ocultar' if ev.show_in_calendar else 'Oculto del calendario (solo en la vista del día) — clic para mostrar' }}">
@@ -143,7 +143,7 @@
         {% endif %}
         <button type="button" class="btn-edit" onclick="editRec({{ ev.id }})">Editar</button>
         {% if ev.recurrence == 'once' %}
-        <form method="POST" action="{{ url_for('recurring_delete', event_id=ev.id) }}"
+        <form method="POST" action="{{ url_for('recurring.recurring_delete', event_id=ev.id) }}"
               onsubmit="return confirm('¿Eliminar este evento?');">
           <input type="hidden" name="mode" value="all">
           <button type="submit" class="btn-delete-sm">Eliminar</button>
@@ -157,12 +157,12 @@
     <!-- Borrado granular (inline, sin modal) -->
     <div class="rec-del-panel" id="rec-del-{{ ev.id }}" style="display:none;">
       <span class="rec-del-q">¿Qué borramos?</span>
-      <form method="POST" action="{{ url_for('recurring_delete', event_id=ev.id) }}"
+      <form method="POST" action="{{ url_for('recurring.recurring_delete', event_id=ev.id) }}"
             onsubmit="return confirm('Cortar a futuro: se conserva el historial pasado. ¿Confirmás?');">
         <input type="hidden" name="mode" value="future">
         <button type="submit" class="btn-edit">Borrar futuros (conservar historial)</button>
       </form>
-      <form method="POST" action="{{ url_for('recurring_delete', event_id=ev.id) }}"
+      <form method="POST" action="{{ url_for('recurring.recurring_delete', event_id=ev.id) }}"
             onsubmit="return confirm('Borrar TODO, incluido el historial. ¿Confirmás?');">
         <input type="hidden" name="mode" value="all">
         <button type="submit" class="btn-delete-sm">Borrar todo</button>
@@ -172,7 +172,7 @@
 
     <!-- Edición inline -->
     <div class="rec-edit-wrap" id="rec-edit-{{ ev.id }}" style="display:none;">
-      <form method="POST" action="{{ url_for('recurring_edit', event_id=ev.id) }}" class="rec-form">
+      <form method="POST" action="{{ url_for('recurring.recurring_edit', event_id=ev.id) }}" class="rec-form">
 
         <div class="field-group">
           <label>Nombre</label>

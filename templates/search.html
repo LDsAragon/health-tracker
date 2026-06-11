@@ -12,7 +12,7 @@
   {% endif %}
 </div>
 
-<form class="search-form-main" action="{{ url_for('search_view') }}" method="GET">
+<form class="search-form-main" action="{{ url_for('main.search_view') }}" method="GET">
   <input type="text" name="q" class="search-input-main"
          value="{{ query or '' }}" placeholder="Buscar en todas las notas..." autofocus>
   <button type="submit" class="btn-primary">Buscar</button>
@@ -22,7 +22,7 @@
   {% if results %}
   <div class="search-results">
     {% for note in results %}
-    <a href="{{ url_for('day_view', date_str=note.note_date) }}"
+    <a href="{{ url_for('day.day_view', date_str=note.note_date) }}"
        class="search-result-item {% if note.color %}search-result-colored{% endif %}"
        {% if note.color %}style="--c: {{ note.color }};"{% endif %}>
       <span class="search-result-date">{{ note.note_date }}</span>

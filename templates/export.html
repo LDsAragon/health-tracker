@@ -9,7 +9,7 @@
 </div>
 
 <div class="export-form-wrap">
-  <form class="export-form" action="{{ url_for('export_download') }}" method="GET">
+  <form class="export-form" action="{{ url_for('main.export_download') }}" method="GET">
     <div class="field-row">
       <div class="field-group">
         <label>Desde</label>
@@ -36,7 +36,7 @@
   <p style="font-size:14px; color:var(--muted); margin-bottom:14px;">
     Backup completo de la base de datos — guardá este archivo por las dudas.
   </p>
-  <a href="{{ url_for('backup_download') }}" class="btn-primary" style="display:inline-block;">
+  <a href="{{ url_for('main.backup_download') }}" class="btn-primary" style="display:inline-block;">
     Descargar backup (.db)
   </a>
 </div>

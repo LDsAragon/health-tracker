@@ -8,29 +8,29 @@
 </head>
 <body>
   <nav class="navbar">
-    <a href="{{ url_for('home') }}" class="nav-brand">Calendario</a>
+    <a href="{{ url_for('main.home') }}" class="nav-brand">Calendario</a>
 
-    <form class="nav-search" action="{{ url_for('search_view') }}" method="GET">
+    <form class="nav-search" action="{{ url_for('main.search_view') }}" method="GET">
       <input type="text" name="q" class="nav-search-input"
              placeholder="Buscar notas..."
-             value="{{ request.args.get('q', '') if request.endpoint == 'search_view' else '' }}">
+             value="{{ request.args.get('q', '') if request.endpoint == 'main.search_view' else '' }}">
     </form>
 
     <div class="nav-links">
-      <a href="{{ url_for('recurring_view') }}"
-         class="nav-link {% if request.endpoint == 'recurring_view' %}active{% endif %}">
+      <a href="{{ url_for('recurring.recurring_view') }}"
+         class="nav-link {% if request.endpoint == 'recurring.recurring_view' %}active{% endif %}">
         Rutinas
       </a>
-      <a href="{{ url_for('journal_view') }}"
-         class="nav-link {% if request.endpoint == 'journal_view' %}active{% endif %}">
+      <a href="{{ url_for('journal.journal_view') }}"
+         class="nav-link {% if request.endpoint == 'journal.journal_view' %}active{% endif %}">
         Notas especiales
       </a>
-      <a href="{{ url_for('export_view') }}"
-         class="nav-link {% if request.endpoint in ('export_view', 'export_download') %}active{% endif %}">
+      <a href="{{ url_for('main.export_view') }}"
+         class="nav-link {% if request.endpoint in ('main.export_view', 'main.export_download') %}active{% endif %}">
         Exportar
       </a>
-      <a href="{{ url_for('settings_view') }}"
-         class="nav-link {% if request.endpoint in ('settings_view', 'settings_save') %}active{% endif %}">
+      <a href="{{ url_for('main.settings_view') }}"
+         class="nav-link {% if request.endpoint in ('main.settings_view', 'main.settings_save') %}active{% endif %}">
         ⚙️ Ajustes
       </a>
     </div>
