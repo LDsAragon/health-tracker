@@ -87,6 +87,10 @@ def init_db():
                 position    INTEGER DEFAULT 0,
                 created_at  TEXT DEFAULT (datetime('now','localtime'))
             );
+            CREATE TABLE IF NOT EXISTS settings (
+                key   TEXT PRIMARY KEY,
+                value TEXT
+            );
         """)
 
 
@@ -465,6 +469,35 @@ def reorder_todos(todo_date: str, ordered_ids: list):
                 "UPDATE todos SET position = ? WHERE id = ? AND todo_date = ?",
                 (pos, int(tid), todo_date),
             )
+
+
+# ── Ajustes (clave/valor) ────────────────────────────────────────────────────────
+
+DEFAULT_SETTINGS = {
+    "date_format": "dmy",   # dmy = dd/mm/aaaa · mdy = mm/dd/aaaa · ymd = aaaa-mm-dd
+}
+
+def get_setting(key: str, default: str = "") -> str:
+    with get_db() as conn:
+        row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    if row is not None:
+        return row["value"]
+    return DEFAULT_SETTINGS.get(key, default)
+
+def set_setting(key: str, value: str):
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO settings (key, value) VALUES (?,?)"
+            " ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, value),
+        )
+
+def get_all_settings() -> dict:
+    s = dict(DEFAULT_SETTINGS)
+    with get_db() as conn:
+        for r in conn.execute("SELECT key, value FROM settings").fetchall():
+            s[r["key"]] = r["value"]
+    return s
 
 
 def get_todos_range(start: str, end: str) -> dict:

@@ -300,3 +300,20 @@ def test_todos_aparecen_en_semana(client):
     r = client.get(f"/week/{DATE}")
     assert b"week-todo" in r.data
     assert "semana visible".encode() in r.data
+
+
+# ── Ajustes ──────────────────────────────────────────────────────────────────────
+
+def test_pagina_ajustes(client):
+    r = client.get("/ajustes")
+    assert r.status_code == 200
+    assert "Ajustes".encode() in r.data
+
+def test_guardar_ajuste_formato_fecha(client):
+    r = client.post("/ajustes/guardar", data={"date_format": "mdy"})
+    assert r.status_code == 302
+    assert db.get_setting("date_format") == "mdy"
+
+def test_guardar_ajuste_formato_invalido_se_ignora(client):
+    client.post("/ajustes/guardar", data={"date_format": "xxx"})
+    assert db.get_setting("date_format") == "dmy"

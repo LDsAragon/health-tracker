@@ -1,0 +1,9 @@
+{# Campo de fecha en formato configurable (ver static/js/date-es.js). Guarda ISO en el hidden 'name'. #}
+{% macro date_field(name, value='', required=False) -%}
+<span class="date-es">
+  <input type="text" class="date-es-text" inputmode="numeric" autocomplete="off"{% if required %} required{% endif %}>
+  <button type="button" class="date-es-cal" tabindex="-1" aria-label="Abrir calendario">📅</button>
+  <input type="date" class="date-es-native" tabindex="-1" aria-hidden="true">
+  <input type="hidden" name="{{ name }}" class="date-es-iso" value="{{ value }}">
+</span>
+{%- endmacro %}

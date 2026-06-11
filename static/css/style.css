@@ -1372,6 +1372,23 @@ select.journal-cat-select {
   color: var(--accent); font-weight: 600; font-size: 13px;
 }
 
+/* Campo de fecha (formato configurable, ver date-es.js) */
+.date-es { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+.date-es-text {
+  width: 130px; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 14px;
+}
+.date-es-text:focus { outline: none; border-color: var(--accent); }
+.date-es-cal {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+  cursor: pointer; padding: 5px 8px; font-size: 14px; line-height: 1;
+}
+.date-es-cal:hover { border-color: var(--accent); }
+.date-es-native {
+  position: absolute; left: 8px; bottom: 0; width: 1px; height: 1px;
+  opacity: 0; pointer-events: none; border: 0; padding: 0;
+}
+
 .day-journal-add-wrap {
   border-top: 1px solid var(--border);
   padding-top: 10px;

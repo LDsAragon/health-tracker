@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import date_field %}
 {% block title %}Rutinas y recordatorios{% endblock %}
 
 {% block content %}
@@ -32,11 +33,11 @@
 
       <div class="field-group">
         <label>Desde</label>
-        <input type="date" name="start_date" value="{{ today }}">
+        {{ date_field('start_date', today) }}
       </div>
       <div class="field-group">
         <label>Hasta <span style="font-weight:400;">(opcional)</span></label>
-        <input type="date" name="end_date" value="">
+        {{ date_field('end_date', '') }}
       </div>
     </div>
 
@@ -192,11 +193,11 @@
           </div>
           <div class="field-group">
             <label>Desde</label>
-            <input type="date" name="start_date" value="{{ ev.start_date }}">
+            {{ date_field('start_date', ev.start_date) }}
           </div>
           <div class="field-group">
             <label>Hasta <span style="font-weight:400;">(opcional)</span></label>
-            <input type="date" name="end_date" value="{{ ev.end_date or '' }}">
+            {{ date_field('end_date', ev.end_date or '') }}
           </div>
         </div>
 
@@ -271,7 +272,6 @@
 
 <script>
 const today = "{{ today }}";
-document.querySelector('[name="start_date"]').value = today;
 
 function showFreq(val) {
   document.getElementById('freq-weekly').style.display = val === 'weekly' ? 'block' : 'none';

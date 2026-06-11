@@ -72,6 +72,12 @@ def setup():
     db.init_db()
 
 
+@app.context_processor
+def inject_settings():
+    """Expone los ajustes (ej. date_format) a todas las plantillas."""
+    return {"settings": db.get_all_settings()}
+
+
 # ── Calendar ───────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -445,6 +451,21 @@ def week_view(date_str):
         todo_counts=todo_counts,
         todos_by_date=todos_by_date,
     )
+
+
+# ── Ajustes ────────────────────────────────────────────────────────────────────
+
+@app.route("/ajustes")
+def settings_view():
+    return render_template("settings.html")
+
+
+@app.route("/ajustes/guardar", methods=["POST"])
+def settings_save():
+    fmt = request.form.get("date_format", "dmy")
+    if fmt in ("dmy", "mdy", "ymd"):
+        db.set_setting("date_format", fmt)
+    return redirect(url_for("settings_view"))
 
 
 # ── Export ─────────────────────────────────────────────────────────────────────

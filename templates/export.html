@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import date_field %}
 {% block title %}Exportar datos{% endblock %}
 
 {% block content %}
@@ -12,11 +13,11 @@
     <div class="field-row">
       <div class="field-group">
         <label>Desde</label>
-        <input type="date" name="start" value="{{ first_of_month }}" required>
+        {{ date_field('start', first_of_month, required=True) }}
       </div>
       <div class="field-group">
         <label>Hasta</label>
-        <input type="date" name="end" value="{{ today }}" required>
+        {{ date_field('end', today, required=True) }}
       </div>
     </div>
     <button type="submit" class="btn-primary">Descargar CSV</button>

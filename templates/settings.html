@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Ajustes{% endblock %}
+
+{% block content %}
+<div class="page-top">
+  <h1 class="page-title">Ajustes</h1>
+  <p class="page-sub">Preferencias de la app.</p>
+</div>
+
+<div class="rec-form-wrap">
+  <form class="rec-form" method="POST" action="{{ url_for('settings_save') }}">
+    <div class="field-group">
+      <label for="date_format">Formato de fecha</label>
+      <p class="page-sub" style="margin:0 0 8px;">Cómo se muestran y se escriben los campos de fecha (en Rutinas, mover objetivos, exportar).</p>
+      <select name="date_format" id="date_format" class="journal-type-select" style="max-width:280px;">
+        <option value="dmy" {% if settings.date_format == 'dmy' %}selected{% endif %}>dd/mm/aaaa — español</option>
+        <option value="mdy" {% if settings.date_format == 'mdy' %}selected{% endif %}>mm/dd/aaaa — inglés</option>
+        <option value="ymd" {% if settings.date_format == 'ymd' %}selected{% endif %}>aaaa-mm-dd — ISO</option>
+      </select>
+    </div>
+
+    <button type="submit" class="btn-primary">Guardar</button>
+  </form>
+</div>
+{% endblock %}

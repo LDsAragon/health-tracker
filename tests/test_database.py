@@ -290,3 +290,24 @@ def test_get_todos_range(test_db):
     assert "2026-06-08" in r and "2026-06-09" in r
     assert "2026-07-01" not in r
     assert r["2026-06-08"][0]["text"] == "lun"
+
+
+# ── Ajustes (settings) ───────────────────────────────────────────────────────────
+
+def test_setting_default(test_db):
+    assert db.get_setting("date_format") == "dmy"
+    assert db.get_setting("inexistente", "x") == "x"
+
+def test_set_and_get_setting(test_db):
+    db.set_setting("date_format", "ymd")
+    assert db.get_setting("date_format") == "ymd"
+
+def test_set_setting_upsert(test_db):
+    db.set_setting("k", "1")
+    db.set_setting("k", "2")
+    assert db.get_setting("k") == "2"
+
+def test_get_all_settings_incluye_defaults(test_db):
+    assert db.get_all_settings()["date_format"] == "dmy"
+    db.set_setting("date_format", "mdy")
+    assert db.get_all_settings()["date_format"] == "mdy"

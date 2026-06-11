@@ -29,6 +29,10 @@
          class="nav-link {% if request.endpoint in ('export_view', 'export_download') %}active{% endif %}">
         Exportar
       </a>
+      <a href="{{ url_for('settings_view') }}"
+         class="nav-link {% if request.endpoint in ('settings_view', 'settings_save') %}active{% endif %}">
+        ⚙️ Ajustes
+      </a>
     </div>
   </nav>
   <main class="{% block main_class %}main{% endblock %}">
@@ -39,8 +43,10 @@
   <script src="{{ url_for('static', filename='js/ekman-wheel.js') }}"></script>
   <script src="{{ url_for('static', filename='js/ekman-wheel-content.js') }}"></script>
   <script src="{{ url_for('static', filename='js/emotion-wheel-visual.js') }}"></script>
+  <script>window.DATE_FMT = "{{ settings.date_format }}";</script>
   <script src="{{ url_for('static', filename='js/time-fields.js') }}"></script>
   <script src="{{ url_for('static', filename='js/field-blocks.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/date-es.js') }}"></script>
 
   <div id="ew-modal" class="ew-modal-overlay" style="display:none;" onclick="ewOverlayClick(event)">
     <div class="ew-modal-box">

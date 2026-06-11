@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import date_field %}
 {% block title %}{{ d.day }} de {{ d.strftime('%B') }}{% endblock %}
 {% block main_class %}main-day{% endblock %}
 
@@ -58,7 +59,7 @@
         <form method="POST" action="{{ url_for('todo_move', date_str=date_str, todo_id=t.id) }}"
               class="todo-inline-form" id="todo-move-{{ t.id }}" style="display:none;">
           <span class="todo-move-label">Mover a:</span>
-          <input type="date" name="new_date" value="{{ next_day }}" required>
+          {{ date_field('new_date', next_day, required=True) }}
           <button type="submit" class="btn-primary">Mover</button>
           <button type="button" class="btn-cancel" onclick="cancelTodoMove({{ t.id }})">Cancelar</button>
         </form>
