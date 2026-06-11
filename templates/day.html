@@ -349,12 +349,12 @@
     <div class="day-add-bottom">
       <div class="color-picker-row">
         <label class="color-opt-none">
-          <input type="radio" name="color" value="" checked>
+          <input type="radio" name="color" value="" checked onchange="previewAddColor('')">
           <span class="color-circle color-none">&#10006;</span>
         </label>
         {% for c in COLORS %}
         <label class="color-opt">
-          <input type="radio" name="color" value="{{ c }}">
+          <input type="radio" name="color" value="{{ c }}" onchange="previewAddColor('{{ c }}')">
           <span class="color-circle" style="background:{{ c }};"></span>
         </label>
         {% endfor %}

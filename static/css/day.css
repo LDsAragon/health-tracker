@@ -289,6 +289,11 @@
 }
 .day-add-input:focus { outline: none; border-color: var(--accent); }
 .day-add-input::placeholder { color: var(--muted); }
+/* Preview en vivo del color elegido en el alta — mismo lenguaje que .day-note-colored */
+.day-add-input.day-add-colored {
+  background: color-mix(in srgb, var(--c) 18%, var(--surface2));
+  border-left: 3px solid var(--c);
+}
 
 /* Botones de alta del día sin fondo (notas rápidas + especiales): borde + texto accent */
 .day-add-btn {

@@ -94,6 +94,12 @@ function applyNoteColor(note, color) {
 function previewNoteColor(id, color) {
   applyNoteColor(document.getElementById('dnote-' + id), color);
 }
+// Ídem para el alta de nota rápida: tiñe el textarea con el color elegido
+function previewAddColor(color) {
+  const ta = document.querySelector('#rapida-form .day-add-input');
+  if (color) { ta.style.setProperty('--c', color); ta.classList.add('day-add-colored'); }
+  else       { ta.style.removeProperty('--c');      ta.classList.remove('day-add-colored'); }
+}
 
 // Journal
 const DAY_JOURNAL_CATS = DAY_CTX.cats;
