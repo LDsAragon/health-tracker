@@ -1,6 +1,6 @@
-"""Health Tracker como app de escritorio: ventana nativa (pywebview / Edge WebView2).
+"""Bitácora (ex Health Tracker) como app de escritorio: ventana nativa (pywebview / Edge WebView2).
 
-Modo ventana: la DB vive en %LOCALAPPDATA%\\HealthTracker\\health.db (via env HT_DB),
+Modo ventana: la DB vive en %LOCALAPPDATA%\\Bitacora\\health.db (via env HT_DB),
 así el .exe puede vivir en cualquier carpeta sin problemas de permisos de escritura.
 El modo navegador (start.bat / python app.py) sigue funcionando igual que siempre,
 con su health.db al lado del código.
@@ -14,10 +14,12 @@ import sqlite3
 import traceback
 from pathlib import Path
 
-APP_DIR = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "HealthTracker"
+_LOCALAPPDATA = Path(os.environ.get("LOCALAPPDATA", str(Path.home())))
+APP_DIR = _LOCALAPPDATA / "Bitacora"
+_OLD_APP_DIR = _LOCALAPPDATA / "HealthTracker"   # nombre previo al rename (jun 2026)
 DB_FILE = APP_DIR / "health.db"
 
-WINDOW_TITLE = "Health Tracker"
+WINDOW_TITLE = "Bitácora"
 WINDOW_SIZE = (1280, 860)
 # Mínimo chico a propósito: la app es responsive (<600px = modo agenda) y así
 # la ventana sirve como "columnita" al costado de la pantalla.
@@ -60,7 +62,29 @@ def _migrate_first_run():
         _copy_db(old, DB_FILE)
 
 
+def _migrate_from_old_appdata():
+    """Migración del rename (jun 2026): la carpeta de appdata era HealthTracker.
+
+    Intenta renombrar la carpeta entera; si algo la tiene lockeada (WebView2,
+    antivirus), copia solo la DB — el storage del webview se recrea solo.
+    """
+    if DB_FILE.exists():
+        return
+    old_db = _OLD_APP_DIR / "health.db"
+    if not old_db.exists():
+        return
+    if not APP_DIR.exists():
+        try:
+            os.rename(_OLD_APP_DIR, APP_DIR)
+            return
+        except OSError:
+            pass
+    APP_DIR.mkdir(parents=True, exist_ok=True)
+    _copy_db(old_db, DB_FILE)
+
+
 def main():
+    _migrate_from_old_appdata()
     APP_DIR.mkdir(parents=True, exist_ok=True)
     os.environ["HT_DB"] = str(DB_FILE)
     _migrate_first_run()
@@ -94,7 +118,7 @@ if __name__ == "__main__":
             import ctypes
             ctypes.windll.user32.MessageBoxW(
                 None,
-                f"Health Tracker no pudo arrancar.\nDetalle en: {log}",
+                f"Bitácora no pudo arrancar.\nDetalle en: {log}",
                 WINDOW_TITLE, 0x10)
         except Exception:
             pass

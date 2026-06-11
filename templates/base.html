@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Calendario{% endblock %}</title>
+  <title>{% block title %}Bitácora{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/day.css') }}">
@@ -13,7 +13,7 @@
 </head>
 <body>
   <nav class="navbar">
-    <a href="{{ url_for('main.home') }}" class="nav-brand">Calendario</a>
+    <a href="{{ url_for('main.home') }}" class="nav-brand">Bitácora</a>
 
     <form class="nav-search" action="{{ url_for('main.search_view') }}" method="GET">
       <input type="text" name="q" class="nav-search-input"

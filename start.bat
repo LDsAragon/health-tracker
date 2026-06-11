@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0"
-echo Iniciando Health Tracker...
+echo Iniciando Bitacora...
 
 where python >nul 2>&1
 if %errorlevel% neq 0 (
