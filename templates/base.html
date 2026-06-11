@@ -43,7 +43,7 @@
   <script src="{{ url_for('static', filename='js/ekman-wheel.js') }}"></script>
   <script src="{{ url_for('static', filename='js/ekman-wheel-content.js') }}"></script>
   <script src="{{ url_for('static', filename='js/emotion-wheel-visual.js') }}"></script>
-  <script>window.DATE_FMT = "{{ settings.date_format }}";</script>
+  <script>window.DATE_FMT = "{{ settings.date_format }}"; window.TIME_FMT = "{{ settings.time_format }}";</script>
   <script src="{{ url_for('static', filename='js/time-fields.js') }}"></script>
   <script src="{{ url_for('static', filename='js/field-blocks.js') }}"></script>
   <script src="{{ url_for('static', filename='js/date-es.js') }}"></script>

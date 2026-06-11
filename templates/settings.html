@@ -19,6 +19,15 @@
       </select>
     </div>
 
+    <div class="field-group">
+      <label for="time_format">Formato de hora</label>
+      <p class="page-sub" style="margin:0 0 8px;">Cómo se muestran y se escriben las horas (rangos horarios, sello de las notas).</p>
+      <select name="time_format" id="time_format" class="journal-type-select" style="max-width:280px;">
+        <option value="24h" {% if settings.time_format == '24h' %}selected{% endif %}>24 horas (23:00)</option>
+        <option value="12h" {% if settings.time_format == '12h' %}selected{% endif %}>12 horas — AM/PM (11:00 PM)</option>
+      </select>
+    </div>
+
     <button type="submit" class="btn-primary">Guardar</button>
   </form>
 </div>

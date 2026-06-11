@@ -317,3 +317,8 @@ def test_guardar_ajuste_formato_fecha(client):
 def test_guardar_ajuste_formato_invalido_se_ignora(client):
     client.post("/ajustes/guardar", data={"date_format": "xxx"})
     assert db.get_setting("date_format") == "dmy"
+
+def test_guardar_ajuste_formato_hora(client):
+    r = client.post("/ajustes/guardar", data={"date_format": "dmy", "time_format": "12h"})
+    assert r.status_code == 302
+    assert db.get_setting("time_format") == "12h"

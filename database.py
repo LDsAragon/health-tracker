@@ -475,6 +475,7 @@ def reorder_todos(todo_date: str, ordered_ids: list):
 
 DEFAULT_SETTINGS = {
     "date_format": "dmy",   # dmy = dd/mm/aaaa · mdy = mm/dd/aaaa · ymd = aaaa-mm-dd
+    "time_format": "24h",   # 24h | 12h (AM/PM)
 }
 
 def get_setting(key: str, default: str = "") -> str:

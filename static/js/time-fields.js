@@ -24,14 +24,26 @@ function tfRangeMin(from, to) {
   return ((tb - fa) % 1440 + 1440) % 1440;
 }
 
-// ── Fila de Rango: inputs numéricos HH:MM → HH:MM (24h, sin overlay) ────────
+// ── Fila de Rango: inputs numéricos HH:MM (24h) o hh:mm AM/PM (12h) ──────────
+// El valor canónico guardado SIEMPRE es 24h ("HH:MM-HH:MM"); el 12h es solo de UI.
+function _tfIs12() { return (window.TIME_FMT || '24h') === '12h'; }
+function _tf24to12(H) {
+  H = parseInt(H, 10) || 0;
+  let h = H % 12; if (h === 0) h = 12;
+  return { h: String(h), a: H < 12 ? 'AM' : 'PM' };
+}
+function _tfTimeInputs(p) {   // p = 'f' (desde) | 't' (hasta)
+  const is12 = _tfIs12();
+  const h = '<input type="number" class="tf-rh-' + p + 'h" min="' + (is12 ? 1 : 0) + '" max="' + (is12 ? 12 : 23) + '" placeholder="hh">';
+  const m = '<input type="number" class="tf-rh-' + p + 'm" min="0" max="59" placeholder="mm">';
+  const a = is12
+    ? ' <select class="tf-rh-' + p + 'a tf-sel-ampm"><option value="AM">AM</option><option value="PM">PM</option></select>'
+    : '';
+  return h + '<span class="tf-u">:</span>' + m + a;
+}
 function tfRangoRow() {
-  const hi = (cls, mx, ph) =>
-    '<input type="number" class="' + cls + '" min="0" max="' + mx + '" placeholder="' + ph + '">';
   return '<div class="tf-row">' +
-    hi('tf-rh-fh', 23, 'hh') + '<span class="tf-u">:</span>' + hi('tf-rh-fm', 59, 'mm') +
-    '<span class="tf-u">→</span>' +
-    hi('tf-rh-th', 23, 'hh') + '<span class="tf-u">:</span>' + hi('tf-rh-tm', 59, 'mm') +
+    _tfTimeInputs('f') + '<span class="tf-u">→</span>' + _tfTimeInputs('t') +
     '<span class="tf-rh-calc"></span>' +
   '</div>';
 }
@@ -65,12 +77,21 @@ function _tfEnsureRango(tf) {
 }
 
 function _tfRangoVals(tf) {
+  const is12 = _tfIs12();
   const val = c => { const el = tf.querySelector(c); return el && el.value !== '' ? el.value : null; };
-  const cp  = (x, mx) => String(Math.min(mx, Math.max(0, parseInt(x, 10) || 0))).padStart(2, '0');
+  const to24 = (h, m, a) => {                       // → "HH:MM" 24h canónico
+    let H = Math.max(0, parseInt(h, 10) || 0);
+    const M = Math.min(59, Math.max(0, parseInt(m, 10) || 0));
+    if (is12) { H = H % 12; if (a === 'PM') H += 12; }
+    else { H = Math.min(23, H); }
+    return String(H).padStart(2, '0') + ':' + String(M).padStart(2, '0');
+  };
   const fh = val('.tf-rh-fh'), fm = val('.tf-rh-fm'), th = val('.tf-rh-th'), tm = val('.tf-rh-tm');
+  const fa = is12 ? (val('.tf-rh-fa') || 'AM') : null;
+  const ta = is12 ? (val('.tf-rh-ta') || 'AM') : null;
   return {
-    from: (fh !== null && fm !== null) ? cp(fh, 23) + ':' + cp(fm, 59) : '',
-    to:   (th !== null && tm !== null) ? cp(th, 23) + ':' + cp(tm, 59) : ''
+    from: (fh !== null && fm !== null) ? to24(fh, fm, fa) : '',
+    to:   (th !== null && tm !== null) ? to24(th, tm, ta) : ''
   };
 }
 
@@ -113,7 +134,13 @@ function restoreTimeFields(root) {
       const p = v.split('-');
       const f = (p[0] || '').split(':'), t = (p[1] || '').split(':');
       const set = (c, val) => { const el = tf.querySelector(c); if (el && val != null) el.value = val; };
-      set('.tf-rh-fh', f[0]); set('.tf-rh-fm', f[1]); set('.tf-rh-th', t[0]); set('.tf-rh-tm', t[1]);
+      if (_tfIs12()) {
+        const F = _tf24to12(f[0]), T = _tf24to12(t[0]);
+        set('.tf-rh-fh', F.h); set('.tf-rh-fm', String(parseInt(f[1], 10) || 0)); set('.tf-rh-fa', F.a);
+        set('.tf-rh-th', T.h); set('.tf-rh-tm', String(parseInt(t[1], 10) || 0)); set('.tf-rh-ta', T.a);
+      } else {
+        set('.tf-rh-fh', f[0]); set('.tf-rh-fm', f[1]); set('.tf-rh-th', t[0]); set('.tf-rh-tm', t[1]);
+      }
       if (p[0] && p[1]) {
         const calc = tf.querySelector('.tf-rh-calc');
         if (calc) calc.textContent = '· ' + tfFmtDur(tfRangeMin(p[0], p[1]));

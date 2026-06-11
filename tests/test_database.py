@@ -311,3 +311,8 @@ def test_get_all_settings_incluye_defaults(test_db):
     assert db.get_all_settings()["date_format"] == "dmy"
     db.set_setting("date_format", "mdy")
     assert db.get_all_settings()["date_format"] == "mdy"
+
+def test_time_format_default(test_db):
+    assert db.get_setting("time_format") == "24h"
+    db.set_setting("time_format", "12h")
+    assert db.get_setting("time_format") == "12h"

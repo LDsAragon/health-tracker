@@ -377,3 +377,18 @@ def test_escala_con_etiquetas_muestra_label(client):
     })
     body = client.get(f"/day/{DATE}").data.decode("utf-8")
     assert "Bien" in body   # 3ª etiqueta de la escala
+
+
+def test_rango_display_12h(client):
+    db.set_setting("time_format", "12h")
+    client.post("/journal/add", data={
+        "name": "Sueño", "color": "#6366f1",
+        "field_label[]": ["Horario"], "field_type[]": ["rango"], "field_placeholder[]": [""],
+    })
+    cid = db.get_journal_categories()[0]["id"]
+    client.post(f"/day/{DATE}/journal/add", data={
+        "category_id": cid, "values_json": json.dumps({"Horario": "23:00-08:00"}), "next": "day",
+    })
+    body = client.get(f"/day/{DATE}").data.decode("utf-8")
+    assert "11:00 PM" in body
+    assert "8:00 AM" in body

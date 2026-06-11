@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, make_response, send_file
+from flask import Flask, render_template, request, redirect, url_for, make_response, send_file, g
 from datetime import date, datetime, timedelta
 import calendar as cal
 import json
@@ -15,9 +15,9 @@ def humantime_filter(ts):
         dt = datetime.fromisoformat(ts[:19])
         delta = (date.today() - dt.date()).days
         if delta == 0:
-            return f"hoy {dt.strftime('%H:%M')}"
+            return f"hoy {_fmt_clock(dt.strftime('%H:%M'))}"
         if delta == 1:
-            return f"ayer {dt.strftime('%H:%M')}"
+            return f"ayer {_fmt_clock(dt.strftime('%H:%M'))}"
         return dt.strftime('%d/%m/%Y')
     except Exception:
         return ''
@@ -62,7 +62,7 @@ def rango_fmt_filter(s):
         ah, am = (int(x) for x in a.split(':'))
         bh, bm = (int(x) for x in b.split(':'))
         dur = ((bh * 60 + bm) - (ah * 60 + am)) % 1440
-        return f"{a} → {b} · {dur_fmt_filter(str(dur))}"
+        return f"{_fmt_clock(a)} → {_fmt_clock(b)} · {dur_fmt_filter(str(dur))}"
     except (ValueError, TypeError):
         return s
 
@@ -70,12 +70,34 @@ def rango_fmt_filter(s):
 @app.before_request
 def setup():
     db.init_db()
+    g.settings = db.get_all_settings()
 
 
 @app.context_processor
 def inject_settings():
     """Expone los ajustes (ej. date_format) a todas las plantillas."""
     return {"settings": db.get_all_settings()}
+
+
+def _setting(key, default=''):
+    try:
+        return getattr(g, 'settings', {}).get(key, default)
+    except Exception:
+        return default
+
+
+def _fmt_clock(hhmm):
+    """'23:30' → '23:30' (24h) o '11:30 PM' (12h) según el ajuste time_format."""
+    try:
+        h, m = hhmm.split(':')
+        H = int(h)
+    except (ValueError, AttributeError):
+        return hhmm
+    if _setting('time_format', '24h') == '12h':
+        ap = 'AM' if H < 12 else 'PM'
+        h12 = H % 12 or 12
+        return f"{h12}:{m} {ap}"
+    return hhmm
 
 
 # ── Calendar ───────────────────────────────────────────────────────────────────
@@ -465,6 +487,9 @@ def settings_save():
     fmt = request.form.get("date_format", "dmy")
     if fmt in ("dmy", "mdy", "ymd"):
         db.set_setting("date_format", fmt)
+    tfmt = request.form.get("time_format", "24h")
+    if tfmt in ("24h", "12h"):
+        db.set_setting("time_format", tfmt)
     return redirect(url_for("settings_view"))
 
 
