@@ -11,6 +11,32 @@
   --r:        8px;
 }
 
+/* ── Temas (data-theme en <html>); índigo = :root ──────────────────────── */
+[data-theme="medianoche"] {
+  --bg:#0d1117; --surface:#161b22; --surface2:#21262d; --border:#30363d; --text:#c9d1d9; --muted:#8b949e; --accent:#539bf5;
+}
+[data-theme="bosque"] {
+  --bg:#14211a; --surface:#1b2a1b; --surface2:#24382a; --border:#3d6b3d; --text:#cfe8c8; --muted:#84a87d; --accent:#6fbf73;
+}
+[data-theme="oceano"] {
+  --bg:#0b1a2c; --surface:#112334; --surface2:#17304a; --border:#1e5074; --text:#cfe9ff; --muted:#7aa6c4; --accent:#4facfe;
+}
+[data-theme="ciruela"] {
+  --bg:#1e1420; --surface:#2b1b2e; --surface2:#3a2740; --border:#6c4675; --text:#f5d8ec; --muted:#b594ad; --accent:#e879b9;
+}
+[data-theme="cobre"] {
+  --bg:#140f0a; --surface:#1c1410; --surface2:#2a1f16; --border:#7a5533; --text:#e8c39e; --muted:#b0926e; --accent:#d4764e;
+}
+[data-theme="claude"] {
+  --bg:#1f1e1c; --surface:#262624; --surface2:#30302e; --border:#4a4a47; --text:#f5f4f0; --muted:#a8a59c; --accent:#c6613f;
+}
+[data-theme="cyberpunk"] {
+  --bg:#0a0a0f; --surface:#12101a; --surface2:#1b1726; --border:#9b30ff; --text:#0ff0fc; --muted:#6aa5ad; --accent:#e040fb;
+}
+[data-theme="retrowave"] {
+  --bg:#1a1a2e; --surface:#16213e; --surface2:#20294a; --border:#533483; --text:#f0e9ff; --muted:#9a93c4; --accent:#e94560;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -1387,6 +1413,20 @@ select.journal-cat-select {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent); font-weight: 600; font-size: 13px;
 }
+
+/* Selector de temas (Ajustes) */
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; max-width: 600px; }
+.theme-swatch {
+  display: flex; flex-direction: column; gap: 6px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--r); padding: 8px;
+  background: var(--surface); transition: border-color .15s;
+}
+.theme-swatch:hover { border-color: var(--accent); }
+.theme-swatch input { position: absolute; opacity: 0; pointer-events: none; }
+.theme-swatch:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.theme-swatch-colors { display: flex; height: 28px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+.theme-swatch-colors span { flex: 1; }
+.theme-swatch-name { font-size: 12px; color: var(--text); font-weight: 600; }
 
 /* Campo de fecha (formato configurable, ver date-es.js) */
 .date-es { position: relative; display: inline-flex; align-items: center; gap: 4px; }

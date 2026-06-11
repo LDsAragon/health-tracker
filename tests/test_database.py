@@ -316,3 +316,6 @@ def test_time_format_default(test_db):
     assert db.get_setting("time_format") == "24h"
     db.set_setting("time_format", "12h")
     assert db.get_setting("time_format") == "12h"
+
+def test_theme_default(test_db):
+    assert db.get_setting("theme") == "indigo"

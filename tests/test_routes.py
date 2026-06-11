@@ -335,3 +335,17 @@ def test_volver_desde_calendario(client):
 
 def test_volver_default_es_calendario(client):
     assert b"/calendar/2026/6" in client.get(f"/day/{DATE}").data
+
+def test_guardar_tema(client):
+    r = client.post("/ajustes/guardar", data={"theme": "oceano"})
+    assert r.status_code == 302
+    assert db.get_setting("theme") == "oceano"
+
+def test_guardar_tema_invalido_se_ignora(client):
+    client.post("/ajustes/guardar", data={"theme": "nope-no-existe"})
+    assert db.get_setting("theme") == "indigo"
+
+def test_ajustes_muestra_swatches(client):
+    body = client.get("/ajustes").data
+    assert b"theme-swatch" in body
+    assert "Medianoche".encode() in body

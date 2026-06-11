@@ -10,6 +10,25 @@
 <div class="rec-form-wrap">
   <form class="rec-form" method="POST" action="{{ url_for('settings_save') }}">
     <div class="field-group">
+      <label>Tema</label>
+      <p class="page-sub" style="margin:0 0 8px;">Elegí la paleta de la app.</p>
+      <div class="theme-grid">
+        {% for t in themes %}
+        <label class="theme-swatch {% if settings.theme == t.slug %}active{% endif %}">
+          <input type="radio" name="theme" value="{{ t.slug }}" {% if settings.theme == t.slug %}checked{% endif %}>
+          <span class="theme-swatch-colors">
+            <span style="background:{{ t.bg }};"></span>
+            <span style="background:{{ t.surface }};"></span>
+            <span style="background:{{ t.text }};"></span>
+            <span style="background:{{ t.accent }};"></span>
+          </span>
+          <span class="theme-swatch-name">{{ t.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="field-group">
       <label for="date_format">Formato de fecha</label>
       <p class="page-sub" style="margin:0 0 8px;">Cómo se muestran y se escriben los campos de fecha (en Rutinas, mover objetivos, exportar).</p>
       <select name="date_format" id="date_format" class="journal-type-select" style="max-width:280px;">
