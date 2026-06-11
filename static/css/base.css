@@ -1,0 +1,121 @@
+:root {
+  --bg:       #0f1117;
+  --surface:  #1a1d27;
+  --surface2: #242736;
+  --border:   #2e3148;
+  --text:     #e2e8f0;
+  --muted:    #8892a4;
+  --accent:   #6366f1;
+  --green:    #22c55e;
+  --red:      #ef4444;
+  /* Overlays (los temas claros los redefinen para no usar blancos sobre claro) */
+  --hover:       rgba(255,255,255,.05);
+  --line:        rgba(255,255,255,.05);
+  --cell-empty:  rgba(0,0,0,.18);
+  --placeholder: rgba(255,255,255,.18);
+  --r:        8px;
+}
+
+/* ── Temas (data-theme en <html>); índigo = :root ──────────────────────── */
+[data-theme="medianoche"] {
+  --bg:#0d1117; --surface:#161b22; --surface2:#21262d; --border:#30363d; --text:#c9d1d9; --muted:#8b949e; --accent:#539bf5;
+}
+[data-theme="bosque"] {
+  --bg:#14211a; --surface:#1b2a1b; --surface2:#24382a; --border:#3d6b3d; --text:#cfe8c8; --muted:#84a87d; --accent:#6fbf73;
+}
+[data-theme="oceano"] {
+  --bg:#0b1a2c; --surface:#112334; --surface2:#17304a; --border:#1e5074; --text:#cfe9ff; --muted:#7aa6c4; --accent:#4facfe;
+}
+[data-theme="ciruela"] {
+  --bg:#1e1420; --surface:#2b1b2e; --surface2:#3a2740; --border:#6c4675; --text:#f5d8ec; --muted:#b594ad; --accent:#e879b9;
+}
+[data-theme="cobre"] {
+  --bg:#140f0a; --surface:#1c1410; --surface2:#2a1f16; --border:#7a5533; --text:#e8c39e; --muted:#b0926e; --accent:#d4764e;
+}
+[data-theme="claude"] {
+  --bg:#1f1e1c; --surface:#262624; --surface2:#30302e; --border:#4a4a47; --text:#f5f4f0; --muted:#a8a59c; --accent:#c6613f;
+}
+[data-theme="cyberpunk"] {
+  --bg:#0a0a0f; --surface:#12101a; --surface2:#1b1726; --border:#9b30ff; --text:#0ff0fc; --muted:#6aa5ad; --accent:#e040fb;
+}
+[data-theme="retrowave"] {
+  --bg:#1a1a2e; --surface:#16213e; --surface2:#20294a; --border:#533483; --text:#f0e9ff; --muted:#9a93c4; --accent:#e94560;
+}
+/* Temas claros: redefinen overlays a negros suaves sobre fondo claro */
+[data-theme="papel"] {
+  --bg:#faf8f5; --surface:#ffffff; --surface2:#f1ece4; --border:#d5d0c8; --text:#3b3836; --muted:#8a8378; --accent:#b0832e;
+  --hover:rgba(0,0,0,.04); --line:rgba(0,0,0,.08); --cell-empty:rgba(0,0,0,.035); --placeholder:rgba(0,0,0,.4);
+}
+[data-theme="claro"] {
+  --bg:#f0ebe3; --surface:#faf6f0; --surface2:#e9e2d8; --border:#d4cdc2; --text:#4a443c; --muted:#8c8475; --accent:#c47d5a;
+  --hover:rgba(0,0,0,.04); --line:rgba(0,0,0,.08); --cell-empty:rgba(0,0,0,.035); --placeholder:rgba(0,0,0,.4);
+}
+[data-theme="lavanda"] {
+  --bg:#f3eef8; --surface:#faf7ff; --surface2:#ebe4f3; --border:#cec3de; --text:#3d3551; --muted:#8478a0; --accent:#9b6dcc;
+  --hover:rgba(0,0,0,.04); --line:rgba(0,0,0,.08); --cell-empty:rgba(0,0,0,.035); --placeholder:rgba(0,0,0,.4);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ── NAV ──────────────────────────────────────────────────────────── */
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  height: 52px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nav-brand {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.nav-search { flex: 1; max-width: 320px; margin: 0 24px; }
+.nav-search-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 5px 11px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color .15s;
+}
+.nav-search-input:focus { outline: none; border-color: var(--accent); }
+.nav-search-input::placeholder { color: var(--muted); }
+
+.nav-links { display: flex; gap: 4px; flex-shrink: 0; }
+
+.nav-link {
+  font-size: 14px;
+  color: var(--muted);
+  padding: 5px 12px;
+  border-radius: var(--r);
+  transition: all .15s;
+}
+.nav-link:hover  { color: var(--text); background: var(--surface2); }
+.nav-link.active { color: var(--accent); background: rgba(99,102,241,.15); }
+
+.main      { padding: 24px 20px; max-width: 1100px; margin: 0 auto; }
+.main-wide { padding: 20px 24px; }
+

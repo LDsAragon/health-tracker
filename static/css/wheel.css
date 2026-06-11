@@ -1,0 +1,299 @@
+/* ── EMOTION WHEEL ────────────────────────────────────────────────────────── */
+
+.journal-type-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.journal-type-select:focus { outline: none; border-color: var(--accent); }
+
+.ew-selects {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ew-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+  appearance: auto;
+}
+.ew-select:focus { outline: none; }
+.ew-select option { color: var(--text); background: var(--surface); }
+
+/* Versión compacta para celdas del calendario */
+.ew-compact .ew-select {
+  font-size: 11px;
+  padding: 3px 5px;
+  border-radius: 4px;
+}
+.ew-compact { display: flex; flex-direction: column; gap: 4px; }
+
+/* Display de emoción guardada (vista de entrada) */
+.ew-display {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.ew-display-chip {
+  background: color-mix(in srgb, var(--ew-c, #8892a4) 18%, transparent);
+  color: var(--ew-c, #8892a4);
+  border: 1px solid color-mix(in srgb, var(--ew-c, #8892a4) 35%, transparent);
+  padding: 3px 12px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ew-display-sep {
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ── RUEDA DE EMOCIONES — MODAL VISUAL ───────────────────────────── */
+
+.ew-open-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.ew-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.ew-open-btn:hover { border-color: var(--accent); }
+.ew-open-btn-ek:hover { border-color: #e6b53c; }
+
+/* Chip de solo lectura cuando el valor viene de la rueda Ekman */
+.ew-ek-chip {
+  margin-top: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: color-mix(in srgb, #e6b53c 16%, transparent);
+  border: 1px solid color-mix(in srgb, #e6b53c 38%, transparent);
+}
+.ew-ek-chip::before { content: "🧭 "; }
+
+/* Badge "Ekman" en el display de la entrada guardada */
+.ew-display-src {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* Toggle de rueda dentro del modal */
+.ew-wheel-tabs { display: flex; gap: 6px; }
+.ew-wheel-tab {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.ew-wheel-tab:hover { color: var(--text); }
+.ew-wheel-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.ew-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ew-modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 20px 18px;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 16px;
+  max-height: 98vh;
+  max-width: 98vw;
+  overflow-y: auto;
+}
+
+.ew-modal-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Panel lateral de contexto psicológico */
+.ew-info-panel {
+  width: 320px;
+  flex-shrink: 0;
+  align-self: stretch;
+  overflow-y: auto;
+  text-align: left;
+  border-left: 1px solid var(--border);
+  padding-left: 16px;
+}
+.ew-info-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 10px;
+}
+.ew-info-sec { margin-bottom: 11px; }
+.ew-info-sec h4 {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 3px;
+  font-weight: 700;
+}
+.ew-info-sec p {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  margin: 0;
+}
+.ew-info-divider {
+  border-top: 1px dashed var(--border);
+  margin: 4px 0 11px;
+}
+.ew-info-src {
+  font-size: 10px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.ew-wheel-wrap {
+  position: relative;
+  width: min(740px, calc(90vh - 140px), calc(100vw - 32px));
+  height: min(740px, calc(90vh - 140px), calc(100vw - 32px));
+  flex-shrink: 0;
+}
+
+.ew-wheel-wrap svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Etiqueta central (círculo interno del SVG) */
+.ew-center-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 56px;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.2;
+  pointer-events: none;
+  hyphens: auto;
+}
+
+/* Etiqueta de hover */
+.ew-hover-label {
+  font-size: 16px;
+  font-weight: 700;
+  min-height: 24px;
+  text-align: center;
+  color: var(--text);
+}
+.ew-sep { color: var(--muted); font-weight: 400; }
+
+.ew-hover-hint {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  min-height: 16px;
+}
+
+.ew-modal-actions {
+  display: flex;
+  gap: 8px;
+}
+.ew-modal-actions button {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.ew-modal-actions button:hover { border-color: var(--accent); }
+
+.ew-hint {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── RESPONSIVE ───────────────────────────────────────────────────── */
+@media (max-width: 980px) {
+  .ew-modal-box { flex-direction: column; align-items: center; }
+  .ew-info-panel {
+    width: min(740px, calc(100vw - 56px));
+    align-self: auto;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    padding-top: 14px;
+  }
+}
+
+@media (max-width: 700px) {
+  .cal-cell { min-height: 80px; padding: 6px 4px; }
+  .cal-num  { font-size: 13px; }
+  .chip     { font-size: 10px; }
+  .cal-note-line { display: none; }
+  .day-title { font-size: 20px; }
+}
