@@ -118,8 +118,7 @@ def week_view(date_str):
 @bp.route("/ajustes")
 def settings_view():
     return render_template("settings.html", themes=THEMES,
-                           back=safe_back(request.args.get("back")),
-                           datos=request.args.get("datos"))
+                           back=safe_back(request.args.get("back")))
 
 
 @bp.route("/ajustes/guardar", methods=["POST"])
@@ -212,7 +211,8 @@ def charts_delete(chart_id):
 def export_view():
     today = date.today().isoformat()
     first_of_month = date.today().replace(day=1).isoformat()
-    return render_template("export.html", today=today, first_of_month=first_of_month)
+    return render_template("export.html", today=today, first_of_month=first_of_month,
+                           datos=request.args.get("datos"))
 
 
 @bp.route("/export/download")
@@ -281,7 +281,7 @@ def restore_upload():
     import os, tempfile
     f = request.files.get("dbfile")
     if not f or not f.filename:
-        return redirect(url_for("main.settings_view", datos="err-nofile"))
+        return redirect(url_for("main.export_view", datos="err-nofile"))
     base = os.path.dirname(os.path.abspath(db.db_path())) or "."
     fd, tmp = tempfile.mkstemp(suffix=".db", dir=base)   # mismo dir → os.replace atómico
     os.close(fd)
@@ -292,7 +292,7 @@ def restore_upload():
         for p in (tmp, tmp + "-wal", tmp + "-shm"):
             if os.path.exists(p):
                 os.remove(p)
-    return redirect(url_for("main.settings_view", datos="ok" if ok else "err-invalid"))
+    return redirect(url_for("main.export_view", datos="ok" if ok else "err-invalid"))
 
 
 # ── Search ─────────────────────────────────────────────────────────────────────

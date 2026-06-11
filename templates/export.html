@@ -1,13 +1,26 @@
 {% extends "base.html" %}
 {% from "_macros.html" import date_field %}
-{% block title %}Exportar datos{% endblock %}
+{% block title %}Datos{% endblock %}
 
 {% block content %}
 <div class="page-top">
-  <h1 class="page-title">Exportar datos</h1>
-  <p class="page-sub">Descargá tus notas y completaciones como CSV para llevar al médico o revisar en otro lugar.</p>
+  <h1 class="page-title">Datos</h1>
+  <p class="page-sub">Exportá, respaldá y restaurá toda tu información.</p>
 </div>
 
+{% if datos == 'ok' %}
+<div class="datos-banner datos-ok">✓ Base de datos restaurada correctamente.</div>
+{% elif datos == 'err-invalid' %}
+<div class="datos-banner datos-err">✗ El archivo no es una base de datos válida de la app. No se cambió nada.</div>
+{% elif datos == 'err-nofile' %}
+<div class="datos-banner datos-err">✗ No seleccionaste ningún archivo.</div>
+{% endif %}
+
+<!-- Exportar a CSV -->
+<div class="page-top" style="margin-bottom:12px;">
+  <h2 class="page-title" style="font-size:20px;">Exportar a CSV</h2>
+  <p class="page-sub">Descargá tus notas y completaciones como CSV para llevar al médico o revisar en otro lugar.</p>
+</div>
 <div class="export-form-wrap">
   <form class="export-form" action="{{ url_for('main.export_download') }}" method="GET">
     <div class="field-row">
@@ -22,21 +35,36 @@
     </div>
     <button type="submit" class="btn-primary">Descargar CSV</button>
   </form>
+  <div class="export-info" style="margin-top:14px;">
+    <p>El archivo incluye:</p>
+    <ul>
+      <li>Notas libres con fecha y hora</li>
+      <li>Eventos completados o salteados con comentarios</li>
+    </ul>
+  </div>
 </div>
 
-<div class="export-info">
-  <p>El archivo incluye:</p>
-  <ul>
-    <li>Notas libres con fecha y hora</li>
-    <li>Eventos completados o salteados con comentarios</li>
-  </ul>
+<!-- Backup / Restore de la base de datos completa -->
+<div class="page-top" style="margin-top:36px;margin-bottom:12px;">
+  <h2 class="page-title" style="font-size:20px;">Copia de seguridad</h2>
+  <p class="page-sub">Respaldo y restauración de toda la base de datos (incluye absolutamente todo).</p>
 </div>
+<div class="rec-form-wrap">
+  <div class="field-group">
+    <label>Backup</label>
+    <p class="page-sub" style="margin:0 0 8px;">Descargá una copia completa (.db) de todos tus datos — guardala por las dudas.</p>
+    <a href="{{ url_for('main.backup_download') }}" class="back-link" style="display:inline-flex;">⬇&nbsp; Descargar backup (.db)</a>
+  </div>
 
-<div class="export-form-wrap" style="margin-top:24px;">
-  <p style="font-size:14px; color:var(--muted);">
-    ¿Buscás el backup completo de la base de datos? Ahora vive en
-    <a href="{{ url_for('main.settings_view') }}" style="color:var(--accent);text-decoration:underline;">⚙️ Ajustes → Datos</a>
-    (con restauración incluida).
-  </p>
+  <div class="field-group" style="margin-top:22px;">
+    <label for="dbfile">Restaurar</label>
+    <p class="page-sub" style="margin:0 0 8px;">Reemplaza <b>todos</b> los datos actuales por los del archivo elegido. Se guarda un backup automático previo (<code>health-prerestore-*.db</code>) por las dudas.</p>
+    <form method="POST" action="{{ url_for('main.restore_upload') }}" enctype="multipart/form-data"
+          onsubmit="return confirm('Esto reemplaza TODA la base de datos actual por la del archivo. ¿Continuar?');">
+      <input type="file" name="dbfile" accept=".db,.sqlite,.sqlite3" required
+             style="font-size:13px;margin-bottom:10px;display:block;color:var(--text);">
+      <button type="submit" class="btn-primary">Restaurar base de datos</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

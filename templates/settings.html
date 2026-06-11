@@ -6,14 +6,6 @@
   <a href="{{ back or url_for('main.home') }}" class="back-link">&#8592; {{ 'Volver' if back else 'Calendario' }}</a>
 </div>
 
-{% if datos == 'ok' %}
-<div class="datos-banner datos-ok">✓ Base de datos restaurada correctamente.</div>
-{% elif datos == 'err-invalid' %}
-<div class="datos-banner datos-err">✗ El archivo no es una base de datos válida de la app. No se cambió nada.</div>
-{% elif datos == 'err-nofile' %}
-<div class="datos-banner datos-err">✗ No seleccionaste ningún archivo.</div>
-{% endif %}
-
 <div class="page-top">
   <h1 class="page-title">Ajustes</h1>
   <p class="page-sub">Preferencias de la app.</p>
@@ -89,8 +81,8 @@
     </div>
 
     <div class="field-group">
-      <label for="show_export">Acceso a Exportar</label>
-      <p class="page-sub" style="margin:0 0 8px;">Mostrar u ocultar el enlace Exportar en la barra de navegación.</p>
+      <label for="show_export">Acceso a Datos</label>
+      <p class="page-sub" style="margin:0 0 8px;">Mostrar u ocultar el tab <b>Datos</b> (exportar CSV, backup y restaurar la base de datos) en la barra de navegación.</p>
       <select name="show_export" id="show_export" class="journal-type-select" style="max-width:280px;">
         <option value="show" {% if settings.show_export == 'show' %}selected{% endif %}>Mostrar en el navbar</option>
         <option value="hide" {% if settings.show_export == 'hide' %}selected{% endif %}>Ocultar del navbar</option>
@@ -117,30 +109,6 @@
 
     <button type="submit" class="btn-primary">Guardar</button>
   </form>
-</div>
-
-<div class="page-top" style="margin-top:36px;">
-  <h2 class="page-title" style="font-size:20px;">Datos</h2>
-  <p class="page-sub">Copia de seguridad y restauración de toda la base de datos.</p>
-</div>
-
-<div class="rec-form-wrap">
-  <div class="field-group">
-    <label>Backup</label>
-    <p class="page-sub" style="margin:0 0 8px;">Descargá una copia completa (.db) de todos tus datos — guardala por las dudas.</p>
-    <a href="{{ url_for('main.backup_download') }}" class="back-link" style="display:inline-flex;">⬇&nbsp; Descargar backup (.db)</a>
-  </div>
-
-  <div class="field-group" style="margin-top:22px;">
-    <label for="dbfile">Restaurar</label>
-    <p class="page-sub" style="margin:0 0 8px;">Reemplaza <b>todos</b> los datos actuales por los del archivo elegido. Se guarda un backup automático previo (<code>health-prerestore-*.db</code>) por las dudas.</p>
-    <form method="POST" action="{{ url_for('main.restore_upload') }}" enctype="multipart/form-data"
-          onsubmit="return confirm('Esto reemplaza TODA la base de datos actual por la del archivo. ¿Continuar?');">
-      <input type="file" name="dbfile" accept=".db,.sqlite,.sqlite3" required
-             style="font-size:13px;margin-bottom:10px;display:block;color:var(--text);">
-      <button type="submit" class="btn-primary">Restaurar base de datos</button>
-    </form>
-  </div>
 </div>
 
 <script>
