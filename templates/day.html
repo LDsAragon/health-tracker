@@ -26,7 +26,7 @@
 <!-- Panel lateral permanente: objetivos / quehaceres -->
 <aside class="day-side">
   <div class="day-card-todos">
-    <h3 class="day-section-title">🎯 Objetivos del día</h3>
+    <h3 class="day-section-title">📋 Lista de tareas</h3>
 
     {% if todos %}
     <ul class="todo-list" id="todo-list">
@@ -44,7 +44,7 @@
             <button type="button" class="btn-edit" onclick="editTodo({{ t.id }})" title="Editar">&#9998;</button>
             <button type="button" class="btn-edit" onclick="moveTodo({{ t.id }})" title="Mover a otro día">&#8594;</button>
             <form method="POST" action="{{ url_for('todo_delete', date_str=date_str, todo_id=t.id) }}" style="display:inline;"
-                  onsubmit="return confirm('¿Eliminar este objetivo?');">
+                  onsubmit="return confirm('¿Eliminar esta tarea?');">
               <button type="submit" class="btn-delete" title="Eliminar">&#10005;</button>
             </form>
           </div>
@@ -70,7 +70,7 @@
     {% endif %}
 
     <form method="POST" action="{{ url_for('todo_add', date_str=date_str) }}" class="todo-add-form">
-      <input type="text" name="text" placeholder="Agregar un objetivo..." maxlength="200" required>
+      <input type="text" name="text" placeholder="Agregar una tarea..." maxlength="200" required>
       <button type="submit" class="btn-primary">Agregar</button>
     </form>
   </div>
@@ -400,7 +400,9 @@
   <button type="button" class="day-journal-add-toggle" id="rapida-collapsed" style="display:none;"
           onclick="openRapida()">+ Agregar nota rápida</button>
   <form class="day-card-footer" id="rapida-form" method="POST" action="{{ url_for('note_add', date_str=date_str) }}">
-    <div class="day-add-row">
+    <textarea name="content" class="day-add-input" rows="2"
+              placeholder="Escribí una nota..."></textarea>
+    <div class="day-add-bottom">
       <div class="color-picker-row">
         <label class="color-opt-none">
           <input type="radio" name="color" value="" checked>
@@ -413,12 +415,10 @@
         </label>
         {% endfor %}
       </div>
-    </div>
-    <textarea name="content" class="day-add-input" rows="2"
-              placeholder="Escribí una nota..."></textarea>
-    <div style="display:flex; gap:8px; align-self:flex-end;">
-      <button type="submit" class="day-add-btn">Agregar</button>
-      <button type="button" class="btn-cancel" onclick="collapseRapida()">Cancelar</button>
+      <div style="display:flex; gap:8px;">
+        <button type="submit" class="day-add-btn">Agregar</button>
+        <button type="button" class="btn-cancel" onclick="collapseRapida()">Cancelar</button>
+      </div>
     </div>
   </form>
   </div>
