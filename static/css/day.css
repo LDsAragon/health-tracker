@@ -48,8 +48,18 @@
 
 @media (max-width: 1100px) {
   .day-layout { grid-template-columns: 1fr; }
+  /* Apilado en una columna: Card → Tareas → Rutinas/eventos */
+  .day-card { grid-column: 1; order: 0; }
   .day-side {
     grid-column: 1;
+    order: 1;
+    justify-self: stretch;
+    max-width: none;
+    position: static;
+  }
+  .day-side-right {
+    grid-column: 1;
+    order: 2;
     justify-self: stretch;
     max-width: none;
     position: static;
