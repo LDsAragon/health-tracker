@@ -1,3 +1,6 @@
+import os
+import sys
+
 from flask import Flask, g
 import database as db
 import filters
@@ -9,7 +12,14 @@ from routes import main, day, recurring, journal
 
 def create_app():
     """App factory: crea y configura la app (filtros, handlers, blueprints)."""
-    app = Flask(__name__)
+    # Congelada con PyInstaller, templates/static viven bajo sys._MEIPASS (--add-data)
+    frozen_base = getattr(sys, "_MEIPASS", None)
+    if frozen_base:
+        app = Flask(__name__,
+                    template_folder=os.path.join(frozen_base, "templates"),
+                    static_folder=os.path.join(frozen_base, "static"))
+    else:
+        app = Flask(__name__)
     filters.register(app)
 
     @app.before_request

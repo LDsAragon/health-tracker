@@ -18,7 +18,8 @@
     set(zoom + (e.deltaY < 0 ? STEP : -STEP));
   }, { passive: false });
 
-  // Ctrl + (+/-/0) y Ctrl+Shift+R para resetear
+  // Ctrl + (+/-/0) y Ctrl+Shift+R para resetear; Ctrl+R recarga (la ventana
+  // nativa pywebview no tiene botón de refresh — en navegador es lo mismo que el default)
   window.addEventListener('keydown', function (e) {
     if (!e.ctrlKey) return;
     var k = e.key;
@@ -26,5 +27,6 @@
     else if (k === '-' || k === '_') { e.preventDefault(); set(zoom - STEP); }
     else if (k === '0') { e.preventDefault(); set(1); }
     else if (e.shiftKey && (k === 'R' || k === 'r')) { e.preventDefault(); set(1); }
+    else if (k === 'r' || k === 'R') { e.preventDefault(); location.reload(); }
   });
 })();
