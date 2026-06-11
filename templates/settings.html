@@ -11,7 +11,7 @@
   <form class="rec-form" method="POST" action="{{ url_for('main.settings_save') }}">
     <div class="field-group">
       <label>Tema</label>
-      <p class="page-sub" style="margin:0 0 8px;">Elegí la paleta de la app.</p>
+      <p class="page-sub" style="margin:0 0 8px;">Elegí la paleta — se previsualiza al instante; guardá para fijarla.</p>
       <div class="theme-grid">
         {% for t in themes %}
         <label class="theme-swatch {% if settings.theme == t.slug %}active{% endif %}">
@@ -69,4 +69,14 @@
     <button type="submit" class="btn-primary">Guardar</button>
   </form>
 </div>
+
+<script>
+// Preview en vivo del tema: al elegir un swatch, aplica data-theme sin guardar.
+// Si no guardás, al navegar vuelve al tema guardado (la página recarga con settings.theme).
+document.querySelectorAll('input[name="theme"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    document.documentElement.setAttribute('data-theme', radio.value);
+  });
+});
+</script>
 {% endblock %}
