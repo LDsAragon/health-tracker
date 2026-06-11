@@ -56,6 +56,16 @@
       </select>
     </div>
 
+    <div class="field-group">
+      <label for="start_view">Vista de inicio</label>
+      <p class="page-sub" style="margin:0 0 8px;">Qué se abre al entrar o al tocar "Calendario".</p>
+      <select name="start_view" id="start_view" class="journal-type-select" style="max-width:280px;">
+        <option value="month" {% if settings.start_view == 'month' %}selected{% endif %}>Mes</option>
+        <option value="week" {% if settings.start_view == 'week' %}selected{% endif %}>Semana</option>
+        <option value="today" {% if settings.start_view == 'today' %}selected{% endif %}>Hoy</option>
+      </select>
+    </div>
+
     <button type="submit" class="btn-primary">Guardar</button>
   </form>
 </div>

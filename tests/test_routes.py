@@ -18,9 +18,16 @@ EV_BASE = {
 # ── Vistas principales ────────────────────────────────────────────────────────
 
 def test_calendario_carga(client):
-    r = client.get("/")
+    r = client.get("/", follow_redirects=True)   # "/" redirige a la vista de inicio (default: mes)
     assert r.status_code == 200
     assert b"Lunes" in r.data
+
+def test_home_redirige_segun_start_view(client):
+    assert "/calendar/" in client.get("/").headers["Location"]   # default month
+    db.set_setting("start_view", "today")
+    assert "/day/" in client.get("/").headers["Location"]
+    db.set_setting("start_view", "week")
+    assert "/week/" in client.get("/").headers["Location"]
 
 def test_calendario_mes_especifico(client):
     assert client.get("/calendar/2026/6").status_code == 200

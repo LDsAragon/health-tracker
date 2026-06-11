@@ -478,6 +478,7 @@ DEFAULT_SETTINGS = {
     "time_format": "24h",   # 24h | 12h (AM/PM)
     "theme":       "indigo",  # ver THEMES en static/css (data-theme); indigo = :root
     "week_start":  "mon",   # mon | sun
+    "start_view":  "month", # month | week | today (qué abre "/")
 }
 
 def get_setting(key: str, default: str = "") -> str:

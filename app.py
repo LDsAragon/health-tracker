@@ -115,9 +115,21 @@ def _dow_names():
     return _DOW_MON[fw:] + _DOW_MON[:fw]
 
 
-# ── Calendar ───────────────────────────────────────────────────────────────────
+# ── Home (vista de inicio configurable) ─────────────────────────────────────────
 
 @app.route("/")
+def home():
+    today = date.today()
+    sv = _setting("start_view", "month")
+    if sv == "week":
+        return redirect(url_for("week_view", date_str=today.isoformat()))
+    if sv == "today":
+        return redirect(url_for("day_view", date_str=today.isoformat()))
+    return redirect(url_for("calendar_view", year=today.year, month=today.month))
+
+
+# ── Calendar ───────────────────────────────────────────────────────────────────
+
 @app.route("/calendar/<int:year>/<int:month>")
 def calendar_view(year=None, month=None):
     today = date.today()
@@ -532,6 +544,9 @@ def settings_save():
     wstart = request.form.get("week_start", "mon")
     if wstart in ("mon", "sun"):
         db.set_setting("week_start", wstart)
+    sview = request.form.get("start_view", "month")
+    if sview in ("month", "week", "today"):
+        db.set_setting("start_view", sview)
     return redirect(url_for("settings_view"))
 
 
