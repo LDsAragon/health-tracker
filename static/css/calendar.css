@@ -240,3 +240,21 @@
   border-left: 3px solid var(--c);
 }
 
+/* ── Responsive ─────────────────────────────────────────────────────── */
+
+/* Header (mes/semana): que no desborde en anchos chicos */
+@media (max-width: 760px) {
+  .cal-header { flex-wrap: wrap; gap: 12px; }
+  .cal-title { min-width: 0; font-size: 18px; text-align: left; }
+  .size-control { display: none; }   /* el slider de tamaño no aplica en modo agenda */
+}
+
+/* Modo agenda: en pantallas angostas el calendario pasa a lista vertical (1 día por fila) */
+@media (max-width: 600px) {
+  .cal-grid { grid-template-columns: 1fr; }
+  .cal-dow { display: none; }              /* cabeceras de columna no aplican apiladas */
+  .cal-cell.cal-empty { display: none; }   /* sin días de relleno */
+  .cal-cell { min-height: auto; border-right: none; }
+  .cal-cell-body { min-height: 60px; }
+}
+
