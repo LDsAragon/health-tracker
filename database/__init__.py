@@ -22,3 +22,6 @@ from .todos import (
     delete_todo, reorder_todos, get_todos_range, get_todo_counts_range,
 )
 from .settings import get_setting, set_setting, get_all_settings
+from .stats import (
+    numeric_series, bool_counts, option_distribution, chartable_fields, build_series,
+)
