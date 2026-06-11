@@ -43,7 +43,7 @@
 
   <div class="cal-cell todo-dropzone {% if is_today %}is-today{% endif %}" data-date="{{ ds }}">
 
-    <a href="{{ url_for('day_view', date_str=ds) }}" class="cal-cell-body">
+    <a href="{{ url_for('day_view', date_str=ds, ref='week') }}" class="cal-cell-body">
       <span class="cal-num {% if is_today %}today-num{% endif %}">{{ d.day }}</span>
 
       {% for ev in day_evs %}

@@ -1,22 +1,23 @@
 {% extends "base.html" %}
 {% from "_macros.html" import date_field %}
-{% block title %}{{ d.day }} de {{ d.strftime('%B') }}{% endblock %}
-{% block main_class %}main-day{% endblock %}
-
 {% set COLORS = ['#6366f1','#22c55e','#3b82f6','#f97316','#ef4444','#a855f7','#ec4899','#eab308','#14b8a6'] %}
 {% set MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'] %}
 {% set DAYS   = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'] %}
+{% block title %}{{ d.day }} de {{ MONTHS[d.month-1] }}{% endblock %}
+{% block main_class %}main-day{% endblock %}
 
 {% block content %}
 
 <!-- Nav superior -->
 <div class="day-topnav">
-  <a href="{{ url_for('calendar_view', year=d.year, month=d.month) }}" class="back-link">
-    &#8592; {{ d.strftime('%B %Y') }}
-  </a>
+  {% if ref == 'week' %}
+  <a href="{{ url_for('week_view', date_str=date_str) }}" class="back-link">&#8592; Semana</a>
+  {% else %}
+  <a href="{{ url_for('calendar_view', year=d.year, month=d.month) }}" class="back-link">&#8592; {{ MONTHS[d.month-1]|capitalize }} {{ d.year }}</a>
+  {% endif %}
   <div class="day-arrows">
-    <a href="{{ url_for('day_view', date_str=prev_day) }}" class="nav-arrow" title="Día anterior">&#8592;</a>
-    <a href="{{ url_for('day_view', date_str=next_day) }}" class="nav-arrow" title="Día siguiente">&#8594;</a>
+    <a href="{{ url_for('day_view', date_str=prev_day, ref=ref) }}" class="nav-arrow" title="Día anterior">&#8592;</a>
+    <a href="{{ url_for('day_view', date_str=next_day, ref=ref) }}" class="nav-arrow" title="Día siguiente">&#8594;</a>
   </div>
 </div>
 

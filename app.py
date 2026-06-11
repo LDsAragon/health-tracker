@@ -196,6 +196,7 @@ def day_view(date_str):
 
     prev_day = (d - timedelta(days=1)).isoformat()
     next_day = (d + timedelta(days=1)).isoformat()
+    ref      = request.args.get("ref", "cal")   # de dónde venimos: 'cal' | 'week'
 
     return render_template(
         "day.html",
@@ -208,6 +209,7 @@ def day_view(date_str):
         todos=todos,
         prev_day=prev_day,
         next_day=next_day,
+        ref=ref,
         today=date.today().isoformat(),
     )
 

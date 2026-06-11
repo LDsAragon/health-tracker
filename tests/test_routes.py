@@ -322,3 +322,16 @@ def test_guardar_ajuste_formato_hora(client):
     r = client.post("/ajustes/guardar", data={"date_format": "dmy", "time_format": "12h"})
     assert r.status_code == 302
     assert db.get_setting("time_format") == "12h"
+
+
+# ── Volver contextual (día → semana / calendario) ────────────────────────────────
+
+def test_volver_desde_semana(client):
+    r = client.get(f"/day/{DATE}?ref=week").data
+    assert ("/week/" + DATE).encode() in r
+
+def test_volver_desde_calendario(client):
+    assert b"/calendar/2026/6" in client.get(f"/day/{DATE}?ref=cal").data
+
+def test_volver_default_es_calendario(client):
+    assert b"/calendar/2026/6" in client.get(f"/day/{DATE}").data

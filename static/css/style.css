@@ -600,13 +600,18 @@ a { color: inherit; text-decoration: none; }
 
 .back-link {
   font-size: 13px;
-  color: var(--muted);
+  color: var(--text);
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: color .15s;
+  padding: 6px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-weight: 600;
+  transition: border-color .15s, background .15s;
 }
-.back-link:hover { color: var(--text); }
+.back-link:hover { border-color: var(--accent); background: var(--surface); }
 
 /* Note input form (legacy, kept for recurring page) */
 .note-form {
