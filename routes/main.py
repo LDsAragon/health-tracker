@@ -3,6 +3,7 @@ from datetime import date, timedelta
 import calendar as cal
 from flask import Blueprint, render_template, request, redirect, url_for, make_response, send_file
 import database as db
+import services
 from appconfig import THEMES, SETTINGS
 from helpers import _setting, _first_weekday, _week_start, _dow_names
 
@@ -34,37 +35,12 @@ def calendar_view(year=None, month=None):
     notes_by_date   = db.get_notes_range(month_start, month_end)
     completions     = db.get_completions_range(month_start, month_end)
     recurring       = db.get_recurring_events()
+    dates           = [date(year, month, day) for day in range(1, month_days + 1)]
 
-    events_by_date: dict = {}
-    for day in range(1, month_days + 1):
-        d = date(year, month, day)
-        d_str = d.isoformat()
-        day_done = completions.get(d_str, {})
-        events_by_date[d_str] = [
-            {
-                **ev,
-                "done":    ev["id"] in day_done and day_done[ev["id"]]["status"] == "done",
-                "skipped": ev["id"] in day_done and day_done[ev["id"]]["status"] == "skipped",
-                "completion_note": day_done.get(ev["id"], {}).get("note", ""),
-            }
-            for ev in recurring
-            if ev.get("show_in_calendar", 1) and db.event_applies(ev, d)
-        ]
-
-    journal_cats  = db.get_journal_categories()
-    journal_raw   = db.get_journal_entries_range(month_start, month_end)
-    journal_badges: dict = {}
-    for ds_str, entries in journal_raw.items():
-        seen: set = set()
-        badges = []
-        for e in entries:
-            if e["show_in_calendar"] and e["category_id"] not in seen:
-                seen.add(e["category_id"])
-                badges.append({"name": e["category_name"], "color": e["category_color"]})
-        if badges:
-            journal_badges[ds_str] = badges
-
-    todo_counts = db.get_todo_counts_range(month_start, month_end)
+    events_by_date = services.events_by_date(recurring, completions, dates)
+    journal_cats   = db.get_journal_categories()
+    journal_badges = services.journal_badges(db.get_journal_entries_range(month_start, month_end))
+    todo_counts    = db.get_todo_counts_range(month_start, month_end)
 
     prev_month = month - 1 if month > 1 else 12
     prev_year  = year if month > 1 else year - 1
@@ -103,36 +79,11 @@ def week_view(date_str):
     completions     = db.get_completions_range(start, end)
     recurring       = db.get_recurring_events()
 
-    events_by_date = {}
-    for d in week_dates:
-        d_str    = d.isoformat()
-        day_done = completions.get(d_str, {})
-        events_by_date[d_str] = [
-            {
-                **ev,
-                "done":    ev["id"] in day_done and day_done[ev["id"]]["status"] == "done",
-                "skipped": ev["id"] in day_done and day_done[ev["id"]]["status"] == "skipped",
-                "completion_note": day_done.get(ev["id"], {}).get("note", ""),
-            }
-            for ev in recurring
-            if ev.get("show_in_calendar", 1) and db.event_applies(ev, d)
-        ]
-
-    journal_cats  = db.get_journal_categories()
-    journal_raw   = db.get_journal_entries_range(start, end)
-    journal_badges: dict = {}
-    for ds_str, entries in journal_raw.items():
-        seen: set = set()
-        badges = []
-        for e in entries:
-            if e["show_in_calendar"] and e["category_id"] not in seen:
-                seen.add(e["category_id"])
-                badges.append({"name": e["category_name"], "color": e["category_color"]})
-        if badges:
-            journal_badges[ds_str] = badges
-
-    todo_counts  = db.get_todo_counts_range(start, end)
-    todos_by_date = db.get_todos_range(start, end)
+    events_by_date = services.events_by_date(recurring, completions, week_dates)
+    journal_cats   = db.get_journal_categories()
+    journal_badges = services.journal_badges(db.get_journal_entries_range(start, end))
+    todo_counts    = db.get_todo_counts_range(start, end)
+    todos_by_date  = db.get_todos_range(start, end)
 
     prev_week = (monday - timedelta(days=7)).isoformat()
     next_week = (monday + timedelta(days=7)).isoformat()
