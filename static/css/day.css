@@ -41,7 +41,7 @@
 }
 
 /* Reordenar secciones de la card: notas rápidas suben al hueco de los objetivos */
-.day-qn-title        { order: 2; padding: 14px 20px 0; border-top: 1px solid var(--border); }
+.day-qn-title        { order: 2; padding: 14px 20px 12px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .day-card-notes      { order: 3; }
 .day-card-footer-wrap { order: 4; }
 .day-card-journal    { order: 5; }
