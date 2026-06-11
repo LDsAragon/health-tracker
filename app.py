@@ -5,6 +5,7 @@ import json
 import database as db
 import filters
 from appconfig import THEMES, SETTINGS
+from fieldtypes import FIELD_TYPES
 from helpers import _setting, _fmt_clock, _first_weekday, _week_start, _dow_names
 # Re-export para tests que hacen `from app import dur_fmt_filter, ...`
 from filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
@@ -21,8 +22,8 @@ def setup():
 
 @app.context_processor
 def inject_settings():
-    """Expone los ajustes (ej. date_format) a todas las plantillas."""
-    return {"settings": db.get_all_settings()}
+    """Expone ajustes y el catálogo de tipos de campo a todas las plantillas."""
+    return {"settings": db.get_all_settings(), "field_types": FIELD_TYPES}
 
 
 # ── Home (vista de inicio configurable) ─────────────────────────────────────────

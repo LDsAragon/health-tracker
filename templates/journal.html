@@ -64,14 +64,9 @@
         <div class="journal-field-row">
           <input type="text" name="field_label[]" placeholder="Nombre del campo (ej: ¿Qué sentí?)" style="flex:1.2;">
           <select name="field_type[]" class="journal-type-select">
-            <option value="text">Texto libre</option>
-            <option value="emotion-wheel">🎡 Rueda de emociones</option>
-            <option value="duracion">⏱️ Duración</option>
-            <option value="rango">🕒 Rango horario</option>
-            <option value="escala">📊 Escala</option>
-            <option value="sino">☑️ Sí / No</option>
-            <option value="opciones">🔘 Opciones</option>
-            <option value="numero">🔢 Número</option>
+            {% for slug, label in field_types %}
+            <option value="{{ slug }}">{{ label }}</option>
+            {% endfor %}
           </select>
           <input type="text" name="field_placeholder[]" placeholder="Ayuda / opciones / unidad" style="flex:1;">
           <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar campo">&#10005;</button>
@@ -157,14 +152,9 @@
             <div class="journal-field-row">
               <input type="text" name="field_label[]" value="{{ f.label }}" placeholder="Nombre del campo" style="flex:1.2;">
               <select name="field_type[]" class="journal-type-select">
-                <option value="text" {% if ftype == 'text' %}selected{% endif %}>Texto libre</option>
-                <option value="emotion-wheel" {% if ftype == 'emotion-wheel' %}selected{% endif %}>🎡 Rueda de emociones</option>
-                <option value="duracion" {% if ftype == 'duracion' %}selected{% endif %}>⏱️ Duración</option>
-                <option value="rango" {% if ftype == 'rango' %}selected{% endif %}>🕒 Rango horario</option>
-                <option value="escala" {% if ftype == 'escala' %}selected{% endif %}>📊 Escala</option>
-                <option value="sino" {% if ftype == 'sino' %}selected{% endif %}>☑️ Sí / No</option>
-                <option value="opciones" {% if ftype == 'opciones' %}selected{% endif %}>🔘 Opciones</option>
-                <option value="numero" {% if ftype == 'numero' %}selected{% endif %}>🔢 Número</option>
+                {% for slug, label in field_types %}
+                <option value="{{ slug }}" {% if ftype == slug %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
               </select>
               <input type="text" name="field_placeholder[]" value="{{ f.get('placeholder', '') }}" placeholder="Ayuda / opciones / unidad" style="flex:1;">
               <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>
@@ -189,12 +179,7 @@
 {% endif %}
 
 <script>
-const FIELD_TYPES = [
-  ['text', 'Texto libre'], ['emotion-wheel', '🎡 Rueda de emociones'],
-  ['duracion', '⏱️ Duración'], ['rango', '🕒 Rango horario'],
-  ['escala', '📊 Escala'], ['sino', '☑️ Sí / No'],
-  ['opciones', '🔘 Opciones'], ['numero', '🔢 Número']
-];
+const FIELD_TYPES = {{ field_types | tojson }};   // fuente única: fieldtypes.py
 
 function _fieldRow(label, type, ph) {
   const esc = s => (s || '').replace(/"/g, '&quot;');

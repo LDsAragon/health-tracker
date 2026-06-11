@@ -533,13 +533,8 @@ function buildFields(containerId, catId) {
   if (!cat || !cat.fields || !cat.fields.length) { container.innerHTML = ''; return; }
   container.innerHTML = cat.fields.map(f => {
     const type = (f.type || 'text');
-    if (type === 'emotion-wheel') return buildEWPicker(f.label);
-    if (type === 'duracion') return buildDuracionField(f.label, f.placeholder);
-    if (type === 'rango') return buildRangoField(f.label, f.placeholder);
-    if (type === 'escala') return buildEscalaField(f.label, f.placeholder);
-    if (type === 'sino') return buildSinoField(f.label, f.placeholder);
-    if (type === 'opciones') return buildOpcionesField(f.label, f.placeholder);
-    if (type === 'numero') return buildNumeroField(f.label, f.placeholder);
+    const build = (window.FIELD_BUILDERS || {})[type];
+    if (build) return build(f.label, f.placeholder);
     return '<div class="day-journal-field-input">' +
       '<label>' + f.label + '</label>' +
       '<textarea data-label="' + f.label.replace(/"/g, '&quot;') + '" placeholder="' +
