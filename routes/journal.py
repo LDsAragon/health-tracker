@@ -16,14 +16,18 @@ def _parse_fields(form) -> list:
     labels       = form.getlist("field_label[]")
     placeholders = form.getlist("field_placeholder[]")
     types        = form.getlist("field_type[]")
+    charts       = form.getlist("field_chart[]")   # "1"/"0" por fila (alineado con labels)
     fields = []
     for i, label in enumerate(labels):
         if label.strip():
-            fields.append({
+            f = {
                 "label":       label.strip(),
                 "placeholder": placeholders[i].strip() if i < len(placeholders) else "",
                 "type":        types[i].strip() if i < len(types) else "text",
-            })
+            }
+            if i < len(charts) and charts[i] == "1":
+                f["chart"] = True
+            fields.append(f)
     return fields
 
 

@@ -69,6 +69,9 @@
             {% endfor %}
           </select>
           <input type="text" name="field_placeholder[]" placeholder="Ayuda / opciones / unidad" style="flex:1;">
+          <label class="field-chart" title="Graficar en Estadísticas" style="cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:2px;">
+            <input type="checkbox" onchange="this.nextElementSibling.value=this.checked?'1':'0'"><input type="hidden" name="field_chart[]" value="0">📈
+          </label>
           <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar campo">&#10005;</button>
         </div>
       </div>
@@ -157,6 +160,9 @@
                 {% endfor %}
               </select>
               <input type="text" name="field_placeholder[]" value="{{ f.get('placeholder', '') }}" placeholder="Ayuda / opciones / unidad" style="flex:1;">
+              <label class="field-chart" title="Graficar en Estadísticas" style="cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:2px;">
+                <input type="checkbox" {% if f.get('chart') %}checked{% endif %} onchange="this.nextElementSibling.value=this.checked?'1':'0'"><input type="hidden" name="field_chart[]" value="{{ '1' if f.get('chart') else '0' }}">📈
+              </label>
               <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>
             </div>
             {% endfor %}
@@ -181,7 +187,7 @@
 <script>
 const FIELD_TYPES = {{ field_types | tojson }};   // fuente única: fieldtypes.py
 
-function _fieldRow(label, type, ph) {
+function _fieldRow(label, type, ph, chart) {
   const esc = s => (s || '').replace(/"/g, '&quot;');
   const opts = FIELD_TYPES.map(([v, t]) =>
     '<option value="' + v + '"' + (v === type ? ' selected' : '') + '>' + t + '</option>').join('');
@@ -191,6 +197,9 @@ function _fieldRow(label, type, ph) {
     '<input type="text" name="field_label[]" value="' + esc(label) + '" placeholder="Nombre del campo" style="flex:1.2;">' +
     '<select name="field_type[]" class="journal-type-select">' + opts + '</select>' +
     '<input type="text" name="field_placeholder[]" value="' + esc(ph) + '" placeholder="Ayuda (opcional)" style="flex:1;">' +
+    '<label class="field-chart" title="Graficar en Estadísticas" style="cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:2px;">' +
+      '<input type="checkbox"' + (chart ? ' checked' : '') + ' onchange="this.nextElementSibling.value=this.checked?\'1\':\'0\'">' +
+      '<input type="hidden" name="field_chart[]" value="' + (chart ? '1' : '0') + '">📈</label>' +
     '<button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>';
   return row;
 }
@@ -246,7 +255,7 @@ function applyPreset(key) {
   if (radio) radio.checked = true;
   const c = document.getElementById('jcat-add-fields');
   c.innerHTML = '';
-  p.fields.forEach(f => c.appendChild(_fieldRow(f.label, f.type, f.ph)));
+  p.fields.forEach(f => c.appendChild(_fieldRow(f.label, f.type, f.ph, f.chart)));
 }
 
 function removeField(btn) {

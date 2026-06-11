@@ -399,3 +399,16 @@ def test_dia_alta_rapida_colapsable(client):
     body = client.get(f"/day/{DATE}").data.decode("utf-8")
     assert "Agregar nota especial" in body   # toggle de nota especial
     assert "rapida-collapsed" in body        # botón colapsado de la nota rápida
+
+
+def test_categoria_campo_chart_flag(client):
+    client.post("/journal/add", data={
+        "name": "Peso", "color": "#6366f1",
+        "field_label[]": ["Peso", "Nota"],
+        "field_type[]": ["numero", "text"],
+        "field_placeholder[]": ["kg", ""],
+        "field_chart[]": ["1", "0"],
+    })
+    fields = db.get_journal_categories()[0]["fields"]
+    assert fields[0].get("chart") is True
+    assert "chart" not in fields[1]
