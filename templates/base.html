@@ -29,6 +29,10 @@
          class="nav-link {% if request.endpoint == 'journal.journal_view' %}active{% endif %}">
         Notas especiales
       </a>
+      <a href="{{ url_for('main.stats_view') }}"
+         class="nav-link {% if request.endpoint == 'main.stats_view' %}active{% endif %}">
+        📈 Estadísticas
+      </a>
       <a href="{{ url_for('main.export_view') }}"
          class="nav-link {% if request.endpoint in ('main.export_view', 'main.export_download') %}active{% endif %}">
         Exportar
@@ -74,5 +78,6 @@
       <aside class="ew-info-panel" id="ew-info-panel"></aside>
     </div>
   </div>
+  {% block page_scripts %}{% endblock %}
 </body>
 </html>

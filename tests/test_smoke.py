@@ -8,6 +8,8 @@ GET_ROUTES = [
     "/day/2026-06-09",
     "/recurring",
     "/journal",
+    "/estadisticas",
+    "/estadisticas?range=180",
     "/ajustes",
     "/export",
     "/backup",

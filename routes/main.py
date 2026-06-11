@@ -130,6 +130,35 @@ def settings_save():
     return redirect(url_for("main.settings_view"))
 
 
+# ── Estadísticas ─────────────────────────────────────────────────────────────────
+
+@bp.route("/estadisticas")
+def stats_view():
+    today = date.today()
+    range_days = request.args.get("range", "90")
+    range_days = int(range_days) if range_days in ("30", "90", "180", "365") else 90
+    start = (today - timedelta(days=range_days - 1)).isoformat()
+    end   = today.isoformat()
+
+    charts = []
+    for f in db.chartable_fields():
+        s = db.build_series(f["category_id"], f["label"], f["type"], start, end)
+        if s["data"]:
+            charts.append({"title": f"{f['category_name']} · {f['label']}",
+                           "kind": s["kind"], "labels": s["labels"], "data": s["data"]})
+
+    events = db.get_recurring_events()
+    adh = db.get_completion_stats(events, days=range_days)
+    adherence = [
+        {"title": ev["title"], "color": ev["color"],
+         "done": adh[ev["id"]]["done"], "applicable": adh[ev["id"]]["applicable"],
+         "pct": round(adh[ev["id"]]["done"] / adh[ev["id"]]["applicable"] * 100)}
+        for ev in events if adh[ev["id"]]["applicable"]
+    ]
+
+    return render_template("stats.html", charts=charts, adherence=adherence, range_days=range_days)
+
+
 # ── Export ─────────────────────────────────────────────────────────────────────
 
 @bp.route("/export")
