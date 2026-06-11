@@ -3,68 +3,13 @@ from datetime import date, datetime, timedelta
 import calendar as cal
 import json
 import database as db
+import filters
+from helpers import _setting, _fmt_clock, _first_weekday, _week_start, _dow_names
+# Re-export para tests que hacen `from app import dur_fmt_filter, ...`
+from filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
 
 app = Flask(__name__)
-
-
-@app.template_filter('humantime')
-def humantime_filter(ts):
-    if not ts:
-        return ''
-    try:
-        dt = datetime.fromisoformat(ts[:19])
-        delta = (date.today() - dt.date()).days
-        if delta == 0:
-            return f"hoy {_fmt_clock(dt.strftime('%H:%M'))}"
-        if delta == 1:
-            return f"ayer {_fmt_clock(dt.strftime('%H:%M'))}"
-        return dt.strftime('%d/%m/%Y')
-    except Exception:
-        return ''
-
-
-@app.template_filter('fechacorta')
-def fechacorta_filter(s):
-    """'2026-06-10' → '10/06/2026' (formato local, sin ISO/anglicismo)."""
-    if not s:
-        return ''
-    try:
-        return date.fromisoformat(s).strftime('%d/%m/%Y')
-    except (ValueError, TypeError):
-        return s
-
-
-@app.template_filter('dur_fmt')
-def dur_fmt_filter(s):
-    """Minutos ('90') → '1 h 30 min'. Vacío/0 → ''."""
-    try:
-        m = int(s)
-    except (ValueError, TypeError):
-        return s
-    if m <= 0:
-        return ''
-    h, mm = divmod(m, 60)
-    parts = []
-    if h:
-        parts.append(f"{h} h")
-    if mm:
-        parts.append(f"{mm} min")
-    return " ".join(parts) or "0 min"
-
-
-@app.template_filter('rango_fmt')
-def rango_fmt_filter(s):
-    """'02:00-09:00' → '02:00 → 09:00 · 7 h' (cruce de medianoche soportado)."""
-    if not s or '-' not in s:
-        return s
-    try:
-        a, b = s.split('-', 1)
-        ah, am = (int(x) for x in a.split(':'))
-        bh, bm = (int(x) for x in b.split(':'))
-        dur = ((bh * 60 + bm) - (ah * 60 + am)) % 1440
-        return f"{_fmt_clock(a)} → {_fmt_clock(b)} · {dur_fmt_filter(str(dur))}"
-    except (ValueError, TypeError):
-        return s
+filters.register(app)
 
 
 @app.before_request
@@ -77,42 +22,6 @@ def setup():
 def inject_settings():
     """Expone los ajustes (ej. date_format) a todas las plantillas."""
     return {"settings": db.get_all_settings()}
-
-
-def _setting(key, default=''):
-    try:
-        return getattr(g, 'settings', {}).get(key, default)
-    except Exception:
-        return default
-
-
-def _fmt_clock(hhmm):
-    """'23:30' → '23:30' (24h) o '11:30 PM' (12h) según el ajuste time_format."""
-    try:
-        h, m = hhmm.split(':')
-        H = int(h)
-    except (ValueError, AttributeError):
-        return hhmm
-    if _setting('time_format', '24h') == '12h':
-        ap = 'AM' if H < 12 else 'PM'
-        h12 = H % 12 or 12
-        return f"{h12}:{m} {ap}"
-    return hhmm
-
-
-# ── Inicio de semana (mon|sun) ───────────────────────────────────────────────────
-_DOW_MON = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-
-def _first_weekday():
-    return 6 if _setting('week_start', 'mon') == 'sun' else 0   # 0=lunes, 6=domingo
-
-def _week_start(d):
-    fw = _first_weekday()
-    return d - timedelta(days=(d.weekday() - fw) % 7)
-
-def _dow_names():
-    fw = _first_weekday()
-    return _DOW_MON[fw:] + _DOW_MON[:fw]
 
 
 # ── Home (vista de inicio configurable) ─────────────────────────────────────────
