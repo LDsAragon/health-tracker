@@ -55,3 +55,14 @@ def test_build_series_numero(test_db):
     _entry(cid, "2026-06-01", {"Peso": "100"})
     out = db.build_series(cid, "Peso", "numero", "2026-06-01", "2026-06-30")
     assert out == {"kind": "line", "labels": ["2026-06-01"], "data": [100.0]}
+
+
+def test_charts_crud_via_ruta(client):
+    db.add_journal_category({"name": "Peso", "color": "#000",
+        "fields_json": json.dumps([{"label": "Peso", "type": "numero"}]), "show_in_calendar": 0})
+    cid = db.get_journal_categories()[0]["id"]
+    client.post("/estadisticas/grafico/add", data={"category_id": str(cid), "field_label": "Peso", "title": "Mi peso", "range_days": "180"})
+    charts = db.get_charts()
+    assert len(charts) == 1 and charts[0]["field_label"] == "Peso" and charts[0]["range_days"] == 180
+    client.post(f"/estadisticas/grafico/{charts[0]['id']}/delete")
+    assert db.get_charts() == []

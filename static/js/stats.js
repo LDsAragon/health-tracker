@@ -1,3 +1,15 @@
+// Constructor de gráficos: pobla el select de campos según la categoría elegida.
+function statsPopulateFields() {
+  const cats = window.BUILDER_CATS || [];
+  const catSel = document.getElementById('builder-cat');
+  const fieldSel = document.getElementById('builder-field');
+  if (!catSel || !fieldSel) return;
+  const cat = cats.find(c => String(c.id) === catSel.value);
+  const esc = s => s.replace(/"/g, '&quot;');
+  fieldSel.innerHTML = '<option value="">Campo…</option>' +
+    (cat ? cat.fields.map(f => '<option value="' + esc(f) + '">' + f + '</option>').join('') : '');
+}
+
 // Instancia un Chart.js por cada gráfico que pasó el backend (window.STATS_CHARTS).
 (function () {
   const charts = window.STATS_CHARTS || [];

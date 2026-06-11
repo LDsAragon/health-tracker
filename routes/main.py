@@ -132,6 +132,9 @@ def settings_save():
 
 # ── Estadísticas ─────────────────────────────────────────────────────────────────
 
+_CHARTABLE_TYPES = ("numero", "escala", "duracion", "rango", "sino", "opciones")
+
+
 @bp.route("/estadisticas")
 def stats_view():
     today = date.today()
@@ -140,12 +143,26 @@ def stats_view():
     start = (today - timedelta(days=range_days - 1)).isoformat()
     end   = today.isoformat()
 
+    cats = db.get_journal_categories()
+    fieldinfo = {(c["id"], f["label"]): (f.get("type", "text"), c["name"])
+                 for c in cats for f in c.get("fields", [])}
+
     charts = []
+    # Automáticos: campos marcados con "graficar"
     for f in db.chartable_fields():
         s = db.build_series(f["category_id"], f["label"], f["type"], start, end)
         if s["data"]:
-            charts.append({"title": f"{f['category_name']} · {f['label']}",
-                           "kind": s["kind"], "labels": s["labels"], "data": s["data"]})
+            charts.append({"title": f"{f['category_name']} · {f['label']}", **s})
+    # Personalizados: tabla charts (cada uno con su propio rango)
+    for ch in db.get_charts():
+        info = fieldinfo.get((ch["category_id"], ch["field_label"]))
+        if not info:
+            continue   # categoría/campo borrado
+        ftype, cname = info
+        cstart = (today - timedelta(days=ch["range_days"] - 1)).isoformat()
+        s = db.build_series(ch["category_id"], ch["field_label"], ftype, cstart, end)
+        charts.append({"title": ch["title"] or f"{cname} · {ch['field_label']}",
+                       "chart_id": ch["id"], **s})
 
     events = db.get_recurring_events()
     adh = db.get_completion_stats(events, days=range_days)
@@ -156,7 +173,34 @@ def stats_view():
         for ev in events if adh[ev["id"]]["applicable"]
     ]
 
-    return render_template("stats.html", charts=charts, adherence=adherence, range_days=range_days)
+    # Para el constructor: categorías con sus campos graficables (numérico/sino/opciones)
+    builder_cats = [
+        {"id": c["id"], "name": c["name"],
+         "fields": [f["label"] for f in c.get("fields", []) if f.get("type") in _CHARTABLE_TYPES]}
+        for c in cats
+    ]
+    builder_cats = [c for c in builder_cats if c["fields"]]
+
+    return render_template("stats.html", charts=charts, adherence=adherence,
+                           range_days=range_days, builder_cats=builder_cats)
+
+
+@bp.route("/estadisticas/grafico/add", methods=["POST"])
+def charts_add():
+    cat_id = request.form.get("category_id", "").strip()
+    field  = request.form.get("field_label", "").strip()
+    title  = request.form.get("title", "").strip()
+    rng    = request.form.get("range_days", "90")
+    rng    = int(rng) if rng in ("30", "90", "180", "365") else 90
+    if cat_id and field:
+        db.add_chart(int(cat_id), field, title, rng)
+    return redirect(url_for("main.stats_view"))
+
+
+@bp.route("/estadisticas/grafico/<int:chart_id>/delete", methods=["POST"])
+def charts_delete(chart_id):
+    db.delete_chart(chart_id)
+    return redirect(url_for("main.stats_view"))
 
 
 # ── Export ─────────────────────────────────────────────────────────────────────

@@ -25,3 +25,4 @@ from .settings import get_setting, set_setting, get_all_settings
 from .stats import (
     numeric_series, bool_counts, option_distribution, chartable_fields, build_series,
 )
+from .charts import get_charts, add_chart, delete_chart
