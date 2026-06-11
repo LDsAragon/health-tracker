@@ -8,6 +8,11 @@
   --accent:   #6366f1;
   --green:    #22c55e;
   --red:      #ef4444;
+  /* Overlays (los temas claros los redefinen para no usar blancos sobre claro) */
+  --hover:       rgba(255,255,255,.05);
+  --line:        rgba(255,255,255,.05);
+  --cell-empty:  rgba(0,0,0,.18);
+  --placeholder: rgba(255,255,255,.18);
   --r:        8px;
 }
 
@@ -35,6 +40,19 @@
 }
 [data-theme="retrowave"] {
   --bg:#1a1a2e; --surface:#16213e; --surface2:#20294a; --border:#533483; --text:#f0e9ff; --muted:#9a93c4; --accent:#e94560;
+}
+/* Temas claros: redefinen overlays a negros suaves sobre fondo claro */
+[data-theme="papel"] {
+  --bg:#faf8f5; --surface:#ffffff; --surface2:#f1ece4; --border:#d5d0c8; --text:#3b3836; --muted:#8a8378; --accent:#b0832e;
+  --hover:rgba(0,0,0,.04); --line:rgba(0,0,0,.08); --cell-empty:rgba(0,0,0,.035); --placeholder:rgba(0,0,0,.4);
+}
+[data-theme="claro"] {
+  --bg:#f0ebe3; --surface:#faf6f0; --surface2:#e9e2d8; --border:#d4cdc2; --text:#4a443c; --muted:#8c8475; --accent:#c47d5a;
+  --hover:rgba(0,0,0,.04); --line:rgba(0,0,0,.08); --cell-empty:rgba(0,0,0,.035); --placeholder:rgba(0,0,0,.4);
+}
+[data-theme="lavanda"] {
+  --bg:#f3eef8; --surface:#faf7ff; --surface2:#ebe4f3; --border:#cec3de; --text:#3d3551; --muted:#8478a0; --accent:#9b6dcc;
+  --hover:rgba(0,0,0,.04); --line:rgba(0,0,0,.08); --cell-empty:rgba(0,0,0,.035); --placeholder:rgba(0,0,0,.4);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -227,7 +245,7 @@ a { color: inherit; text-decoration: none; }
   background: var(--bg);
 }
 .cal-cell:nth-child(7n) { border-right: none; }
-.cal-cell.cal-empty  { background: rgba(0,0,0,.18); }
+.cal-cell.cal-empty  { background: var(--cell-empty); }
 .cal-cell.is-today   { background: rgba(99,102,241,.07); box-shadow: inset 0 0 0 2px rgba(99,102,241,.4); }
 
 /* Área de contenido clickeable */
@@ -241,7 +259,7 @@ a { color: inherit; text-decoration: none; }
   color: inherit;
   transition: background .12s;
 }
-.cal-cell-body:hover { background: rgba(255,255,255,.025); }
+.cal-cell-body:hover { background: var(--hover); }
 
 .cal-num {
   font-size: 18px;
@@ -254,7 +272,7 @@ a { color: inherit; text-decoration: none; }
 
 /* Input de nota rápida al fondo de la celda */
 .cal-quick-form {
-  border-top: 1px solid rgba(255,255,255,.05);
+  border-top: 1px solid var(--line);
   padding: 5px 8px;
 }
 .cal-quick-input {
@@ -267,7 +285,7 @@ a { color: inherit; text-decoration: none; }
   padding: 3px 2px;
   transition: color .15s;
 }
-.cal-quick-input::placeholder { color: rgba(255,255,255,.18); }
+.cal-quick-input::placeholder { color: var(--placeholder); }
 .cal-quick-input:focus {
   outline: none;
   color: var(--text);
@@ -1475,7 +1493,7 @@ select.journal-cat-select {
 /* ── JOURNAL in CALENDAR CELLS ────────────────────────────────────────── */
 
 .cal-journal-add {
-  border-top: 1px solid rgba(255,255,255,.05);
+  border-top: 1px solid var(--line);
   padding: 4px 8px 5px;
 }
 
@@ -1546,7 +1564,7 @@ select.journal-cat-select {
   padding: 3px 2px;
 }
 .cal-journal-tags:focus { outline: none; border-color: var(--accent); color: var(--text); }
-.cal-journal-tags::placeholder { color: rgba(255,255,255,.18); }
+.cal-journal-tags::placeholder { color: var(--placeholder); }
 
 .btn-cancel-sm {
   background: none;

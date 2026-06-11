@@ -490,6 +490,9 @@ THEMES = [
     {"slug": "claude",     "name": "Claude",     "dark": True,  "bg": "#1f1e1c", "surface": "#262624", "text": "#f5f4f0", "accent": "#c6613f"},
     {"slug": "cyberpunk",  "name": "Cyberpunk",  "dark": True,  "bg": "#0a0a0f", "surface": "#12101a", "text": "#0ff0fc", "accent": "#e040fb"},
     {"slug": "retrowave",  "name": "Retrowave",  "dark": True,  "bg": "#1a1a2e", "surface": "#16213e", "text": "#f0e9ff", "accent": "#e94560"},
+    {"slug": "papel",      "name": "Papel",      "dark": False, "bg": "#faf8f5", "surface": "#ffffff", "text": "#3b3836", "accent": "#b0832e"},
+    {"slug": "claro",      "name": "Claro",      "dark": False, "bg": "#f0ebe3", "surface": "#faf6f0", "text": "#4a443c", "accent": "#c47d5a"},
+    {"slug": "lavanda",    "name": "Lavanda",    "dark": False, "bg": "#f3eef8", "surface": "#faf7ff", "text": "#3d3551", "accent": "#9b6dcc"},
 ]
 THEME_SLUGS = {t["slug"] for t in THEMES}
 
