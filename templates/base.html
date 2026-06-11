@@ -29,14 +29,18 @@
          class="nav-link {% if request.endpoint == 'journal.journal_view' %}active{% endif %}">
         Notas especiales
       </a>
+      {% if settings.show_stats != 'hide' %}
       <a href="{{ url_for('main.stats_view') }}"
          class="nav-link {% if request.endpoint == 'main.stats_view' %}active{% endif %}">
         📈 Estadísticas
       </a>
+      {% endif %}
+      {% if settings.show_export != 'hide' %}
       <a href="{{ url_for('main.export_view') }}"
          class="nav-link {% if request.endpoint in ('main.export_view', 'main.export_download') %}active{% endif %}">
         Exportar
       </a>
+      {% endif %}
       <a href="{{ url_for('main.settings_view') }}"
          class="nav-link {% if request.endpoint in ('main.settings_view', 'main.settings_save') %}active{% endif %}">
         ⚙️ Ajustes

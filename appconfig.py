@@ -24,5 +24,7 @@ SETTINGS = {
     "theme":       {"default": "indigo", "choices": THEME_SLUGS},
     "week_start":  {"default": "mon",    "choices": ("mon", "sun")},
     "start_view":  {"default": "month",  "choices": ("month", "week", "today")},
+    "show_stats":  {"default": "show",   "choices": ("show", "hide")},
+    "show_export": {"default": "show",   "choices": ("show", "hide")},
 }
 DEFAULT_SETTINGS = {k: v["default"] for k, v in SETTINGS.items()}

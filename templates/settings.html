@@ -66,6 +66,24 @@
       </select>
     </div>
 
+    <div class="field-group">
+      <label for="show_stats">Acceso a Estadísticas</label>
+      <p class="page-sub" style="margin:0 0 8px;">Mostrar u ocultar el enlace 📈 Estadísticas en la barra de navegación.</p>
+      <select name="show_stats" id="show_stats" class="journal-type-select" style="max-width:280px;">
+        <option value="show" {% if settings.show_stats == 'show' %}selected{% endif %}>Mostrar en el navbar</option>
+        <option value="hide" {% if settings.show_stats == 'hide' %}selected{% endif %}>Ocultar del navbar</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label for="show_export">Acceso a Exportar</label>
+      <p class="page-sub" style="margin:0 0 8px;">Mostrar u ocultar el enlace Exportar en la barra de navegación.</p>
+      <select name="show_export" id="show_export" class="journal-type-select" style="max-width:280px;">
+        <option value="show" {% if settings.show_export == 'show' %}selected{% endif %}>Mostrar en el navbar</option>
+        <option value="hide" {% if settings.show_export == 'hide' %}selected{% endif %}>Ocultar del navbar</option>
+      </select>
+    </div>
+
     <button type="submit" class="btn-primary">Guardar</button>
   </form>
 </div>
