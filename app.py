@@ -100,6 +100,21 @@ def _fmt_clock(hhmm):
     return hhmm
 
 
+# ── Inicio de semana (mon|sun) ───────────────────────────────────────────────────
+_DOW_MON = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+def _first_weekday():
+    return 6 if _setting('week_start', 'mon') == 'sun' else 0   # 0=lunes, 6=domingo
+
+def _week_start(d):
+    fw = _first_weekday()
+    return d - timedelta(days=(d.weekday() - fw) % 7)
+
+def _dow_names():
+    fw = _first_weekday()
+    return _DOW_MON[fw:] + _DOW_MON[:fw]
+
+
 # ── Calendar ───────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -159,7 +174,8 @@ def calendar_view(year=None, month=None):
         "calendar.html",
         year=year, month=month,
         month_name=cal.month_name[month],
-        weeks=cal.monthcalendar(year, month),
+        weeks=cal.Calendar(_first_weekday()).monthdayscalendar(year, month),
+        dow_names=_dow_names(),
         notes_by_date=notes_by_date,
         events_by_date=events_by_date,
         today=today.isoformat(),
@@ -407,7 +423,7 @@ def week_view(date_str):
     from datetime import timedelta
     today      = date.today()
     anchor     = date.fromisoformat(date_str)
-    monday     = anchor - timedelta(days=anchor.weekday())
+    monday     = _week_start(anchor)   # inicio de semana según ajuste (lun|dom)
     sunday     = monday + timedelta(days=6)
 
     week_dates = [monday + timedelta(days=i) for i in range(7)]
@@ -513,6 +529,9 @@ def settings_save():
     theme = request.form.get("theme", "indigo")
     if theme in THEME_SLUGS:
         db.set_setting("theme", theme)
+    wstart = request.form.get("week_start", "mon")
+    if wstart in ("mon", "sun"):
+        db.set_setting("week_start", wstart)
     return redirect(url_for("settings_view"))
 
 

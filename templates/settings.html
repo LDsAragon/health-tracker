@@ -47,6 +47,15 @@
       </select>
     </div>
 
+    <div class="field-group">
+      <label for="week_start">Inicio de semana</label>
+      <p class="page-sub" style="margin:0 0 8px;">Con qué día empieza el calendario y la vista semanal.</p>
+      <select name="week_start" id="week_start" class="journal-type-select" style="max-width:280px;">
+        <option value="mon" {% if settings.week_start == 'mon' %}selected{% endif %}>Lunes</option>
+        <option value="sun" {% if settings.week_start == 'sun' %}selected{% endif %}>Domingo</option>
+      </select>
+    </div>
+
     <button type="submit" class="btn-primary">Guardar</button>
   </form>
 </div>

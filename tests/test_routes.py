@@ -349,3 +349,16 @@ def test_ajustes_muestra_swatches(client):
     body = client.get("/ajustes").data
     assert b"theme-swatch" in body
     assert "Medianoche".encode() in body
+
+def test_guardar_inicio_semana(client):
+    client.post("/ajustes/guardar", data={"week_start": "sun"})
+    assert db.get_setting("week_start") == "sun"
+
+def test_calendario_inicio_domingo(client):
+    db.set_setting("week_start", "sun")
+    body = client.get("/calendar/2026/6").data.decode("utf-8")
+    assert body.index("Domingo") < body.index("Lunes")
+
+def test_calendario_inicio_lunes(client):
+    body = client.get("/calendar/2026/6").data.decode("utf-8")
+    assert body.index("Lunes") < body.index("Domingo")
