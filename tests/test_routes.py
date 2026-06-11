@@ -412,6 +412,37 @@ def test_restore_sin_archivo(client):
     assert r.status_code == 302
     assert "err-nofile" in r.headers["Location"]
 
+def test_reset_borra_todo_con_frase_exacta(client):
+    db.add_note("2026-06-11", "se-va-a-borrar")
+    r = client.post("/reset", data={"confirm_text": "BORRAR TODO"})
+    assert r.status_code == 302
+    assert "reset-ok" in r.headers["Location"]
+    assert db.get_notes_for_date("2026-06-11") == []
+
+def test_reset_sin_frase_no_borra(client):
+    db.add_note("2026-06-11", "sobrevive")
+    for malo in ("", "borrar todo", "BORRAR", "BORRARTODO"):
+        r = client.post("/reset", data={"confirm_text": malo})
+        assert r.status_code == 302
+        assert "err-reset-confirm" in r.headers["Location"]
+    assert len(db.get_notes_for_date("2026-06-11")) == 1
+
+def test_reset_deja_backup_prereset(client, test_db):
+    import os, glob
+    db.add_note("2026-06-11", "estaba-antes")
+    client.post("/reset", data={"confirm_text": "BORRAR TODO"})
+    backups = glob.glob(os.path.join(os.path.dirname(test_db), "health-prereset-*.db"))
+    assert backups, "no se creó el backup pre-reset"
+    assert db.is_valid_db(backups[0])   # el backup conserva el estado previo
+
+def test_reset_app_sigue_funcionando(client):
+    client.post("/reset", data={"confirm_text": "BORRAR TODO"})
+    assert client.get("/", follow_redirects=True).status_code == 200
+
+def test_reset_preserva_back(client):
+    r = client.post("/reset", data={"confirm_text": "nope", "back": "/week/2026-06-11"})
+    assert "2026-06-11" in r.headers["Location"]
+
 def test_datos_volver_contextual(client):
     body = client.get("/export?back=/calendar/2026/6").data
     assert b'href="/calendar/2026/6"' in body

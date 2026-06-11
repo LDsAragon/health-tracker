@@ -19,7 +19,9 @@ DB_FILE = APP_DIR / "health.db"
 
 WINDOW_TITLE = "Health Tracker"
 WINDOW_SIZE = (1280, 860)
-MIN_SIZE = (900, 600)
+# Mínimo chico a propósito: la app es responsive (<600px = modo agenda) y así
+# la ventana sirve como "columnita" al costado de la pantalla.
+MIN_SIZE = (420, 480)
 
 
 def _base_dir():

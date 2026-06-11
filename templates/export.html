@@ -18,6 +18,10 @@
 <div class="datos-banner datos-err">✗ El archivo no es una base de datos válida de la app. No se cambió nada.</div>
 {% elif datos == 'err-nofile' %}
 <div class="datos-banner datos-err">✗ No seleccionaste ningún archivo.</div>
+{% elif datos == 'reset-ok' %}
+<div class="datos-banner datos-ok">✓ Base de datos borrada — empezás de cero. Quedó un backup automático (<code>health-prereset-*.db</code>) junto a la base de datos por si te arrepentís.</div>
+{% elif datos == 'err-reset-confirm' %}
+<div class="datos-banner datos-err">✗ No se borró nada: la frase de confirmación no coincide. Tenés que escribir exactamente <b>BORRAR TODO</b>.</div>
 {% endif %}
 
 <!-- Exportar a CSV -->
@@ -72,4 +76,43 @@
     </form>
   </div>
 </div>
+
+<!-- Zona peligrosa: borrar toda la base de datos -->
+<div class="page-top" style="margin-top:36px;margin-bottom:12px;">
+  <h2 class="page-title" style="font-size:20px;color:var(--red);">Zona peligrosa</h2>
+  <p class="page-sub">Borrar todo y empezar de cero.</p>
+</div>
+<div class="rec-form-wrap danger-zone">
+  <div class="field-group">
+    <label style="color:var(--red);">Borrar TODA la base de datos</label>
+    <p class="page-sub" style="margin:0 0 8px;">
+      Elimina de forma <b>permanente</b> todos tus datos: notas rápidas, tareas, rutinas y su
+      historial, notas especiales, gráficos y ajustes. <b>No se puede deshacer desde la app.</b>
+      Antes de borrar se guarda un backup automático (<code>health-prereset-*.db</code>) junto a la
+      base de datos — igual te recomendamos
+      <a href="{{ url_for('main.backup_download') }}">descargar un backup</a> primero.
+    </p>
+    <form method="POST" action="{{ url_for('main.reset_db_route') }}"
+          onsubmit="return confirm('ÚLTIMA CONFIRMACIÓN\n\nSe van a borrar TODOS los datos de la app (notas, tareas, rutinas, notas especiales, gráficos y ajustes) y vas a empezar de cero.\n\n¿Borrar todo?');">
+      <input type="hidden" name="back" value="{{ back or '' }}">
+      <label for="confirm_text" style="display:block;font-size:13px;margin-bottom:4px;">
+        Para confirmar, escribí <b>BORRAR TODO</b>:
+      </label>
+      <input type="text" name="confirm_text" id="confirm_text" class="danger-confirm-input"
+             placeholder="BORRAR TODO" autocomplete="off">
+      <button type="submit" class="btn-danger" id="reset-btn" disabled>Borrar todos los datos</button>
+    </form>
+  </div>
+</div>
+
+<script>
+// El botón de borrado se habilita solo si la frase coincide exactamente.
+(function () {
+  var input = document.getElementById('confirm_text');
+  var btn = document.getElementById('reset-btn');
+  input.addEventListener('input', function () {
+    btn.disabled = input.value.trim() !== 'BORRAR TODO';
+  });
+})();
+</script>
 {% endblock %}

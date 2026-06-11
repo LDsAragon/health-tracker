@@ -671,3 +671,28 @@ select.journal-cat-select {
 .stats-builder-form select, .stats-builder-form input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 13px; }
 .stats-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
 .stats-card-head .stats-card-title { margin-bottom: 0; }
+
+/* ── Zona peligrosa (tab Datos): borrar toda la DB ──────────────────────────── */
+.danger-zone { border: 1px solid rgba(239, 68, 68, .4); }
+.danger-confirm-input {
+  display: block; margin: 0 0 12px; padding: 8px 10px; width: 100%; max-width: 280px;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid rgba(239, 68, 68, .4); border-radius: 8px; font-size: 14px;
+}
+.danger-confirm-input:focus { outline: none; border-color: var(--red); }
+.btn-danger {
+  background: var(--red); color: #fff; border: none; border-radius: 8px;
+  padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.btn-danger:disabled { opacity: .45; cursor: not-allowed; }
+.btn-danger:not(:disabled):hover { filter: brightness(1.12); }
+
+/* ── Atajos de teclado (Ajustes) ────────────────────────────────────────────── */
+.shortcut-list { display: grid; gap: 8px; }
+.shortcut-row { display: flex; align-items: baseline; gap: 12px; font-size: 14px; color: var(--text); flex-wrap: wrap; }
+.shortcut-keys { white-space: nowrap; }
+.shortcut-row kbd {
+  display: inline-block; padding: 2px 7px; font-size: 12px; font-family: inherit;
+  background: var(--surface2); border: 1px solid var(--line);
+  border-bottom-width: 2px; border-radius: 6px;
+}

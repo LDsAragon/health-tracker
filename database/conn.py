@@ -60,6 +60,30 @@ def is_valid_db(path):
     return bool(integrity) and integrity[0] == "ok" and CORE_TABLES.issubset(tables)
 
 
+def reset_db():
+    """Borra TODOS los datos: backup automático previo + drop de todas las tablas.
+
+    Devuelve el nombre del backup pre-reset (queda junto a la DB). No recrea el
+    esquema: el caller debe llamar a init_db() después.
+    """
+    base = os.path.dirname(os.path.abspath(DB_PATH)) or "."
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup_name = f"health-prereset-{ts}.db"
+    snapshot_to(os.path.join(base, backup_name))
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute("PRAGMA busy_timeout=5000")
+        tables = [r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()]
+        for t in tables:
+            conn.execute(f'DROP TABLE IF EXISTS "{t}"')
+        conn.commit()
+        conn.execute("VACUUM")
+    finally:
+        conn.close()
+    return backup_name
+
+
 def restore_from(src_path):
     """Valida `src_path` y reemplaza el contenido de la DB actual (con pre-restore backup).
 

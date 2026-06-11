@@ -297,6 +297,23 @@ def restore_upload():
     return redirect(url_for("main.export_view", datos="ok" if ok else "err-invalid", back=back))
 
 
+# Frase exacta que el usuario tiene que escribir para habilitar el borrado total.
+RESET_PHRASE = "BORRAR TODO"
+
+
+@bp.route("/reset", methods=["POST"])
+def reset_db_route():
+    # Borra TODOS los datos y arranca de cero. Triple verificación: botón
+    # deshabilitado hasta escribir la frase (JS), confirm() del form, y acá la
+    # frase se re-valida server-side. reset_db deja un backup pre-reset.
+    back = safe_back(request.form.get("back"))
+    if request.form.get("confirm_text", "").strip() != RESET_PHRASE:
+        return redirect(url_for("main.export_view", datos="err-reset-confirm", back=back))
+    db.reset_db()
+    db.init_db()   # recrea el esquema vacío (defaults de ajustes incluidos)
+    return redirect(url_for("main.export_view", datos="reset-ok", back=back))
+
+
 # ── Search ─────────────────────────────────────────────────────────────────────
 
 @bp.route("/search")
