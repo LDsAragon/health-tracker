@@ -7,7 +7,7 @@ import app as flask_app
 def test_db(tmp_path, monkeypatch):
     """Base de datos temporal aislada por test."""
     db_file = str(tmp_path / "test.db")
-    monkeypatch.setattr(db, "DB_PATH", db_file)
+    monkeypatch.setattr("database.conn.DB_PATH", db_file)
     db.init_db()
     return db_file
 

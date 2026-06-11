@@ -183,7 +183,7 @@ def export_download():
 @bp.route("/backup")
 def backup_download():
     import os
-    db_path = os.path.abspath(db.DB_PATH)
+    db_path = os.path.abspath(db.db_path())
     today   = date.today().isoformat()
     return send_file(db_path, as_attachment=True,
                      download_name=f"health-backup-{today}.db")
