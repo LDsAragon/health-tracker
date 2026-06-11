@@ -28,6 +28,18 @@
   background: var(--bg);
 }
 
+/* Panel derecho: rutinas y eventos (espejo del panel de tareas) */
+.day-side-right { grid-column: 3; justify-self: start; }
+.day-card-events-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg);
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 /* Reordenar secciones de la card: notas rápidas suben al hueco de los objetivos */
 .day-qn-title        { order: 2; padding: 14px 20px 0; }
 .day-card-notes      { order: 3; }
@@ -99,13 +111,12 @@
 }
 .day-card-num.today-num { color: var(--accent); }
 
-/* Eventos */
+/* Eventos (en el panel derecho — chips apilados) */
 .day-card-events {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
 }
 
 .day-ev-wrap { display: flex; flex-direction: column; gap: 6px; }
@@ -271,19 +282,28 @@
 .day-add-input:focus { outline: none; border-color: var(--accent); }
 .day-add-input::placeholder { color: var(--muted); }
 
+/* Botones de alta del día sin fondo (notas rápidas + especiales): borde + texto accent */
 .day-add-btn {
   align-self: flex-end;
-  background: var(--accent);
-  color: white;
-  border: none;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
   padding: 8px 18px;
   border-radius: var(--r);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity .15s;
+  transition: background .15s, color .15s;
 }
-.day-add-btn:hover { opacity: .85; }
+.day-add-btn:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+
+.day-card .btn-add {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  transition: background .15s, color .15s;
+}
+.day-card .btn-add:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); opacity: 1; }
 
 .back-link {
   font-size: 13px;

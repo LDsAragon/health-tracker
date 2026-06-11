@@ -88,65 +88,6 @@
     <span class="day-card-num {% if date_str == today %}today-num{% endif %}">{{ d.day }}</span>
   </div>
 
-  <!-- Eventos recurrentes — chips interactivos -->
-  {% if day_events %}
-  <div class="day-card-events">
-    {% for ev in day_events %}
-    <div class="day-ev-wrap" id="ev-wrap-{{ ev.id }}">
-
-      {% if ev.done %}
-      <!-- Hecho: chip tachado + nota + deshacer -->
-      <div class="day-chip day-chip-done" style="--c: {{ ev.color }};">
-        <span class="day-chip-check">&#10003;</span>
-        <span class="day-chip-title">{{ ev.title }}</span>
-        {% if ev.completion_note %}
-        <span class="day-chip-note">— {{ ev.completion_note }}</span>
-        {% endif %}
-        <form method="POST" action="{{ url_for('day.event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
-          <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
-        </form>
-      </div>
-
-      {% elif ev.skipped %}
-      <!-- Salteado: chip gris + nota + deshacer -->
-      <div class="day-chip day-chip-skipped">
-        <span class="day-chip-title">{{ ev.title }}</span>
-        {% if ev.completion_note %}
-        <span class="day-chip-note">— {{ ev.completion_note }}</span>
-        {% endif %}
-        <form method="POST" action="{{ url_for('day.event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
-          <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
-        </form>
-      </div>
-
-      {% else %}
-      <!-- No hecho: chip clickeable que abre formulario inline -->
-      <div class="day-chip day-chip-todo" style="--c: {{ ev.color }};"
-           onclick="openEvForm({{ ev.id }})" id="ev-chip-{{ ev.id }}">
-        <span class="day-chip-circle"></span>
-        <span class="day-chip-title">{{ ev.title }}</span>
-        <span class="day-chip-hint">clic para marcar</span>
-      </div>
-      <form class="day-ev-form" id="ev-form-{{ ev.id }}" style="display:none;">
-        <input type="text" name="note" class="ev-note-input"
-               placeholder="comentario opcional...">
-        <button type="submit"
-                formmethod="POST"
-                formaction="{{ url_for('day.event_complete', date_str=date_str, event_id=ev.id) }}"
-                class="btn-check">&#10003; Hecho</button>
-        <button type="submit"
-                formmethod="POST"
-                formaction="{{ url_for('day.event_skip', date_str=date_str, event_id=ev.id) }}"
-                class="btn-skip">&#8212; Salteé</button>
-        <button type="button" class="btn-cancel-sm" onclick="closeEvForm({{ ev.id }})">&#10005;</button>
-      </form>
-      {% endif %}
-
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
   <!-- Registros de journal -->
   {% if journal_entries or journal_cats %}
   <div class="day-card-journal">
@@ -305,10 +246,12 @@
 
     <!-- Agregar nuevo registro -->
     {% if journal_cats %}
+    {% set jday_open = settings.journal_form_default == 'open' %}
     <div class="day-journal-add-wrap">
       <button type="button" class="day-journal-add-toggle" id="jday-toggle"
+              style="display:{{ 'none' if jday_open else 'block' }};"
               onclick="openEspecial()">+ Agregar nota especial</button>
-      <div id="jday-form-wrap" style="display:none;">
+      <div id="jday-form-wrap" style="display:{{ 'block' if jday_open else 'none' }};">
         <form id="jday-form" method="POST"
               action="{{ url_for('day.journal_entry_add', date_str=date_str) }}"
               onsubmit="return prepareNewValues()">
@@ -396,10 +339,11 @@
   </div>
 
   <!-- Input de nota al fondo — como la celda del calendario -->
+  {% set rapida_open = settings.note_form_default != 'collapsed' %}
   <div class="day-card-footer-wrap">
-  <button type="button" class="day-journal-add-toggle" id="rapida-collapsed" style="display:none;"
+  <button type="button" class="day-journal-add-toggle" id="rapida-collapsed" style="display:{{ 'none' if rapida_open else 'block' }};"
           onclick="openRapida()">+ Agregar nota rápida</button>
-  <form class="day-card-footer" id="rapida-form" method="POST" action="{{ url_for('day.note_add', date_str=date_str) }}">
+  <form class="day-card-footer" id="rapida-form" {% if not rapida_open %}style="display:none;"{% endif %} method="POST" action="{{ url_for('day.note_add', date_str=date_str) }}">
     <textarea name="content" class="day-add-input" rows="2"
               placeholder="Escribí una nota..."></textarea>
     <div class="day-add-bottom">
@@ -424,6 +368,70 @@
   </div>
 
 </div>
+
+<!-- Panel lateral derecho: rutinas y eventos agendados -->
+{% if day_events %}
+<aside class="day-side day-side-right">
+  <div class="day-card-events-panel">
+    <h3 class="day-section-title">📅 Rutinas y eventos</h3>
+    <div class="day-card-events">
+      {% for ev in day_events %}
+      <div class="day-ev-wrap" id="ev-wrap-{{ ev.id }}">
+
+        {% if ev.done %}
+        <!-- Hecho: chip tachado + nota + deshacer -->
+        <div class="day-chip day-chip-done" style="--c: {{ ev.color }};">
+          <span class="day-chip-check">&#10003;</span>
+          <span class="day-chip-title">{{ ev.title }}</span>
+          {% if ev.completion_note %}
+          <span class="day-chip-note">— {{ ev.completion_note }}</span>
+          {% endif %}
+          <form method="POST" action="{{ url_for('day.event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
+            <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
+          </form>
+        </div>
+
+        {% elif ev.skipped %}
+        <!-- Salteado: chip gris + nota + deshacer -->
+        <div class="day-chip day-chip-skipped">
+          <span class="day-chip-title">{{ ev.title }}</span>
+          {% if ev.completion_note %}
+          <span class="day-chip-note">— {{ ev.completion_note }}</span>
+          {% endif %}
+          <form method="POST" action="{{ url_for('day.event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
+            <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
+          </form>
+        </div>
+
+        {% else %}
+        <!-- No hecho: chip clickeable que abre formulario inline -->
+        <div class="day-chip day-chip-todo" style="--c: {{ ev.color }};"
+             onclick="openEvForm({{ ev.id }})" id="ev-chip-{{ ev.id }}">
+          <span class="day-chip-circle"></span>
+          <span class="day-chip-title">{{ ev.title }}</span>
+          <span class="day-chip-hint">clic para marcar</span>
+        </div>
+        <form class="day-ev-form" id="ev-form-{{ ev.id }}" style="display:none;">
+          <input type="text" name="note" class="ev-note-input"
+                 placeholder="comentario opcional...">
+          <button type="submit"
+                  formmethod="POST"
+                  formaction="{{ url_for('day.event_complete', date_str=date_str, event_id=ev.id) }}"
+                  class="btn-check">&#10003; Hecho</button>
+          <button type="submit"
+                  formmethod="POST"
+                  formaction="{{ url_for('day.event_skip', date_str=date_str, event_id=ev.id) }}"
+                  class="btn-skip">&#8212; Salteé</button>
+          <button type="button" class="btn-cancel-sm" onclick="closeEvForm({{ ev.id }})">&#10005;</button>
+        </form>
+        {% endif %}
+
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</aside>
+{% endif %}
 </div>
 
 <script>

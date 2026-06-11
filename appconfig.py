@@ -26,5 +26,7 @@ SETTINGS = {
     "start_view":  {"default": "month",  "choices": ("month", "week", "today")},
     "show_stats":  {"default": "show",   "choices": ("show", "hide")},
     "show_export": {"default": "show",   "choices": ("show", "hide")},
+    "note_form_default":    {"default": "open",      "choices": ("open", "collapsed")},
+    "journal_form_default": {"default": "collapsed", "choices": ("open", "collapsed")},
 }
 DEFAULT_SETTINGS = {k: v["default"] for k, v in SETTINGS.items()}

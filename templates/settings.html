@@ -84,6 +84,24 @@
       </select>
     </div>
 
+    <div class="field-group">
+      <label for="note_form_default">Notas rápidas al abrir un día</label>
+      <p class="page-sub" style="margin:0 0 8px;">Si el campo para escribir una nota rápida aparece abierto o como un botón para abrirlo.</p>
+      <select name="note_form_default" id="note_form_default" class="journal-type-select" style="max-width:280px;">
+        <option value="open" {% if settings.note_form_default == 'open' %}selected{% endif %}>Mostrar el campo abierto</option>
+        <option value="collapsed" {% if settings.note_form_default == 'collapsed' %}selected{% endif %}>Mostrar botón para abrirlo</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label for="journal_form_default">Notas especiales al abrir un día</label>
+      <p class="page-sub" style="margin:0 0 8px;">Si el formulario para agregar una nota especial aparece abierto o como un botón para abrirlo.</p>
+      <select name="journal_form_default" id="journal_form_default" class="journal-type-select" style="max-width:280px;">
+        <option value="open" {% if settings.journal_form_default == 'open' %}selected{% endif %}>Mostrar el formulario abierto</option>
+        <option value="collapsed" {% if settings.journal_form_default == 'collapsed' %}selected{% endif %}>Mostrar botón para abrirlo</option>
+      </select>
+    </div>
+
     <button type="submit" class="btn-primary">Guardar</button>
   </form>
 </div>

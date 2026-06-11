@@ -304,7 +304,7 @@ select.journal-cat-select {
 .todo-add-form input[type="text"] { flex: 1 1 140px; min-width: 0; }
 
 .day-card-journal {
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
   padding: 14px 20px;
   display: flex;
   flex-direction: column;
