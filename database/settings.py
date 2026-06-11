@@ -1,5 +1,5 @@
 """Ajustes clave/valor (esquema en appconfig.SETTINGS)."""
-from appconfig import DEFAULT_SETTINGS
+from appconfig import DEFAULT_SETTINGS, SETTINGS
 from .conn import get_db
 
 
@@ -25,4 +25,8 @@ def get_all_settings() -> dict:
     with get_db() as conn:
         for r in conn.execute("SELECT key, value FROM settings").fetchall():
             s[r["key"]] = r["value"]
+    # Clamp: un valor guardado que ya no es válido (ej. tema removido) cae al default.
+    for key, spec in SETTINGS.items():
+        if s.get(key) not in spec["choices"]:
+            s[key] = spec["default"]
     return s

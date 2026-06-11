@@ -2,6 +2,7 @@
 import json
 from flask import Blueprint, render_template, request, redirect, url_for
 import database as db
+from helpers import safe_back
 
 bp = Blueprint("journal", __name__)
 
@@ -9,7 +10,7 @@ bp = Blueprint("journal", __name__)
 @bp.route("/journal")
 def journal_view():
     categories = db.get_journal_categories()
-    return render_template("journal.html", categories=categories)
+    return render_template("journal.html", categories=categories, back=safe_back(request.args.get("back")))
 
 
 def _parse_fields(form) -> list:
@@ -43,7 +44,7 @@ def journal_category_add():
             "fields_json":      json.dumps(_parse_fields(request.form), ensure_ascii=False),
             "show_in_calendar": show,
         })
-    return redirect(url_for("journal.journal_view"))
+    return redirect(url_for("journal.journal_view", back=safe_back(request.form.get("back"))))
 
 
 @bp.route("/journal/<int:cat_id>/edit", methods=["POST"])
@@ -58,10 +59,10 @@ def journal_category_edit(cat_id):
             "fields_json":      json.dumps(_parse_fields(request.form), ensure_ascii=False),
             "show_in_calendar": show,
         })
-    return redirect(url_for("journal.journal_view"))
+    return redirect(url_for("journal.journal_view", back=safe_back(request.form.get("back"))))
 
 
 @bp.route("/journal/<int:cat_id>/delete", methods=["POST"])
 def journal_category_delete(cat_id):
     db.delete_journal_category(cat_id)
-    return redirect(url_for("journal.journal_view"))
+    return redirect(url_for("journal.journal_view", back=safe_back(request.form.get("back"))))

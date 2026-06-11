@@ -355,7 +355,29 @@ def test_guardar_tema_invalido_se_ignora(client):
 def test_ajustes_muestra_swatches(client):
     body = client.get("/ajustes").data
     assert b"theme-swatch" in body
-    assert "Medianoche".encode() in body
+    assert "Bosque".encode() in body
+
+def test_ajustes_volver_contextual(client):
+    body = client.get("/ajustes?back=/calendar/2026/6").data
+    assert b'href="/calendar/2026/6"' in body
+
+def test_ajustes_volver_default_calendario(client):
+    body = client.get("/ajustes").data
+    assert b"Calendario" in body   # fallback cuando no hay back
+
+def test_guardar_ajustes_preserva_back(client):
+    r = client.post("/ajustes/guardar", data={"theme": "oceano", "back": "/week/2026-06-11"})
+    assert r.status_code == 302
+    assert "2026-06-11" in r.headers["Location"]   # back propagado a /ajustes
+
+def test_back_externo_se_ignora(client):
+    r = client.post("/ajustes/guardar", data={"theme": "oceano", "back": "https://evil.com"})
+    assert "evil.com" not in r.headers["Location"]
+
+def test_journal_preserva_back(client):
+    r = client.post("/journal/add", data={"name": "Test", "back": "/calendar/2026/6"})
+    assert r.status_code == 302
+    assert "calendar" in r.headers["Location"] and "journal" in r.headers["Location"]
 
 def test_guardar_inicio_semana(client):
     client.post("/ajustes/guardar", data={"week_start": "sun"})

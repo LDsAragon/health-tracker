@@ -320,6 +320,11 @@ def test_time_format_default(test_db):
 def test_theme_default(test_db):
     assert db.get_setting("theme") == "indigo"
 
+def test_setting_huerfano_cae_al_default(test_db):
+    # Un valor guardado que ya no es válido (ej. tema removido) cae al default en get_all_settings.
+    db.set_setting("theme", "cobre")          # tema eliminado
+    assert db.get_all_settings()["theme"] == "indigo"
+
 def test_week_start_default(test_db):
     assert db.get_setting("week_start") == "mon"
 

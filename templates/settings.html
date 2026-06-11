@@ -2,6 +2,10 @@
 {% block title %}Ajustes{% endblock %}
 
 {% block content %}
+<div class="page-back" style="margin-bottom:14px;">
+  <a href="{{ back or url_for('main.home') }}" class="back-link">&#8592; {{ 'Volver' if back else 'Calendario' }}</a>
+</div>
+
 <div class="page-top">
   <h1 class="page-title">Ajustes</h1>
   <p class="page-sub">Preferencias de la app.</p>
@@ -9,6 +13,7 @@
 
 <div class="rec-form-wrap">
   <form class="rec-form" method="POST" action="{{ url_for('main.settings_save') }}">
+    <input type="hidden" name="back" value="{{ back or '' }}">
     <div class="field-group">
       <label>Tema</label>
       <p class="page-sub" style="margin:0 0 8px;">Elegí la paleta — se previsualiza al instante; guardá para fijarla.</p>

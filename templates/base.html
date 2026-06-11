@@ -25,7 +25,7 @@
          class="nav-link {% if request.endpoint == 'recurring.recurring_view' %}active{% endif %}">
         Rutinas
       </a>
-      <a href="{{ url_for('journal.journal_view') }}"
+      <a href="{{ url_for('journal.journal_view', back=request.full_path) }}"
          class="nav-link {% if request.endpoint == 'journal.journal_view' %}active{% endif %}">
         Notas especiales
       </a>
@@ -41,7 +41,7 @@
         Exportar
       </a>
       {% endif %}
-      <a href="{{ url_for('main.settings_view') }}"
+      <a href="{{ url_for('main.settings_view', back=request.full_path) }}"
          class="nav-link {% if request.endpoint in ('main.settings_view', 'main.settings_save') %}active{% endif %}">
         ⚙️ Ajustes
       </a>

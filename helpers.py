@@ -40,3 +40,14 @@ def _week_start(d):
 def _dow_names():
     fw = _first_weekday()
     return _DOW_MON[fw:] + _DOW_MON[:fw]
+
+
+def safe_back(url, fallback=None):
+    """Valida que `url` sea una ruta interna relativa (evita open-redirect).
+
+    Devuelve la URL saneada o `fallback` si no es interna. `request.full_path`
+    agrega un '?' final cuando no hay query: lo limpiamos.
+    """
+    if url and url.startswith('/') and not url.startswith('//'):
+        return url[:-1] if url.endswith('?') else url
+    return fallback

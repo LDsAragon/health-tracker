@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, make_r
 import database as db
 import services
 from appconfig import THEMES, SETTINGS
-from helpers import _setting, _first_weekday, _week_start, _dow_names
+from helpers import _setting, _first_weekday, _week_start, _dow_names, safe_back
 
 bp = Blueprint("main", __name__)
 
@@ -117,7 +117,7 @@ def week_view(date_str):
 
 @bp.route("/ajustes")
 def settings_view():
-    return render_template("settings.html", themes=THEMES)
+    return render_template("settings.html", themes=THEMES, back=safe_back(request.args.get("back")))
 
 
 @bp.route("/ajustes/guardar", methods=["POST"])
@@ -127,7 +127,8 @@ def settings_save():
         val = request.form.get(key)
         if val is not None and val in spec["choices"]:
             db.set_setting(key, val)
-    return redirect(url_for("main.settings_view"))
+    # Se queda en /ajustes tras guardar; preserva el destino del botón "Volver".
+    return redirect(url_for("main.settings_view", back=safe_back(request.form.get("back"))))
 
 
 # ── Estadísticas ─────────────────────────────────────────────────────────────────

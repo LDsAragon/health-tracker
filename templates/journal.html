@@ -4,6 +4,10 @@
 {% set COLORS = ['#6366f1','#22c55e','#3b82f6','#f97316','#ef4444','#a855f7','#ec4899','#eab308','#14b8a6'] %}
 
 {% block content %}
+<div class="page-back" style="margin-bottom:14px;">
+  <a href="{{ back or url_for('main.home') }}" class="back-link">&#8592; {{ 'Volver' if back else 'Calendario' }}</a>
+</div>
+
 <div class="page-top">
   <h1 class="page-title">Notas especiales</h1>
   <p class="page-sub">Configurá tus tipos de nota especial: campos guiados para registrar de forma estructurada (lo opuesto a una nota rápida suelta).</p>
@@ -13,6 +17,7 @@
 <div class="rec-form-wrap">
   <form class="rec-form" method="POST" action="{{ url_for('journal.journal_category_add') }}"
         id="jcat-add-form" onsubmit="return validateJournalForm('jcat-add-form')">
+    <input type="hidden" name="back" value="{{ back or '' }}">
 
     <div class="field-row">
       <div class="field-group">
@@ -106,6 +111,7 @@
       <form method="POST" action="{{ url_for('journal.journal_category_delete', cat_id=cat.id) }}"
             onsubmit="return confirm('¿Eliminar esta categoría y todas sus notas?');"
             style="display:inline;">
+        <input type="hidden" name="back" value="{{ back or '' }}">
         <button type="submit" class="btn-delete-sm">Eliminar</button>
       </form>
     </div>
@@ -116,6 +122,7 @@
             action="{{ url_for('journal.journal_category_edit', cat_id=cat.id) }}"
             id="jcat-edit-form-{{ cat.id }}"
             onsubmit="return validateJournalForm('jcat-edit-form-{{ cat.id }}')">
+        <input type="hidden" name="back" value="{{ back or '' }}">
 
         <div class="field-row">
           <div class="field-group">
