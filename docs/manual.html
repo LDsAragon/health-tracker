@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Bitácora — Manual de uso</title>
+<style>
+  /* Manual imprimible (A4). Fuente: docs/manual.html → PDF via tools/make_manual.ps1 */
+  @page { size: A4; margin: 18mm 16mm; }
+  :root {
+    --ink: #1f2330; --muted: #5b6172; --accent: #4f46e5; --accent-soft: #eef0fe;
+    --line: #d9dce6; --card: #f6f7fb; --warn: #b91c1c; --warn-soft: #fdeeee;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif; color: var(--ink);
+    font-size: 11.5pt; line-height: 1.55; margin: 0;
+  }
+  h1, h2, h3 { line-height: 1.2; }
+  h1 { font-size: 26pt; margin: 0 0 4px; }
+  h2 {
+    font-size: 16pt; color: var(--accent); margin: 0 0 10px;
+    padding-bottom: 6px; border-bottom: 2px solid var(--accent);
+    page-break-after: avoid;
+  }
+  h3 { font-size: 12.5pt; margin: 18px 0 6px; page-break-after: avoid; }
+  p { margin: 0 0 9px; }
+  ul, ol { margin: 0 0 10px; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  section { page-break-before: always; }
+  section.cover { page-break-before: avoid; }
+  .lead { font-size: 12.5pt; color: var(--muted); }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+    border-radius: 8px; padding: 10px 14px; margin: 12px 0; page-break-inside: avoid;
+  }
+  .card.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .card .t { font-weight: 700; color: var(--accent); }
+  .card.warn .t { color: var(--warn); }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 14px; page-break-inside: avoid; }
+  th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; font-size: 10.5pt; }
+  th { background: var(--accent-soft); color: var(--accent); }
+  kbd {
+    display: inline-block; padding: 0 6px; border: 1px solid var(--line); border-bottom-width: 2px;
+    border-radius: 5px; background: var(--card); font-family: inherit; font-size: 10pt;
+  }
+  code { background: var(--card); border-radius: 4px; padding: 0 4px; font-size: 10pt; }
+  .pill {
+    display: inline-block; background: var(--accent-soft); color: var(--accent);
+    border-radius: 99px; padding: 1px 10px; font-size: 9.5pt; font-weight: 600; margin-right: 4px;
+  }
+  .cover-box {
+    margin-top: 80px; text-align: center;
+  }
+  .cover-box .logo {
+    width: 96px; height: 96px; border-radius: 22px; background: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 48px; margin-bottom: 18px;
+  }
+  .toc { columns: 2; column-gap: 28px; margin-top: 16px; }
+  .toc div { margin-bottom: 5px; }
+  .toc .n { color: var(--accent); font-weight: 700; margin-right: 6px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 10pt; }
+</style>
+</head>
+<body>
+
+<!-- ───────────────────────── PORTADA ───────────────────────── -->
+<section class="cover">
+  <div class="cover-box">
+    <div class="logo">📅</div>
+    <h1>Bitácora</h1>
+    <p class="lead">Manual de uso — cómo está pensada y todo lo que podés hacer con ella</p>
+    <p class="muted small">Tu calendario personal de hábitos, registros y emociones · junio 2026</p>
+  </div>
+
+  <h3 style="margin-top:60px;">Contenido</h3>
+  <div class="toc">
+    <div><span class="n">1</span> La idea detrás de Bitácora</div>
+    <div><span class="n">2</span> Empezar: las dos formas de abrirla</div>
+    <div><span class="n">3</span> El calendario (mes y semana)</div>
+    <div><span class="n">4</span> La vista del día</div>
+    <div><span class="n">5</span> Qué anotar dónde: los tipos de registro</div>
+    <div><span class="n">6</span> Rutinas y recordatorios</div>
+    <div><span class="n">7</span> Notas especiales a tu medida</div>
+    <div><span class="n">8</span> La rueda de emociones</div>
+    <div><span class="n">9</span> Estadísticas (solo lo que vos pidas)</div>
+    <div><span class="n">10</span> Tus datos: exportar, backup y reset</div>
+    <div><span class="n">11</span> Ajustes</div>
+    <div><span class="n">12</span> Atajos y trucos</div>
+    <div><span class="n">13</span> Recetas: maneras de usarla</div>
+  </div>
+</section>
+
+<!-- ───────────────────────── 1. LA IDEA ───────────────────────── -->
+<section>
+  <h2>1 · La idea detrás de Bitácora</h2>
+  <p>Bitácora es el <b>almanaque de la cocina</b> llevado a la compu: un calendario grande donde
+  anotás lo que pasó, lo que hiciste y lo que querés acordarte de hacer — y donde todo eso se ve
+  <b>de un vistazo</b>, sin entrar a ningún lado.</p>
+
+  <p>Algunas decisiones de diseño que la atraviesan entera:</p>
+  <ul>
+    <li><b>El calendario es la app.</b> No hay "pantalla de inicio" con widgets ni resúmenes:
+    abrís y estás parado en tus días. Como un calendario de pared.</li>
+    <li><b>Nada de dashboards.</b> Los números y gráficos existen, pero solo si vos los pedís
+    (sección 9). El día a día es texto, colores y marcas — cosas que se leen de reojo.</li>
+    <li><b>Anotar tiene que costar cero.</b> Por eso podés escribir una nota directamente en la
+    celda del calendario, sin abrir nada. La fricción mata el hábito de registrar.</li>
+    <li><b>Registrar sin juzgar.</b> Como el cuaderno de a bordo de un barco: cada día se anota
+    el rumbo y el clima, lindo o feo. La constancia importa más que el contenido.</li>
+    <li><b>Tus datos son tuyos.</b> Todo vive en un único archivo en tu máquina. Sin cuentas,
+    sin nube, sin suscripción. Se exporta, se respalda y se restaura con un clic (sección 10).</li>
+  </ul>
+
+  <div class="card"><span class="t">Para qué sirve, en una frase:</span> registrar tu vida
+  cotidiana — hábitos, tareas, comidas, sueño, emociones, horas de trabajo — con el mínimo
+  esfuerzo posible, y que ese registro te sirva después: para verte, para el médico, para
+  facturar, para entenderte.</div>
+</section>
+
+<!-- ───────────────────────── 2. EMPEZAR ───────────────────────── -->
+<section>
+  <h2>2 · Empezar: las dos formas de abrirla</h2>
+
+  <h3>La ventana (recomendada)</h3>
+  <p>Doble clic en <code>Bitacora.exe</code> (carpeta <code>dist\Bitacora</code>; podés crearle
+  un acceso directo al escritorio). Se abre como una app de Windows común. Sus datos viven en
+  <code>%LOCALAPPDATA%\Bitacora\health.db</code>.</p>
+
+  <h3>El navegador</h3>
+  <p>Doble clic en <code>start.bat</code> abre la app en tu navegador en
+  <code>http://127.0.0.1:5000</code>. Es la misma app; usa el archivo <code>health.db</code>
+  que está junto al código.</p>
+
+  <div class="card warn"><span class="t">Ojo:</span> cada modo usa <b>su propia base de datos</b>.
+  Elegí uno como principal (la ventana, idealmente). Si alguna vez necesitás pasar datos de un
+  modo al otro: <i>Datos → Descargar backup</i> en uno, <i>Datos → Restaurar</i> en el otro.</div>
+
+  <h3>La barra de navegación</h3>
+  <p>Arriba siempre tenés: <span class="pill">Bitácora</span> (volver al inicio),
+  <span class="pill">buscador</span> de notas, <span class="pill">Rutinas</span>,
+  <span class="pill">Notas especiales</span>, <span class="pill">📈 Estadísticas</span>,
+  <span class="pill">Datos</span> y <span class="pill">⚙️ Ajustes</span>. Estadísticas y Datos
+  se pueden ocultar desde Ajustes si no los usás.</p>
+</section>
+
+<!-- ───────────────────────── 3. CALENDARIO ───────────────────────── -->
+<section>
+  <h2>3 · El calendario (mes y semana)</h2>
+  <p>Es tu base de operaciones. Hay dos escalas — <b>Mes</b> y <b>Semana</b> — con los botones
+  para saltar de una a otra y el botón <b>Hoy</b> siempre a mano. Con qué vista arranca la app
+  lo elegís en Ajustes (<i>Vista de inicio</i>: mes, semana u hoy).</p>
+
+  <h3>Qué se ve en cada celda</h3>
+  <ul>
+    <li><b>Chips de colores</b>: tus rutinas del día (tachadas si ya las marcaste).</li>
+    <li><b>Tarjetitas de texto</b>: las notas rápidas, con su color si les pusiste uno.</li>
+    <li><b>Badges</b>: categorías de notas especiales que registraste ese día (p. ej. "Sueño").</li>
+    <li><b>Tareas 2/5</b>: cuántas tareas del día completaste, solo si ese día tiene lista.</li>
+  </ul>
+
+  <h3>Anotar sin entrar al día</h3>
+  <p>Cada celda tiene abajo un campo <i>"+ escribí una nota..."</i>: tipeás, elegís color si
+  querés (los puntitos), Enter y listo. Es la manera más rápida de registrar algo — pensada
+  para que anotar un "me sentí bien hoy" cueste dos segundos.</p>
+
+  <h3>Acomodarlo a tu gusto</h3>
+  <ul>
+    <li>El <b>deslizador</b> de arriba cambia la altura de las celdas (de compactas a enormes);
+    se recuerda tu preferencia.</li>
+    <li>Clic en cualquier celda te lleva a la <b>vista del día</b> (sección 4); el botón
+    "← volver" de allá te trae de vuelta exactamente a donde estabas.</li>
+    <li>Si achicás mucho la ventana, el calendario se convierte en <b>agenda vertical</b>
+    (un día por fila, con su nombre: "Lunes 5") — útil para tener Bitácora angostita
+    al costado de la pantalla mientras trabajás.</li>
+  </ul>
+</section>
+
+<!-- ───────────────────────── 4. VISTA DEL DÍA ───────────────────────── -->
+<section>
+  <h2>4 · La vista del día</h2>
+  <p>El detalle de un día concreto, organizado en tres paneles:</p>
+
+  <table>
+    <tr><th>Panel izquierdo</th><th>Centro</th><th>Panel derecho</th></tr>
+    <tr>
+      <td><b>📋 Lista de tareas</b><br>Pendientes de ese día puntual.</td>
+      <td><b>La tarjeta del día</b><br>Notas rápidas + notas especiales.</td>
+      <td><b>📅 Rutinas y eventos</b><br>Lo recurrente que toca ese día (solo aparece si hay).</td>
+    </tr>
+  </table>
+
+  <h3>Tareas</h3>
+  <p>Una lista de pendientes <i>por día</i>: agregás, tildás, editás. Podés <b>arrastrarlas</b>
+  para reordenarlas, y también arrastrarlas <b>a otro día</b> en la vista semanal — o moverlas
+  con el botón de mover ("esto no salió hoy, lo paso a mañana" sin culpa).</p>
+
+  <h3>Notas rápidas</h3>
+  <p>Texto libre con color opcional. Al elegir color, el campo se tiñe para que veas cómo va a
+  quedar. Las notas existentes se editan tocándolas, ahí mismo. Los colores sirven para lo que
+  vos quieras: estados de ánimo, categorías, importancia — la app no les impone significado.</p>
+
+  <h3>Notas especiales</h3>
+  <p>Registros con estructura (sección 7): elegís la categoría y se despliegan sus campos. El
+  alta puede arrancar abierta o como botón, según prefieras (Ajustes).</p>
+
+  <h3>Rutinas del día</h3>
+  <p>Cada chip del panel derecho se toca para marcar <b>hecho</b> ✓ o <b>salteado</b>, con un
+  comentario opcional ("caminé pero 20 min nomás"). Marcar salteado <i>también es registrar</i>:
+  el dato honesto vale más que la racha perfecta.</p>
+</section>
+
+<!-- ───────────────────────── 5. QUÉ ANOTAR DÓNDE ───────────────────────── -->
+<section>
+  <h2>5 · Qué anotar dónde: los tipos de registro</h2>
+  <p>Bitácora tiene cuatro maneras de registrar, cada una pensada para una cosa distinta.
+  La regla rápida:</p>
+
+  <table>
+    <tr><th>Tipo</th><th>Para qué</th><th>Ejemplo</th></tr>
+    <tr>
+      <td><b>Nota rápida</b></td>
+      <td>Texto libre del momento. Cero estructura, cero fricción.</td>
+      <td>"Hoy dormí mal pero rendí bien igual"</td>
+    </tr>
+    <tr>
+      <td><b>Tarea</b></td>
+      <td>Algo por hacer <i>ese día</i>. Se tilda o se muda a otro día.</td>
+      <td>"Sacar turno con el médico"</td>
+    </tr>
+    <tr>
+      <td><b>Rutina</b></td>
+      <td>Hábito que se repite y querés sostener. Se marca hecho/salteado.</td>
+      <td>"Caminar 30 min" lunes-miércoles-viernes</td>
+    </tr>
+    <tr>
+      <td><b>Nota especial</b></td>
+      <td>Registro con campos definidos por vos, comparable en el tiempo.</td>
+      <td>"Sueño: 23:30–07:00, calidad 4/5"</td>
+    </tr>
+  </table>
+
+  <div class="card"><span class="t">La diferencia clave:</span> la nota rápida es para
+  <i>escribir</i>; la nota especial es para <i>medir</i>. Si dentro de un mes vas a querer ver
+  la evolución de eso que anotás, hacelo nota especial. Si es un pensamiento del día, nota
+  rápida y listo.</div>
+</section>
+
+<!-- ───────────────────────── 6. RUTINAS ───────────────────────── -->
+<section>
+  <h2>6 · Rutinas y recordatorios</h2>
+  <p>En <b>Rutinas</b> creás todo lo que se repite. Cada rutina tiene título, color (su chip en
+  el calendario) y una recurrencia:</p>
+  <ul>
+    <li><b>Todos los días</b> — para hábitos diarios.</li>
+    <li><b>Días de la semana</b> — elegís cuáles (lun/mié/vie, fines de semana, etc.).</li>
+    <li><b>Cada N días</b> — "cada 3 días", para lo que no sigue la semana.</li>
+    <li><b>Una sola vez</b> — un recordatorio puntual con fecha (un turno, un vencimiento).</li>
+  </ul>
+
+  <h3>Pensadas para la vida real</h3>
+  <ul>
+    <li><b>Terminar sin borrar:</b> si dejás un hábito, usá "borrar futuros" — la rutina deja
+    de aparecer de hoy en adelante pero <b>todo tu historial queda</b>. Los meses que caminaste
+    siguen contando.</li>
+    <li><b>Ocultar del calendario:</b> una rutina puede seguir activa pero no mostrar su chip en
+    el mes/semana (para no saturar las celdas). En la vista del día aparece siempre.</li>
+    <li><b>El comentario al marcar:</b> cada "hecho" o "salteado" admite una nota. Con el tiempo
+    eso arma una crónica del hábito, no solo una estadística.</li>
+  </ul>
+
+  <div class="card"><span class="t">Cómo se pensó:</span> las rachas perfectas no existen. El
+  sistema registra hecho, salteado y no-marcado como cosas distintas, y la sección de
+  Estadísticas te muestra <i>adherencia</i> (cuánto cumpliste de lo aplicable), no cadenas que
+  se rompen y desmoralizan.</div>
+</section>
+
+<!-- ───────────────────────── 7. NOTAS ESPECIALES ───────────────────────── -->
+<section>
+  <h2>7 · Notas especiales a tu medida</h2>
+  <p>Acá está el corazón configurable de Bitácora. Una <b>categoría</b> de nota especial es un
+  formulario que diseñás vos: le ponés nombre, color y los campos que quieras. Después la cargás
+  desde la vista del día, las veces que haga falta (podés registrar varias por día).</p>
+
+  <h3>Los tipos de campo</h3>
+  <table>
+    <tr><th>Tipo</th><th>Qué guarda</th><th>Ideal para</th></tr>
+    <tr><td><b>Texto</b></td><td>Libre</td><td>descripciones, contexto</td></tr>
+    <tr><td><b>Escala</b></td><td>1 a N (números, etiquetas o emojis)</td><td>calidad de sueño, ánimo, foco</td></tr>
+    <tr><td><b>Sí / No</b></td><td>Un tilde</td><td>"¿tomé la medicación?"</td></tr>
+    <tr><td><b>Opciones</b></td><td>Una de una lista tuya</td><td>momento de comida, proyecto</td></tr>
+    <tr><td><b>Número</b></td><td>Cantidad con unidad</td><td>peso, glucemia, vasos de agua</td></tr>
+    <tr><td><b>Duración</b></td><td>Horas y minutos</td><td>tiempo de estudio, ejercicio</td></tr>
+    <tr><td><b>Rango horario</b></td><td>Desde–hasta (banca cruzar medianoche)</td><td>sueño, franjas de trabajo</td></tr>
+    <tr><td><b>Rueda de emociones</b></td><td>Una emoción con precisión creciente</td><td>registro emocional (sección 8)</td></tr>
+  </table>
+
+  <p class="small muted">El campo "Ayuda" de cada campo cumple doble función: es el texto de
+  ejemplo que ves al cargar, y en escala/opciones/número es donde definís las opciones
+  ("Desayuno, Almuerzo, Cena"), las etiquetas de la escala o la unidad.</p>
+
+  <h3>Plantillas rápidas</h3>
+  <p>Para no arrancar de cero hay 7 presets de un clic: <b>🎡 Emociones · 😴 Sueño · 📚 Estudio ·
+  🍎 Alimentación · 👥 Social · 🎨 Aficiones · 💼 Trabajo</b>. Prellenan el formulario y los
+  ajustás antes de guardar — son punto de partida, no molde.</p>
+
+  <h3>Detalles con intención</h3>
+  <ul>
+    <li><b>Badge en calendario:</b> cada categoría puede mostrar su sello en la celda del día —
+    ves "este día registré Sueño y Emociones" sin entrar.</li>
+    <li><b>Etiquetas:</b> toda nota especial admite tags libres, que después sirven para filtrar
+    gráficos (sección 9).</li>
+    <li><b>📈 Graficar:</b> cualquier campo medible se puede tildar para que aparezca
+    automáticamente en Estadísticas. Sin tilde, no hay gráfico: vos decidís qué se mide.</li>
+  </ul>
+</section>
+
+<!-- ───────────────────────── 8. RUEDA DE EMOCIONES ───────────────────────── -->
+<section>
+  <h2>8 · La rueda de emociones</h2>
+  <p>Ponerle nombre exacto a lo que sentís es difícil — y es la mitad del trabajo de regularlo.
+  La rueda existe para eso: en vez de elegir entre "bien" y "mal", explorás visualmente hasta
+  encontrar la palabra justa.</p>
+
+  <h3>Cómo se usa</h3>
+  <ol>
+    <li>En una nota especial con campo de emoción, tocá el campo: se abre la rueda giratoria.</li>
+    <li>Recorré con el mouse: cada gajo se ilumina y muestra su nombre. Girá con
+    <kbd>Q</kbd>/<kbd>E</kbd> o las flechas para ver todo el círculo.</li>
+    <li>De la emoción básica del centro avanzás hacia los anillos externos, cada vez más
+    específicos: Triste → Solo → Abandonado.</li>
+    <li>Clic y queda guardada. En el día se muestra como una cadena de chips con el color de
+    la emoción.</li>
+  </ol>
+
+  <h3>Dos ruedas, dos tradiciones</h3>
+  <ul>
+    <li><b>Willcox</b> (la principal): la clásica rueda de Gloria Willcox de 1982, en español,
+    con 6 emociones núcleo que se abren en dos niveles de matices.</li>
+    <li><b>Ekman</b>: basada en el <i>Atlas of Emotions</i> de Paul Ekman (el científico detrás
+    de los estudios de expresiones universales), con estados ordenados por intensidad.
+    Se cambia con una pestaña dentro de la misma rueda.</li>
+  </ul>
+
+  <p>Mientras explorás, un <b>panel lateral</b> te acompaña con contexto psicológico de la
+  emoción que estás mirando: qué es, para qué sirve sentirla, qué la suele disparar. La rueda
+  no solo registra — también enseña vocabulario emocional.</p>
+</section>
+
+<!-- ───────────────────────── 9. ESTADÍSTICAS ───────────────────────── -->
+<section>
+  <h2>9 · Estadísticas (solo lo que vos pidas)</h2>
+  <p>La regla de oro: <b>acá no aparece nada que no hayas pedido.</b> Sin tableros precargados
+  ni métricas-por-las-dudas. Hay dos maneras de pedir:</p>
+
+  <h3>1 · El tilde 📈 (automático)</h3>
+  <p>Marcaste "graficar" en un campo de una categoría → su evolución aparece sola: línea para
+  números y tiempos, barras para sí/no, distribución para opciones. Elegís el período arriba
+  (1 mes a 1 año).</p>
+
+  <h3>2 · El constructor (a medida)</h3>
+  <p>"➕ Nuevo gráfico personalizado" te deja armar exactamente lo que necesitás:</p>
+  <ul>
+    <li><b>Campo a graficar</b>, con la opción de <b>sumarle otro campo</b> (p. ej. Horas + Franja,
+    si cargás el tiempo a veces como duración y a veces como rango — se suman en una sola serie).</li>
+    <li><b>Desglosar por</b> un campo de opciones: separa la serie en grupos apilados de colores
+    (uno por proyecto, por momento de comida, por lo que sea).</li>
+    <li><b>Período</b>: por día, por semana o por mes — las sumas respetan tu día de inicio
+    de semana.</li>
+    <li><b>Etiqueta</b>: filtra a las entradas que tengan ese tag.</li>
+  </ul>
+  <p>Cuando el gráfico es desglosado, abajo aparece la <b>tabla de totales</b> del período,
+  ordenada de mayor a menor y en formato legible ("42 h 30 min") — el número listo para usar.</p>
+
+  <div class="card"><span class="t">Receta: horas trabajadas por empleador.</span>
+  ① Notas especiales → plantilla 💼 Trabajo → editá la lista de proyectos en el campo Ayuda de
+  "Proyecto" → guardá. ② Cada bloque de trabajo: nota especial con Proyecto + Franja (o Horas).
+  ③ Estadísticas → nuevo gráfico → campo Horas, "+ sumar" Franja, desglosar por Proyecto,
+  por semana. Resultado: barras apiladas semana a semana y el total exacto por cliente para
+  facturar.</div>
+
+  <h3>Adherencia de rutinas</h3>
+  <p>Al pie, una barra por rutina: hechas / aplicables y el porcentaje, en el período elegido.
+  Aplicable = los días en que la rutina tocaba; lo que importa es la proporción, no la racha.</p>
+</section>
+
+<!-- ───────────────────────── 10. DATOS ───────────────────────── -->
+<section>
+  <h2>10 · Tus datos: exportar, backup y reset</h2>
+  <p>Todo en la pestaña <b>Datos</b>:</p>
+
+  <h3>Exportar a CSV</h3>
+  <p>Elegís un rango de fechas y descargás tus notas y cumplimientos de rutinas en un CSV que
+  abre cualquier planilla. Pensado, entre otras cosas, para llevarle un período al médico.</p>
+
+  <h3>Copia de seguridad</h3>
+  <ul>
+    <li><b>Descargar backup (.db):</b> un archivo con absolutamente todo. Guardalo donde
+    quieras — pendrive, nube, carpeta. Hacelo costumbre (¿una vez por semana?).</li>
+    <li><b>Restaurar:</b> subís un backup y reemplaza todos los datos actuales. Antes de pisar
+    nada se guarda automáticamente un respaldo del estado previo
+    (<code>health-prerestore-*.db</code>), por si te arrepentís.</li>
+  </ul>
+
+  <h3>Zona peligrosa</h3>
+  <p>Borra <b>toda</b> la base y arranca de cero. Para que no pase por accidente, pide tres
+  confirmaciones: escribir la frase <b>BORRAR TODO</b> (el botón está deshabilitado hasta que
+  coincida), confirmar el aviso final, y aun así deja un backup automático
+  (<code>health-prereset-*.db</code>) junto a la base de datos.</p>
+
+  <div class="card warn"><span class="t">La regla de la casa:</span> antes de restaurar o
+  borrar, descargá un backup. Tarda dos segundos y convierte cualquier error en anécdota.</div>
+</section>
+
+<!-- ───────────────────────── 11. AJUSTES ───────────────────────── -->
+<section>
+  <h2>11 · Ajustes</h2>
+  <table>
+    <tr><th>Ajuste</th><th>Qué hace</th></tr>
+    <tr><td><b>Tema</b></td><td>8 paletas (7 oscuras + 1 clara). Se previsualizan al tocar; guardá para fijar.</td></tr>
+    <tr><td><b>Formato de fecha</b></td><td>dd/mm/aaaa, mm/dd/aaaa o ISO — en todos los campos de fecha de la app.</td></tr>
+    <tr><td><b>Formato de hora</b></td><td>24 h o 12 h AM/PM, en rangos horarios y sellos de notas.</td></tr>
+    <tr><td><b>Inicio de semana</b></td><td>Lunes o domingo — afecta calendario, semana y las sumas semanales de Estadísticas.</td></tr>
+    <tr><td><b>Vista de inicio</b></td><td>Qué abre la app: mes, semana u hoy.</td></tr>
+    <tr><td><b>Acceso a Estadísticas / Datos</b></td><td>Mostrar u ocultar esas pestañas del menú (las funciones siguen existiendo).</td></tr>
+    <tr><td><b>Notas rápidas / especiales al abrir un día</b></td><td>Si el formulario de alta aparece desplegado o como botón.</td></tr>
+  </table>
+  <p class="small muted">Al final de Ajustes está también la referencia de atajos de teclado.</p>
+</section>
+
+<!-- ───────────────────────── 12. ATAJOS ───────────────────────── -->
+<section>
+  <h2>12 · Atajos y trucos</h2>
+
+  <h3>Atajos de teclado</h3>
+  <table>
+    <tr><th>Atajo</th><th>Acción</th></tr>
+    <tr><td><kbd>Ctrl</kbd> + rueda del mouse &nbsp;·&nbsp; <kbd>Ctrl</kbd> + <kbd>+</kbd>/<kbd>−</kbd></td><td>Zoom de toda la app</td></tr>
+    <tr><td><kbd>Ctrl</kbd> + <kbd>0</kbd> &nbsp;·&nbsp; <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd></td><td>Restablecer el zoom</td></tr>
+    <tr><td><kbd>Ctrl</kbd> + <kbd>R</kbd></td><td>Recargar la página / ventana</td></tr>
+    <tr><td><kbd>Q</kbd> / <kbd>E</kbd> &nbsp;o&nbsp; <kbd>←</kbd> / <kbd>→</kbd></td><td>Girar la rueda de emociones</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Cerrar la rueda</td></tr>
+  </table>
+
+  <h3>Trucos</h3>
+  <ul>
+    <li><b>El buscador</b> de la barra encuentra cualquier nota por su texto — tu memoria externa.</li>
+    <li><b>Ventana angosta:</b> llevá Bitácora a un costado del monitor; en menos de 600 px de
+    ancho se vuelve agenda vertical, perfecta como compañera de jornada.</li>
+    <li><b>Zoom + celdas:</b> combiná el zoom global con el deslizador de tamaño de celdas hasta
+    que el mes se lea como a vos te gusta. Ambas cosas se recuerdan.</li>
+    <li><b>Los colores de las notas</b> no tienen significado fijo: inventá tu código (rojo =
+    salud, verde = logro...) y va a estar ahí cada vez que mires el mes.</li>
+  </ul>
+</section>
+
+<!-- ───────────────────────── 13. RECETAS ───────────────────────── -->
+<section>
+  <h2>13 · Recetas: maneras de usarla</h2>
+
+  <h3>🩺 Registro de salud para la consulta</h3>
+  <p>Categorías con campos número (peso, glucemia), sí/no (medicación) y escala (energía), con
+  📈 activado. Rutinas para los hábitos que te indicaron. Antes del turno: Estadísticas en
+  "6 meses" para ver tendencias, y Datos → CSV del período para llevar el detalle. El registro
+  diario de dos minutos se convierte en información clínica real.</p>
+
+  <h3>💼 Horas por empleador o proyecto</h3>
+  <p>La receta completa está en la sección 9: plantilla Trabajo + gráfico desglosado por
+  Proyecto + tabla de totales. Sirve igual para repartir tu tiempo entre proyectos propios.</p>
+
+  <h3>😴 Entender tu sueño</h3>
+  <p>Plantilla Sueño (rango Acostarse→Levantarse + escala de calidad). El rango banca cruzar la
+  medianoche, así que "23:30–07:00" se registra tal cual. En un par de semanas el gráfico
+  muestra si la hora de acostarte mueve la calidad.</p>
+
+  <h3>🎡 Diario emocional</h3>
+  <p>Plantilla Emociones: la rueda + "¿qué la disparó?" + "¿cómo la manejé?". Lo valioso no es
+  el gráfico sino el hábito de nombrar con precisión; el panel de contexto te va enseñando el
+  mapa. Los badges en el calendario muestran tu constancia.</p>
+
+  <h3>📚 Estudio o proyectos personales</h3>
+  <p>Plantilla Estudio (duración + tema + escala de foco) o una categoría propia. Con 📈 en la
+  duración ves las horas invertidas por semana — y con un campo de opciones podés desglosar por
+  materia, igual que el tracker de trabajo.</p>
+
+  <div class="card"><span class="t">El consejo final:</span> arrancá con poco. Una rutina, una
+  categoría, notas rápidas cuando pinte. Bitácora está pensada para crecer con vos: cada pieza
+  (campos, gráficos, etiquetas, colores) se agrega cuando la necesitás, no antes. Un día a la
+  vez.</div>
+</section>
+
+</body>
+</html>
