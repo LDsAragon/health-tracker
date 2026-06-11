@@ -396,7 +396,11 @@
   </div>
 
   <!-- Input de nota al fondo — como la celda del calendario -->
-  <form class="day-card-footer" method="POST" action="{{ url_for('note_add', date_str=date_str) }}">
+  {% if journal_cats %}
+  <button type="button" class="day-journal-add-toggle" id="rapida-collapsed" style="display:none;"
+          onclick="toggleDayJournal()">+ Agregar nota rápida</button>
+  {% endif %}
+  <form class="day-card-footer" id="rapida-form" method="POST" action="{{ url_for('note_add', date_str=date_str) }}">
     <div class="day-add-row">
       <div class="color-picker-row">
         <label class="color-opt-none">
@@ -544,14 +548,20 @@ function buildFields(containerId, catId) {
 function updateDayFields(catId) { buildFields('jday-fields', catId); }
 
 function toggleDayJournal() {
-  const wrap = document.getElementById('jday-form-wrap');
-  const btn  = document.getElementById('jday-toggle');
-  if (wrap.style.display === 'none') {
+  const wrap  = document.getElementById('jday-form-wrap');
+  const btn   = document.getElementById('jday-toggle');
+  const rForm = document.getElementById('rapida-form');       // nota rápida (en su lugar)
+  const rBtn  = document.getElementById('rapida-collapsed');  // su botón colapsado
+  if (wrap.style.display === 'none') {        // abrir nota especial
     wrap.style.display = 'block';
     btn.style.display = 'none';
-  } else {
+    if (rForm) rForm.style.display = 'none';  // colapsar nota rápida
+    if (rBtn)  rBtn.style.display = 'block';
+  } else {                                    // cerrar nota especial
     wrap.style.display = 'none';
     btn.style.display = 'block';
+    if (rForm) rForm.style.display = '';      // restaurar nota rápida
+    if (rBtn)  rBtn.style.display = 'none';
     document.getElementById('jday-cat').value = '';
     document.getElementById('jday-fields').innerHTML = '';
   }

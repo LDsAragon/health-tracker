@@ -392,3 +392,10 @@ def test_rango_display_12h(client):
     body = client.get(f"/day/{DATE}").data.decode("utf-8")
     assert "11:00 PM" in body
     assert "8:00 AM" in body
+
+
+def test_dia_alta_rapida_colapsable(client):
+    client.post("/journal/add", data={"name": "Sueño", "color": "#3b82f6"})
+    body = client.get(f"/day/{DATE}").data.decode("utf-8")
+    assert "Agregar nota especial" in body   # toggle de nota especial
+    assert "rapida-collapsed" in body        # botón colapsado de la nota rápida
