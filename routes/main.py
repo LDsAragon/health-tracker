@@ -6,6 +6,7 @@ import database as db
 import services
 from appconfig import THEMES, SETTINGS
 from helpers import _setting, _first_weekday, _week_start, _dow_names, safe_back
+from filters import dur_fmt_filter
 
 bp = Blueprint("main", __name__)
 
@@ -157,14 +158,35 @@ def stats_view():
             charts.append({"title": f"{f['category_name']} · {f['label']}", **s})
     # Personalizados: tabla charts (cada uno con su propio rango)
     for ch in db.get_charts():
-        info = fieldinfo.get((ch["category_id"], ch["field_label"]))
-        if not info:
+        labels = [l for l in (ch["field_label"] or "").split("|") if l]
+        infos = [(l, *fieldinfo[(ch["category_id"], l)]) for l in labels
+                 if (ch["category_id"], l) in fieldinfo]
+        if not infos:
             continue   # categoría/campo borrado
-        ftype, cname = info
+        cname  = infos[0][2]
         cstart = (today - timedelta(days=ch["range_days"] - 1)).isoformat()
-        s = db.build_series(ch["category_id"], ch["field_label"], ftype, cstart, end)
-        charts.append({"title": ch["title"] or f"{cname} · {ch['field_label']}",
-                       "chart_id": ch["id"], **s})
+        grouped = ch["group_field"] or ch["bucket"] not in ("", "day") or len(infos) > 1
+        if grouped:
+            value_fields = [(l, t) for l, t, _ in infos]
+            s = db.grouped_series(ch["category_id"], value_fields, ch["group_field"],
+                                  cstart, end, bucket=ch["bucket"] or "day",
+                                  tag_filter=ch["tag_filter"])
+            # Totales legibles (para la tabla bajo el gráfico) + minutos→horas en el eje
+            fmt = (lambda v: dur_fmt_filter(round(v))) if s["time_based"] else (lambda v: round(v, 2))
+            s["totals"] = [{"name": g, "value": fmt(v)}
+                           for g, v in sorted(s["totals"].items(), key=lambda kv: -kv[1])]
+            if s["time_based"]:
+                for d_set in s["datasets"]:
+                    d_set["data"] = [round(v / 60, 2) for v in d_set["data"]]
+                s["unit"] = "horas"
+            title = ch["title"] or f"{cname} · {' + '.join(l for l, _, _ in infos)}" + \
+                    (f" por {ch['group_field']}" if ch["group_field"] else "")
+            charts.append({"title": title, "chart_id": ch["id"], **s})
+        else:
+            label, ftype, _ = infos[0]
+            s = db.build_series(ch["category_id"], label, ftype, cstart, end)
+            charts.append({"title": ch["title"] or f"{cname} · {label}",
+                           "chart_id": ch["id"], **s})
 
     events = db.get_recurring_events()
     adh = db.get_completion_stats(events, days=range_days)
@@ -175,10 +197,13 @@ def stats_view():
         for ev in events if adh[ev["id"]]["applicable"]
     ]
 
-    # Para el constructor: categorías con sus campos graficables (numérico/sino/opciones)
+    # Para el constructor: categorías con campos graficables (con tipo, para filtrar
+    # numéricos al desglosar) + campos `opciones` (candidatos a "desglosar por")
     builder_cats = [
         {"id": c["id"], "name": c["name"],
-         "fields": [f["label"] for f in c.get("fields", []) if f.get("type") in _CHARTABLE_TYPES]}
+         "fields": [{"label": f["label"], "type": f.get("type", "text")}
+                    for f in c.get("fields", []) if f.get("type") in _CHARTABLE_TYPES],
+         "group_fields": [f["label"] for f in c.get("fields", []) if f.get("type") == "opciones"]}
         for c in cats
     ]
     builder_cats = [c for c in builder_cats if c["fields"]]
@@ -191,11 +216,18 @@ def stats_view():
 def charts_add():
     cat_id = request.form.get("category_id", "").strip()
     field  = request.form.get("field_label", "").strip()
+    field2 = request.form.get("field_label2", "").strip()   # opcional: se suma al primero
     title  = request.form.get("title", "").strip()
     rng    = request.form.get("range_days", "90")
     rng    = int(rng) if rng in ("30", "90", "180", "365") else 90
+    group  = request.form.get("group_field", "").strip()
+    bucket = request.form.get("bucket", "day")
+    bucket = bucket if bucket in ("day", "week", "month") else "day"
+    tag    = request.form.get("tag_filter", "").strip()
     if cat_id and field:
-        db.add_chart(int(cat_id), field, title, rng)
+        labels = field if not field2 or field2 == field else f"{field}|{field2}"
+        db.add_chart(int(cat_id), labels, title, rng,
+                     group_field=group, bucket=bucket, tag_filter=tag)
     return redirect(url_for("main.stats_view"))
 
 

@@ -54,6 +54,7 @@
         <button type="button" class="btn-undo" onclick="applyPreset('alimentacion')">🍎 Alimentación</button>
         <button type="button" class="btn-undo" onclick="applyPreset('social')">👥 Social</button>
         <button type="button" class="btn-undo" onclick="applyPreset('aficiones')">🎨 Aficiones</button>
+        <button type="button" class="btn-undo" onclick="applyPreset('trabajo')">💼 Trabajo</button>
       </div>
       <p style="font-size:11px;color:var(--muted);margin:6px 0 0;">Prellenan los campos abajo · podés ajustarlos antes de guardar.</p>
     </div>
@@ -220,6 +221,12 @@ function addField(containerId) {
 
 // Presets dedicados (widgets) compuestos de los campos genéricos
 const JCAT_PRESETS = {
+  trabajo: { name: 'Trabajo', color: '#14b8a6', fields: [
+    { label: 'Proyecto', type: 'opciones', ph: 'ClienteA, ClienteB, Proyecto propio' },
+    { label: 'Franja',   type: 'rango',    ph: '' },
+    { label: 'Horas',    type: 'duracion', ph: '' },
+    { label: 'Notas',    type: 'text',     ph: 'en qué trabajé...' }
+  ]},
   emociones: { name: 'Emociones', color: '#ec4899', fields: [
     { label: 'Emoción',          type: 'emotion-wheel', ph: '' },
     { label: '¿Qué la disparó?', type: 'text',          ph: 'situación, pensamiento...' },

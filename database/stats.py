@@ -1,8 +1,12 @@
 """Series para Estadísticas a partir de las entradas de notas especiales.
-Funciones testeables; el shaping para Chart.js queda en build_series()."""
+Funciones testeables; el shaping para Chart.js queda en build_series()/grouped_series()."""
+from datetime import date, timedelta
+
 from .journal import get_journal_categories, get_journal_entries_range
+from .settings import get_setting
 
 NUMERIC_TYPES = ("numero", "escala", "duracion", "rango")
+TIME_TYPES = ("duracion", "rango")   # se miden en minutos
 
 
 def _parse_numeric(ftype, raw):
@@ -74,6 +78,68 @@ def chartable_fields():
                     "label": f["label"], "type": f.get("type", "text"),
                 })
     return out
+
+
+def _bucket_key(d_str, bucket, first_weekday):
+    """Clave de agrupación temporal: día (ISO), semana (ISO del 1er día) o mes (aaaa-mm)."""
+    if bucket == "month":
+        return d_str[:7]
+    if bucket == "week":
+        d = date.fromisoformat(d_str)
+        return (d - timedelta(days=(d.weekday() - first_weekday) % 7)).isoformat()
+    return d_str
+
+
+def _entry_tags(e):
+    return {t.strip().lower() for t in (e.get("tags") or "").split(",") if t.strip()}
+
+
+def grouped_series(cat_id, value_fields, group_label, start, end, bucket="day", tag_filter=""):
+    """Serie agregada para Chart.js apilado + totales.
+
+    value_fields: [(label, ftype)] — el valor de una entrada es la SUMA de esos
+    campos (permite mezclar duración y rango: ambos → minutos). group_label:
+    campo `opciones` que separa los grupos (vacío → un solo grupo "Total").
+    bucket: day|week|month (la semana respeta el ajuste week_start).
+    tag_filter: si se da, solo cuentan entradas con esa etiqueta.
+
+    Devuelve {kind, labels, datasets: [{label, data}], totals: {grupo: suma},
+    time_based: True si todos los campos son de tiempo (minutos)}.
+    """
+    fw = 6 if get_setting("week_start", "mon") == "sun" else 0
+    tag = (tag_filter or "").strip().lower()
+    entries = get_journal_entries_range(start, end)
+
+    groups = {}     # grupo -> {bucket_key: suma}
+    buckets = set()
+    for d_str, lst in entries.items():
+        for e in lst:
+            if e["category_id"] != cat_id:
+                continue
+            if tag and tag not in _entry_tags(e):
+                continue
+            v, has = 0, False
+            for label, ftype in value_fields:
+                pv = _parse_numeric(ftype, e["values"].get(label))
+                if pv is not None:
+                    v, has = v + pv, True
+            if not has:
+                continue
+            g = ((e["values"].get(group_label) or "").strip() or "Sin asignar") if group_label else "Total"
+            b = _bucket_key(d_str, bucket, fw)
+            buckets.add(b)
+            gb = groups.setdefault(g, {})
+            gb[b] = gb.get(b, 0) + v
+
+    labels = sorted(buckets)
+    return {
+        "kind": "stacked",
+        "labels": labels,
+        "datasets": [{"label": g, "data": [groups[g].get(b, 0) for b in labels]}
+                     for g in sorted(groups)],
+        "totals": {g: sum(gb.values()) for g, gb in groups.items()},
+        "time_based": bool(value_fields) and all(ft in TIME_TYPES for _, ft in value_fields),
+    }
 
 
 def build_series(cat_id, field_label, ftype, start, end):

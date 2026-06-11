@@ -58,6 +58,9 @@ SCHEMA = """
         field_label TEXT NOT NULL,
         title       TEXT DEFAULT '',
         range_days  INTEGER DEFAULT 90,
+        group_field TEXT DEFAULT '',
+        bucket      TEXT DEFAULT 'day',
+        tag_filter  TEXT DEFAULT '',
         created_at  TEXT DEFAULT (datetime('now','localtime'))
     );
 """
@@ -68,6 +71,10 @@ MIGRATIONS = [
     ("completions",      "status",           "ALTER TABLE completions ADD COLUMN status TEXT DEFAULT 'done'"),
     ("recurring_events", "end_date",         "ALTER TABLE recurring_events ADD COLUMN end_date TEXT DEFAULT ''"),
     ("recurring_events", "show_in_calendar", "ALTER TABLE recurring_events ADD COLUMN show_in_calendar INTEGER DEFAULT 1"),
+    # Gráficos desglosados/agregados (jun 2026): campo de desglose, período y filtro por etiqueta
+    ("charts",           "group_field",      "ALTER TABLE charts ADD COLUMN group_field TEXT DEFAULT ''"),
+    ("charts",           "bucket",           "ALTER TABLE charts ADD COLUMN bucket TEXT DEFAULT 'day'"),
+    ("charts",           "tag_filter",       "ALTER TABLE charts ADD COLUMN tag_filter TEXT DEFAULT ''"),
 ]
 
 

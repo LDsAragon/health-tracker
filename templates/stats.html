@@ -29,6 +29,18 @@
       {% for c in builder_cats %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
     </select>
     <select name="field_label" id="builder-field" required><option value="">Campo…</option></select>
+    <select name="field_label2" id="builder-field2" title="Se suma al campo principal (ej. Horas + Franja)" style="display:none;">
+      <option value="">+ sumar otro campo…</option>
+    </select>
+    <select name="group_field" id="builder-group" style="display:none;" onchange="statsGroupChanged()">
+      <option value="">Sin desglose</option>
+    </select>
+    <select name="bucket" id="builder-bucket">
+      <option value="day">Por día</option>
+      <option value="week">Por semana</option>
+      <option value="month">Por mes</option>
+    </select>
+    <input type="text" name="tag_filter" placeholder="Etiqueta (opcional)" style="max-width:150px;">
     <input type="text" name="title" placeholder="Título (opcional)">
     <select name="range_days">
       <option value="30">1 mes</option><option value="90" selected>3 meses</option>
@@ -52,8 +64,15 @@
       </form>
       {% endif %}
     </div>
-    {% if c.data %}<canvas id="chart-{{ loop.index0 }}"></canvas>
+    {% if c.data or c.datasets %}<canvas id="chart-{{ loop.index0 }}"></canvas>
     {% else %}<p class="page-sub" style="margin:0;">Sin datos en el rango.</p>{% endif %}
+    {% if c.totals %}
+    <table class="stats-totals">
+      {% for t in c.totals %}
+      <tr><td>{{ t.name }}</td><td class="stats-totals-val">{{ t.value }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
   </div>
   {% endfor %}
 </div>

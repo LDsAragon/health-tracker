@@ -696,3 +696,8 @@ select.journal-cat-select {
   background: var(--surface2); border: 1px solid var(--line);
   border-bottom-width: 2px; border-radius: 6px;
 }
+
+/* ── Tabla de totales bajo un gráfico desglosado (Estadísticas) ─────────────── */
+.stats-totals { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 13px; }
+.stats-totals td { padding: 4px 6px; border-top: 1px solid var(--line); color: var(--text); }
+.stats-totals-val { text-align: right; font-weight: 600; color: var(--accent); white-space: nowrap; }
