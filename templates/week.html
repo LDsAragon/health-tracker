@@ -63,7 +63,7 @@
       {% set tc = todo_counts.get(ds) %}
       {% if tc %}
       <span class="cal-todo-badge {% if tc.done == tc.total %}cal-todo-done{% endif %}"
-            title="Objetivos del día">&#10003; {{ tc.done }}/{{ tc.total }}</span>
+            title="Lista de tareas">Tareas {{ tc.done }}/{{ tc.total }}</span>
       {% endif %}
     </a>
 
