@@ -3,6 +3,10 @@
 {% block title %}Datos{% endblock %}
 
 {% block content %}
+<div class="page-back" style="margin-bottom:14px;">
+  <a href="{{ back or url_for('main.home') }}" class="back-link">&#8592; {{ 'Volver' if back else 'Calendario' }}</a>
+</div>
+
 <div class="page-top">
   <h1 class="page-title">Datos</h1>
   <p class="page-sub">Exportá, respaldá y restaurá toda tu información.</p>
@@ -19,7 +23,7 @@
 <!-- Exportar a CSV -->
 <div class="page-top" style="margin-bottom:12px;">
   <h2 class="page-title" style="font-size:20px;">Exportar a CSV</h2>
-  <p class="page-sub">Descargá tus notas y completaciones como CSV para llevar al médico o revisar en otro lugar.</p>
+  <p class="page-sub">Descargá tus notas como CSV.</p>
 </div>
 <div class="export-form-wrap">
   <form class="export-form" action="{{ url_for('main.export_download') }}" method="GET">
@@ -61,6 +65,7 @@
     <p class="page-sub" style="margin:0 0 8px;">Reemplaza <b>todos</b> los datos actuales por los del archivo elegido. Se guarda un backup automático previo (<code>health-prerestore-*.db</code>) por las dudas.</p>
     <form method="POST" action="{{ url_for('main.restore_upload') }}" enctype="multipart/form-data"
           onsubmit="return confirm('Esto reemplaza TODA la base de datos actual por la del archivo. ¿Continuar?');">
+      <input type="hidden" name="back" value="{{ back or '' }}">
       <input type="file" name="dbfile" accept=".db,.sqlite,.sqlite3" required
              style="font-size:13px;margin-bottom:10px;display:block;color:var(--text);">
       <button type="submit" class="btn-primary">Restaurar base de datos</button>

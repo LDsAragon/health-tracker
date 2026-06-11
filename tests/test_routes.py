@@ -412,6 +412,17 @@ def test_restore_sin_archivo(client):
     assert r.status_code == 302
     assert "err-nofile" in r.headers["Location"]
 
+def test_datos_volver_contextual(client):
+    body = client.get("/export?back=/calendar/2026/6").data
+    assert b'href="/calendar/2026/6"' in body
+
+def test_restore_preserva_back(client):
+    import io
+    r = client.post("/restore", data={"dbfile": (io.BytesIO(b"no db"), "x.db"), "back": "/week/2026-06-11"},
+                    content_type="multipart/form-data")
+    assert r.status_code == 302
+    assert "2026-06-11" in r.headers["Location"]
+
 def test_guardar_inicio_semana(client):
     client.post("/ajustes/guardar", data={"week_start": "sun"})
     assert db.get_setting("week_start") == "sun"

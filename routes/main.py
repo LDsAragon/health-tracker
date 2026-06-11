@@ -212,7 +212,8 @@ def export_view():
     today = date.today().isoformat()
     first_of_month = date.today().replace(day=1).isoformat()
     return render_template("export.html", today=today, first_of_month=first_of_month,
-                           datos=request.args.get("datos"))
+                           datos=request.args.get("datos"),
+                           back=safe_back(request.args.get("back")))
 
 
 @bp.route("/export/download")
@@ -279,9 +280,10 @@ def backup_download():
 def restore_upload():
     # Restaura la DB desde un .db subido. Destructivo: reemplaza todos los datos.
     import os, tempfile
+    back = safe_back(request.form.get("back"))
     f = request.files.get("dbfile")
     if not f or not f.filename:
-        return redirect(url_for("main.export_view", datos="err-nofile"))
+        return redirect(url_for("main.export_view", datos="err-nofile", back=back))
     base = os.path.dirname(os.path.abspath(db.db_path())) or "."
     fd, tmp = tempfile.mkstemp(suffix=".db", dir=base)   # mismo dir → os.replace atómico
     os.close(fd)
@@ -292,7 +294,7 @@ def restore_upload():
         for p in (tmp, tmp + "-wal", tmp + "-shm"):
             if os.path.exists(p):
                 os.remove(p)
-    return redirect(url_for("main.export_view", datos="ok" if ok else "err-invalid"))
+    return redirect(url_for("main.export_view", datos="ok" if ok else "err-invalid", back=back))
 
 
 # ── Search ─────────────────────────────────────────────────────────────────────

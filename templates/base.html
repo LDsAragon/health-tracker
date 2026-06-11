@@ -36,7 +36,7 @@
       </a>
       {% endif %}
       {% if settings.show_export != 'hide' %}
-      <a href="{{ url_for('main.export_view') }}"
+      <a href="{{ url_for('main.export_view', back=request.full_path) }}"
          class="nav-link {% if request.endpoint in ('main.export_view', 'main.export_download', 'main.backup_download', 'main.restore_upload') %}active{% endif %}">
         Datos
       </a>
