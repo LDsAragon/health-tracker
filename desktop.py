@@ -83,7 +83,26 @@ def _migrate_from_old_appdata():
     _copy_db(old_db, DB_FILE)
 
 
+def _unblock_dlls():
+    """Quita el "Mark of the Web" de las DLLs del bundle.
+
+    Si la app viajó en un zip (OneDrive, mail, descarga), Windows marca los
+    archivos extraídos y .NET se niega a cargar Python.Runtime.dll con un
+    "Failed to resolve Python.Runtime.Loader.Initialize". Borrar el stream
+    Zone.Identifier antes de importar webview lo cura.
+    """
+    if not getattr(sys, "frozen", False):
+        return
+    internal = Path(sys.executable).parent / "_internal"
+    for p in internal.rglob("*.dll"):
+        try:
+            os.remove(f"{p}:Zone.Identifier")
+        except OSError:
+            pass   # no estaba marcada (lo normal)
+
+
 def main():
+    _unblock_dlls()
     _migrate_from_old_appdata()
     APP_DIR.mkdir(parents=True, exist_ok=True)
     os.environ["HT_DB"] = str(DB_FILE)
@@ -113,13 +132,19 @@ if __name__ == "__main__":
         # Congelada con --windowed no hay consola: dejar rastro y avisar.
         APP_DIR.mkdir(parents=True, exist_ok=True)
         log = APP_DIR / "error.log"
-        log.write_text(traceback.format_exc(), encoding="utf-8")
+        tb = traceback.format_exc()
+        log.write_text(tb, encoding="utf-8")
+        msg = f"Bitácora no pudo arrancar.\nDetalle en: {log}"
+        if "Python.Runtime" in tb:
+            msg += ("\n\nPosibles causas:\n"
+                    "• Archivos bloqueados por venir de internet: clic derecho sobre el .zip\n"
+                    "  → Propiedades → Desbloquear (antes de extraer), o reintentá: la app\n"
+                    "  intenta desbloquearse sola en cada arranque.\n"
+                    "• Falta .NET Framework 4.7.2+ (Windows Update lo trae).\n"
+                    "• El antivirus puso una DLL en cuarentena.")
         try:
             import ctypes
-            ctypes.windll.user32.MessageBoxW(
-                None,
-                f"Bitácora no pudo arrancar.\nDetalle en: {log}",
-                WINDOW_TITLE, 0x10)
+            ctypes.windll.user32.MessageBoxW(None, msg, WINDOW_TITLE, 0x10)
         except Exception:
             pass
         raise
