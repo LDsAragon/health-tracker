@@ -1,0 +1,29 @@
+# CI: tests en cada push/PR + tarball de Linux como artifact descargable.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pytest
+      - run: pytest -q
+
+  tarball-linux:
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tools/make_release_linux.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bitacora-linux
+          path: dist/Bitacora-linux-*.tar.gz
