@@ -1,0 +1,28 @@
+BITÁCORA — calendario personal de hábitos, registros y emociones
+================================================================
+(versión Linux: Ubuntu/Debian/Mint, Fedora, Arch/Manjaro y derivados)
+
+CÓMO INSTALARLA
+1. Descomprimí el .tar.gz en tu carpeta personal, por ejemplo:
+     tar -xzf Bitacora-linux-*.tar.gz -C ~/
+   (queda todo dentro de una carpeta "Bitacora")
+2. Entrá a la carpeta y corré el instalador — pide tu contraseña para
+   instalar unos paquetes del sistema, una sola vez:
+     cd ~/Bitacora
+     ./instalar.sh
+3. Listo: buscá "Bitácora" en el menú de aplicaciones,
+   o corré ./bitacora.sh desde la carpeta.
+
+REQUISITOS
+- Ubuntu 22.04+ / Debian 12+ / Mint 21+ (apt), Fedora (dnf),
+  o Arch/Manjaro/EndeavourOS (pacman; conviene el sistema actualizado).
+- Internet solo durante la instalación; después la app no lo usa.
+
+TUS DATOS
+- Todo se guarda en tu máquina, en ~/.local/share/Bitacora/health.db
+  Sin internet, sin cuentas, sin nube.
+- Hacé copias de seguridad desde la pestaña "Datos" de la app
+  (botón "Descargar backup") cada tanto.
+
+MANUAL
+El manual completo de uso viene en esta carpeta: Bitacora-Manual.pdf
