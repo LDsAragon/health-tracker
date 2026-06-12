@@ -1,6 +1,8 @@
 # Publica el release del día en GitHub Releases: builds frescos de ambas
 # plataformas + gh release create v<fecha> con el zip y el tar.gz.
 # Necesita gh CLI autenticada (gh auth login).
+# -Tag para un tag distinto al del día (ej: v2026-06-12.1 si hubo que re-publicar).
+param([string]$Tag = "")
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
@@ -11,7 +13,7 @@ if ($LASTEXITCODE) {
 }
 
 $fecha = Get-Date -Format yyyy-MM-dd
-$tag = "v$fecha"
+$tag = if ($Tag) { $Tag } else { "v$fecha" }
 $zip = "dist\Bitacora-$fecha.zip"
 $tgz = "dist\Bitacora-linux-$fecha.tar.gz"
 
