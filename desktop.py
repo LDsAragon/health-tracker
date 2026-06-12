@@ -12,6 +12,7 @@ import os
 import sys
 import sqlite3
 import traceback
+from datetime import date
 from pathlib import Path
 
 def _default_app_dir():
@@ -93,6 +94,28 @@ def _migrate_from_old_appdata():
     _copy_db(old_db, DB_FILE)
 
 
+AUTO_BACKUPS = 7
+
+
+def _auto_backup():
+    """Backup diario automático al arrancar: APP_DIR/backups/health-auto-<fecha>.db.
+
+    Red de seguridad además del backup manual de la pestaña Datos (la gente
+    no se acuerda). Uno por día, conserva los últimos AUTO_BACKUPS. Si falla
+    (disco lleno, etc.) la app arranca igual: queda rastro en error.log.
+    """
+    if not DB_FILE.exists():
+        return
+    backups = APP_DIR / "backups"
+    backups.mkdir(parents=True, exist_ok=True)
+    dest = backups / f"health-auto-{date.today().isoformat()}.db"
+    if dest.exists():
+        return
+    _copy_db(DB_FILE, dest)
+    for viejo in sorted(backups.glob("health-auto-*.db"))[:-AUTO_BACKUPS]:
+        viejo.unlink()
+
+
 def _unblock_dlls():
     """Quita el "Mark of the Web" de las DLLs del bundle.
 
@@ -117,6 +140,11 @@ def main():
     APP_DIR.mkdir(parents=True, exist_ok=True)
     os.environ["HT_DB"] = str(DB_FILE)
     _migrate_first_run()
+    try:
+        _auto_backup()
+    except Exception:
+        with open(APP_DIR / "error.log", "a", encoding="utf-8") as f:
+            f.write("auto-backup falló:\n" + traceback.format_exc())
 
     from app import create_app
     flask_app = create_app()

@@ -30,6 +30,23 @@ if real_db.exists():
 else:
     print("(no hay health.db local; arranque limpio)")
 
+# Backup automático: crea el de hoy y rota los viejos
+backups = desktop.APP_DIR / "backups"
+backups.mkdir(parents=True, exist_ok=True)
+for i in range(desktop.AUTO_BACKUPS + 3):
+    (backups / f"health-auto-2000-01-{i+1:02d}.db").touch()
+desktop._auto_backup()
+restantes = sorted(backups.glob("health-auto-*.db"))
+if desktop.DB_FILE.exists():
+    from datetime import date
+    hoy = backups / f"health-auto-{date.today().isoformat()}.db"
+    assert hoy.exists(), "no creó el backup de hoy"
+    assert len(restantes) == desktop.AUTO_BACKUPS, restantes
+    antes = len(restantes)
+    desktop._auto_backup()  # segunda corrida el mismo día: no duplica
+    assert len(sorted(backups.glob("health-auto-*.db"))) == antes
+    print(f"OK auto-backup: {hoy.name}, rotación a {desktop.AUTO_BACKUPS}")
+
 from app import create_app
 app = create_app()
 client = app.test_client()
