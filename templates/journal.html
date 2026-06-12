@@ -161,6 +161,7 @@
             {% for f in cat.fields %}
             {% set ftype = f.get('type', 'text') %}
             <div class="journal-field-row">
+              <input type="hidden" name="field_oldlabel[]" value="{{ f.label }}">
               <input type="text" name="field_label[]" value="{{ f.label }}" placeholder="Nombre del campo" style="flex:1.2;">
               <select name="field_type[]" class="journal-type-select">
                 {% for slug, label in field_types %}
@@ -176,6 +177,26 @@
             {% endfor %}
           </div>
         </div>
+
+        {% set optfields = cat.fields | selectattr('type', 'equalto', 'opciones') | list %}
+        {% if optfields %}
+        <div class="field-row" style="align-items:flex-end;">
+          <div class="field-group">
+            <label>Renombrar una opción (migra lo ya guardado en las entradas)</label>
+            <select name="opt_rename_sel" class="journal-type-select">
+              <option value="">— No renombrar nada —</option>
+              {% for f in optfields %}{% for o in f.get('placeholder', '').split(',') %}
+              {% set ov = o.strip() %}{% if ov %}
+              <option value="{{ f.label }}||{{ ov }}">{{ f.label }}: {{ ov }}</option>
+              {% endif %}{% endfor %}{% endfor %}
+            </select>
+          </div>
+          <div class="field-group">
+            <label>Nuevo nombre</label>
+            <input type="text" name="opt_rename_to" placeholder="ej: Cliente A">
+          </div>
+        </div>
+        {% endif %}
 
         <div id="jcat-edit-error-{{ cat.id }}" class="form-error" style="display:none;"></div>
         <div style="display:flex;gap:8px;">
@@ -202,6 +223,7 @@ function _fieldRow(label, type, ph, chart) {
   const row = document.createElement('div');
   row.className = 'journal-field-row';
   row.innerHTML =
+    '<input type="hidden" name="field_oldlabel[]" value="">' +
     '<input type="text" name="field_label[]" value="' + esc(label) + '" placeholder="Nombre del campo" style="flex:1.2;">' +
     '<select name="field_type[]" class="journal-type-select">' + opts + '</select>' +
     '<input type="text" name="field_placeholder[]" value="' + esc(ph) + '" placeholder="Ayuda (opcional)" style="flex:1;">' +

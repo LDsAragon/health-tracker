@@ -15,7 +15,7 @@ from .journal import (
     get_journal_categories, add_journal_category, update_journal_category,
     delete_journal_category, get_journal_entries_for_date,
     get_journal_entries_range, add_journal_entry, update_journal_entry,
-    delete_journal_entry,
+    delete_journal_entry, migrate_entry_values,
 )
 from .todos import (
     get_todos_for_date, add_todo, toggle_todo, update_todo, move_todo,

@@ -1,6 +1,8 @@
 """Notas especiales: categorías (tipos) y entradas."""
 import json
-from .conn import get_db
+import os
+from datetime import datetime
+from .conn import get_db, snapshot_to, db_path
 
 
 def get_journal_categories() -> list:
@@ -32,6 +34,62 @@ def update_journal_category(cat_id: int, data: dict):
             (data["name"], data.get("color", "#6366f1"),
              data.get("fields_json", "[]"), int(data.get("show_in_calendar", 0)), cat_id),
         )
+
+
+def migrate_entry_values(cat_id: int, label_renames: dict | None = None,
+                         option_renames: dict | None = None) -> int:
+    """Acompaña renombres de la definición: re-clava etiquetas/valores guardados.
+
+    Las entradas guardan {etiqueta: valor} literal: renombrar un campo o una
+    opción sin esto deja los datos viejos invisibles para gráficos y resumen.
+    label_renames: {etiqueta_vieja: nueva}. option_renames: {etiqueta: (de, a)}
+    (etiqueta ya con su nombre NUEVO si se renombró a la vez).
+    También actualiza los gráficos guardados (tabla charts) que referencien
+    etiquetas renombradas. Backup automático previo (health-prerename-<ts>.db).
+    Devuelve cuántas entradas se modificaron.
+    """
+    label_renames = label_renames or {}
+    option_renames = option_renames or {}
+    if not label_renames and not option_renames:
+        return 0
+    base = os.path.dirname(os.path.abspath(db_path())) or "."
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    snapshot_to(os.path.join(base, f"health-prerename-{ts}.db"))
+
+    changed = 0
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, values_json FROM journal_entries WHERE category_id = ?",
+            (cat_id,)).fetchall()
+        for r in rows:
+            try:
+                vals = json.loads(r["values_json"] or "{}")
+            except ValueError:
+                continue
+            dirty = False
+            for old, new in label_renames.items():
+                if old in vals and new not in vals:
+                    vals[new] = vals.pop(old)
+                    dirty = True
+            for label, (de, a) in option_renames.items():
+                if vals.get(label) == de:
+                    vals[label] = a
+                    dirty = True
+            if dirty:
+                conn.execute("UPDATE journal_entries SET values_json = ? WHERE id = ?",
+                             (json.dumps(vals, ensure_ascii=False), r["id"]))
+                changed += 1
+        if label_renames:
+            for ch in conn.execute(
+                    "SELECT id, field_label, group_field FROM charts WHERE category_id = ?",
+                    (cat_id,)).fetchall():
+                fl = "|".join(label_renames.get(x, x)
+                              for x in (ch["field_label"] or "").split("|") if x)
+                gf = label_renames.get(ch["group_field"] or "", ch["group_field"] or "")
+                if fl != (ch["field_label"] or "") or gf != (ch["group_field"] or ""):
+                    conn.execute("UPDATE charts SET field_label = ?, group_field = ? WHERE id = ?",
+                                 (fl, gf, ch["id"]))
+    return changed
 
 
 def delete_journal_category(cat_id: int):

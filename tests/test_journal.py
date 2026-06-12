@@ -324,6 +324,85 @@ def test_categoria_con_tipo_emotion_wheel(test_db):
     assert cat["fields"][0]["label"] == "Estado"
 
 
+# ── Migración de renombres (campos y opciones) ──────────────────────────────
+
+def _cat_trabajo(client):
+    client.post("/journal/add", data={
+        "name": "Trabajo", "color": "#14b8a6", "show_in_calendar": "1",
+        "field_label[]": ["Proyecto", "Horas"],
+        "field_type[]": ["opciones", "duracion"],
+        "field_placeholder[]": ["A, B", ""],
+        "field_chart[]": ["0", "1"],
+    })
+    cid = db.get_journal_categories()[0]["id"]
+    db.add_journal_entry({"category_id": cid, "entry_date": DATE,
+                          "values_json": json.dumps({"Proyecto": "A", "Horas": "120"}),
+                          "tags": ""})
+    return cid
+
+
+def test_renombrar_campo_migra_entradas_y_graficos(client):
+    cid = _cat_trabajo(client)
+    db.add_chart(cid, "Horas", "", 90, "Proyecto", "week", "")
+    client.post(f"/journal/{cid}/edit", data={
+        "name": "Trabajo", "color": "#14b8a6", "show_in_calendar": "1",
+        "field_oldlabel[]": ["Proyecto", "Horas"],
+        "field_label[]": ["Proyecto", "Tiempo"],          # Horas → Tiempo
+        "field_type[]": ["opciones", "duracion"],
+        "field_placeholder[]": ["A, B", ""],
+        "field_chart[]": ["0", "1"],
+    })
+    vals = db.get_journal_entries_for_date(DATE)[0]["values"]
+    assert vals == {"Proyecto": "A", "Tiempo": "120"}
+    assert db.get_charts()[0]["field_label"] == "Tiempo"
+
+
+def test_fila_reemplazada_o_tipo_cambiado_no_migra(client):
+    cid = _cat_trabajo(client)
+    client.post(f"/journal/{cid}/edit", data={
+        "name": "Trabajo", "color": "#14b8a6", "show_in_calendar": "1",
+        "field_oldlabel[]": ["Proyecto", "Horas", ""],
+        "field_label[]": ["Proyecto", "Calidad", "Foco"],  # Horas→Calidad CON cambio de tipo + fila nueva
+        "field_type[]": ["opciones", "escala", "escala"],
+        "field_placeholder[]": ["A, B", "", ""],
+        "field_chart[]": ["0", "0", "0"],
+    })
+    vals = db.get_journal_entries_for_date(DATE)[0]["values"]
+    assert vals == {"Proyecto": "A", "Horas": "120"}      # intacto
+
+
+def test_agregar_y_quitar_opciones_no_toca_entradas(client):
+    cid = _cat_trabajo(client)
+    client.post(f"/journal/{cid}/edit", data={
+        "name": "Trabajo", "color": "#14b8a6", "show_in_calendar": "1",
+        "field_oldlabel[]": ["Proyecto", "Horas"],
+        "field_label[]": ["Proyecto", "Horas"],
+        "field_type[]": ["opciones", "duracion"],
+        "field_placeholder[]": ["B, C", ""],               # salió A, entró C: NO es rename
+        "field_chart[]": ["0", "1"],
+    })
+    vals = db.get_journal_entries_for_date(DATE)[0]["values"]
+    assert vals["Proyecto"] == "A"                         # el histórico conserva su valor
+
+
+def test_renombrar_opcion_explicito_migra_y_actualiza_lista(client):
+    cid = _cat_trabajo(client)
+    client.post(f"/journal/{cid}/edit", data={
+        "name": "Trabajo", "color": "#14b8a6", "show_in_calendar": "1",
+        "field_oldlabel[]": ["Proyecto", "Horas"],
+        "field_label[]": ["Proyecto", "Horas"],
+        "field_type[]": ["opciones", "duracion"],
+        "field_placeholder[]": ["A, B", ""],
+        "field_chart[]": ["0", "1"],
+        "opt_rename_sel": "Proyecto||A",
+        "opt_rename_to": "Cliente A",
+    })
+    vals = db.get_journal_entries_for_date(DATE)[0]["values"]
+    assert vals["Proyecto"] == "Cliente A"
+    cat = db.get_journal_categories()[0]
+    assert cat["fields"][0]["placeholder"] == "Cliente A, B"
+
+
 def test_badge_aparece_en_calendario(client):
     client.post("/journal/add", data={
         "name": "Estados", "color": "#6366f1", "show_in_calendar": "1",
