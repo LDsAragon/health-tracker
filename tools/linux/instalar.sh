@@ -11,9 +11,10 @@ SUDO=sudo; [ "$(id -u)" = 0 ] && SUDO=
 if command -v apt-get >/dev/null; then
     $SUDO apt-get update -q
     $SUDO apt-get install -y -q python3-venv python3-pip python3-gi python3-gi-cairo \
-        gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+        gir1.2-gtk-3.0 gir1.2-webkit2-4.1 fonts-noto-color-emoji
 elif command -v dnf >/dev/null; then
-    $SUDO dnf install -y python3-pip python3-gobject python3-cairo gtk3 webkit2gtk4.1
+    $SUDO dnf install -y python3-pip python3-gobject python3-cairo gtk3 webkit2gtk4.1 \
+        google-noto-color-emoji-fonts
 elif command -v pacman >/dev/null; then
     # Keyring de pacman: en sistemas recién creados (imagen WSL, container)
     # puede faltar; en una Arch/Manjaro normal este if no hace nada.
@@ -25,7 +26,7 @@ elif command -v pacman >/dev/null; then
     # -Sy refresca la lista de paquetes; en Arch conviene tener el sistema
     # actualizado (pacman -Syu) antes de instalar, como siempre.
     $SUDO pacman -Sy --needed --noconfirm python python-pip python-gobject \
-        python-cairo gtk3 webkit2gtk-4.1
+        python-cairo gtk3 webkit2gtk-4.1 noto-fonts-emoji
 else
     echo "No encontré apt, dnf ni pacman: instalá a mano PyGObject + WebKitGTK 4.1" >&2
     echo "y después corré: python3 -m venv --system-site-packages venv &&" >&2
