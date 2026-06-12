@@ -18,6 +18,11 @@ REQUISITOS
   o Arch/Manjaro/EndeavourOS (pacman; conviene el sistema actualizado).
 - Internet solo durante la instalación; después la app no lo usa.
 
+CÓMO ACTUALIZAR
+Cuando te pasen una versión nueva, descomprimila encima de la carpeta
+existente (o borrá la carpeta vieja y extraé de cero) y corré ./instalar.sh
+de nuevo. Tus datos no se tocan: viven fuera de la carpeta de la app.
+
 TUS DATOS
 - Todo se guarda en tu máquina, en ~/.local/share/Bitacora/health.db
   Sin internet, sin cuentas, sin nube.

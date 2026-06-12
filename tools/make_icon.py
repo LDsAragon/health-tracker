@@ -1,4 +1,5 @@
-"""Genera static/icon.ico: calendario con corazón sobre fondo índigo (tema default).
+"""Genera static/icon.ico (+ icon.png para el .desktop de Linux): calendario
+con corazón sobre fondo índigo (tema default).
 
 Correr con el venv (necesita pillow): venv/Scripts/python tools/make_icon.py
 """
@@ -35,6 +36,12 @@ d.polygon([(cx - 2 * r + 3, cy + r * 0.42),
            (cx + 2 * r - 3, cy + r * 0.42),
            (cx, cy + 2.35 * r)], fill=HEART)
 
-out = Path(__file__).resolve().parent.parent / "static" / "icon.ico"
+static = Path(__file__).resolve().parent.parent / "static"
+out = static / "icon.ico"
 img.save(out, sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
 print(f"OK: {out}")
+
+# PNG para el .desktop de Linux (no todos los escritorios renderizan .ico)
+png = static / "icon.png"
+img.save(png)
+print(f"OK: {png}")

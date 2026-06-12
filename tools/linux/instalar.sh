@@ -49,7 +49,7 @@ Type=Application
 Name=Bitácora
 Comment=Calendario personal de hábitos, registros y emociones
 Exec=$PWD/bitacora.sh
-Icon=$PWD/static/icon.ico
+Icon=$PWD/static/icon.png
 Terminal=false
 Categories=Office;Utility;
 EOF
