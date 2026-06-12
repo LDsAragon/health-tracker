@@ -174,6 +174,12 @@ def test_pagina_journal(client):
     assert "Notas especiales".encode() in r.data
 
 
+def test_badge_calendario_tildado_por_defecto(client):
+    """El form de nueva categoría arranca con 'mostrar en calendario' tildado."""
+    body = client.get("/journal").data.decode("utf-8")
+    assert 'name="show_in_calendar" value="1" checked' in body
+
+
 def test_agregar_categoria(client):
     r = client.post("/journal/add", data={
         "name": "Emociones",
