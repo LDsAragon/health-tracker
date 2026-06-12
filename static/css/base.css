@@ -1,4 +1,8 @@
 :root {
+  /* Controles nativos (cara de selects, date pickers) en modo oscuro: sin esto,
+     WebKitGTK (Linux) los dibuja con el tema claro del sistema y el texto
+     var(--text) casi blanco queda invisible. Lavanda lo redefine a light. */
+  color-scheme: dark;
   --bg:       #0f1117;
   --surface:  #1a1d27;
   --surface2: #242736;
@@ -37,6 +41,7 @@
 }
 /* Temas claros: redefinen overlays a negros suaves sobre fondo claro */
 [data-theme="lavanda"] {
+  color-scheme: light;
   --bg:#f3eef8; --surface:#faf7ff; --surface2:#ebe4f3; --border:#cec3de; --text:#3d3551; --muted:#8478a0; --accent:#9b6dcc;
   --hover:rgba(0,0,0,.04); --line:rgba(0,0,0,.08); --cell-empty:rgba(0,0,0,.035); --placeholder:rgba(0,0,0,.4);
 }
