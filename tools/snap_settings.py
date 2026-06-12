@@ -13,6 +13,7 @@ from pathlib import Path
 
 salida = sys.argv[1] if len(sys.argv) > 1 else "/tmp/ajustes.png"
 ruta = sys.argv[2] if len(sys.argv) > 2 else "/ajustes"
+seed = len(sys.argv) > 3 and sys.argv[3] == "seed"
 os.environ["HT_DB"] = str(Path(tempfile.mkdtemp(prefix="bita-snap-")) / "health.db")
 
 root = Path(__file__).resolve().parent.parent
@@ -28,7 +29,24 @@ from gi.repository import GLib, Gtk, WebKit2
 from app import create_app
 from werkzeug.serving import make_server
 
-srv = make_server("127.0.0.1", 0, create_app())
+application = create_app()
+
+if seed:
+    # Datos de muestra: categorías suficientes para que aparezca el filtro,
+    # y el form de nota especial abierto de entrada.
+    import json
+    import database as dbm
+    dbm.init_db()
+    paleta = ["#6366f1", "#22c55e", "#f97316", "#3b82f6", "#ef4444",
+              "#a855f7", "#ec4899", "#eab308"]
+    nombres = ["Ánimo", "Sueño", "Comidas", "Ejercicio", "Medicación",
+               "Trabajo", "Lectura", "Meditación"]
+    for n, c in zip(nombres, paleta):
+        dbm.add_journal_category({"name": n, "color": c, "show_in_calendar": 1,
+            "fields_json": json.dumps([{"label": "Detalle", "type": "text"}])})
+    dbm.set_setting("journal_form_default", "open")
+
+srv = make_server("127.0.0.1", 0, application)
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 
 win = Gtk.OffscreenWindow()

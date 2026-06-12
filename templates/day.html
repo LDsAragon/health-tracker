@@ -259,13 +259,19 @@
           <input type="hidden" name="values_json" id="jday-values-json">
           <div class="field-group">
             <label>Categoría</label>
-            <select name="category_id" id="jday-cat" class="journal-cat-select"
-                    onchange="updateDayFields(this.value)">
-              <option value="">Seleccionar...</option>
+            {% if journal_cats | length > 6 %}
+            <input type="text" id="jday-cat-filter" class="jcat-filter"
+                   placeholder="Filtrar categorías..." autocomplete="off"
+                   oninput="filterJCats(this.value)">
+            {% endif %}
+            <div class="jcat-chips" id="jday-cat-chips">
               {% for cat in journal_cats %}
-              <option value="{{ cat.id }}">{{ cat.name }}</option>
+              <button type="button" class="jcat-chip" style="--c: {{ cat.color }};"
+                      data-id="{{ cat.id }}" data-name="{{ cat.name }}"
+                      onclick="selectJCat(this)">{{ cat.name }}</button>
               {% endfor %}
-            </select>
+            </div>
+            <input type="hidden" name="category_id" id="jday-cat">
           </div>
           <div id="jday-fields"></div>
           <div class="field-group" style="margin-top:8px;">

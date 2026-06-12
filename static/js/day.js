@@ -123,6 +123,23 @@ function buildFields(containerId, catId) {
 
 function updateDayFields(catId) { buildFields('jday-fields', catId); }
 
+// ── Chips de categoría (alta de nota especial) ─────────────────────────────
+function _jcatNorm(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+function selectJCat(btn) {
+  document.querySelectorAll('#jday-cat-chips .jcat-chip').forEach(b =>
+    b.classList.toggle('jcat-chip-sel', b === btn));
+  document.getElementById('jday-cat').value = btn.dataset.id;
+  updateDayFields(btn.dataset.id);
+}
+function filterJCats(q) {
+  q = _jcatNorm(q.trim());
+  document.querySelectorAll('#jday-cat-chips .jcat-chip').forEach(b => {
+    b.style.display = !q || _jcatNorm(b.dataset.name).includes(q) ? '' : 'none';
+  });
+}
+
 // Alternancia: solo una alta activa a la vez (cada una colapsable en su lugar).
 function _setRapida(open) {
   const f = document.getElementById('rapida-form');
@@ -138,6 +155,10 @@ function _setEspecial(open) {
   if (!open) {
     const c = document.getElementById('jday-cat'); if (c) c.value = '';
     const fl = document.getElementById('jday-fields'); if (fl) fl.innerHTML = '';
+    document.querySelectorAll('#jday-cat-chips .jcat-chip-sel').forEach(b =>
+      b.classList.remove('jcat-chip-sel'));
+    const ff = document.getElementById('jday-cat-filter');
+    if (ff) { ff.value = ''; filterJCats(''); }
   }
 }
 function openEspecial()    { _setEspecial(true);  _setRapida(false); }

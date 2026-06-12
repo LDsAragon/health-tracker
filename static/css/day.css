@@ -611,3 +611,35 @@
 }
 .empty-day a { color: var(--accent); text-decoration: underline; }
 
+
+/* ── Chips de categoría (alta de nota especial) ─────────────────────────── */
+.jcat-filter {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 8px 11px;
+  font-size: 14px;
+  font-family: inherit;
+  margin-bottom: 8px;
+}
+.jcat-filter:focus { outline: none; border-color: var(--accent); }
+.jcat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.jcat-chip {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 5px 12px;
+  border-radius: 999px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--c, #6366f1) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c, #6366f1) 45%, transparent);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.jcat-chip:hover { background: color-mix(in srgb, var(--c, #6366f1) 32%, transparent); }
+.jcat-chip-sel {
+  background: color-mix(in srgb, var(--c, #6366f1) 55%, transparent);
+  border-color: var(--c, #6366f1);
+}

@@ -22,6 +22,22 @@ def test_calendario_carga(client):
     assert r.status_code == 200
     assert b"Lunes" in r.data
 
+def test_dia_chips_de_categorias(client):
+    """El alta de nota especial ofrece chips por categoría (no dropdown)."""
+    import json
+    db.add_journal_category({"name": "Ánimo", "color": "#e879b9",
+        "fields_json": json.dumps([{"label": "Detalle", "type": "text"}]),
+        "show_in_calendar": 1})
+    body = client.get(f"/day/{DATE}").data.decode("utf-8")
+    assert 'class="jcat-chip"' in body and "Ánimo" in body
+    assert 'id="jday-cat-filter"' not in body   # filtro recién con 7+ categorías
+    for i in range(7):
+        db.add_journal_category({"name": f"Cat{i}", "color": "#6366f1",
+            "fields_json": "[]", "show_in_calendar": 1})
+    body = client.get(f"/day/{DATE}").data.decode("utf-8")
+    assert 'id="jday-cat-filter"' in body
+
+
 def test_home_redirige_segun_start_view(client):
     assert "/calendar/" in client.get("/").headers["Location"]   # default month
     db.set_setting("start_view", "today")
