@@ -1,0 +1,27 @@
+BITÁCORA — calendario personal de hábitos, registros y emociones
+================================================================
+
+CÓMO INSTALARLA
+1. Descomprimí este zip en una carpeta local, por ejemplo C:\Bitacora.
+   (Evitá OneDrive/Dropbox: pueden "des-descargar" archivos y romper la app.)
+2. Entrá a la carpeta "Bitacora" y hacé doble clic en Bitacora.exe.
+3. Si querés un acceso directo: clic derecho sobre Bitacora.exe
+   → Enviar a → Escritorio (crear acceso directo).
+
+SI WINDOWS SE QUEJA
+- "Windows protegió tu equipo" (pantalla azul de SmartScreen):
+  tocá "Más información" y después "Ejecutar de todas formas".
+  Pasa porque la app no está firmada digitalmente; es normal.
+- Si no abre y muestra un error: cerrala, clic derecho sobre el ZIP
+  original → Propiedades → tildá "Desbloquear" → Aceptar, y volvé a
+  descomprimir. (La app intenta desbloquearse sola en cada arranque,
+  pero por si acaso.)
+
+TUS DATOS
+- Todo se guarda en tu máquina, en %LOCALAPPDATA%\Bitacora\health.db
+  Sin internet, sin cuentas, sin nube.
+- Hacé copias de seguridad desde la pestaña "Datos" de la app
+  (botón "Descargar backup") cada tanto.
+
+MANUAL
+El manual completo de uso viene en este zip: Bitacora-Manual.pdf
