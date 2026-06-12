@@ -122,6 +122,10 @@ def main():
     flask_app = create_app()
 
     import webview
+    # Sin esto pywebview CANCELA las descargas (en todas las plataformas) y el
+    # botón "Descargar backup" no hace nada. Con esto: diálogo de guardado en
+    # Windows, carpeta de descargas en Linux.
+    webview.settings["ALLOW_DOWNLOADS"] = True
     webview.create_window(
         WINDOW_TITLE,
         flask_app,
