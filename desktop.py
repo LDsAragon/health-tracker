@@ -14,9 +14,19 @@ import sqlite3
 import traceback
 from pathlib import Path
 
-_LOCALAPPDATA = Path(os.environ.get("LOCALAPPDATA", str(Path.home())))
-APP_DIR = _LOCALAPPDATA / "Bitacora"
-_OLD_APP_DIR = _LOCALAPPDATA / "HealthTracker"   # nombre previo al rename (jun 2026)
+def _default_app_dir():
+    """Carpeta de datos por plataforma: LOCALAPPDATA (Win) / XDG data (Linux) / App Support (mac)."""
+    if sys.platform == "win32":
+        return Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Bitacora"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "Bitacora"
+    return Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))) / "Bitacora"
+
+
+APP_DIR = _default_app_dir()
+# Nombre previo al rename (jun 2026) — la app solo existió en Windows con ese nombre.
+_OLD_APP_DIR = (Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "HealthTracker"
+                if sys.platform == "win32" else None)
 DB_FILE = APP_DIR / "health.db"
 
 WINDOW_TITLE = "Bitácora"
@@ -68,7 +78,7 @@ def _migrate_from_old_appdata():
     Intenta renombrar la carpeta entera; si algo la tiene lockeada (WebView2,
     antivirus), copia solo la DB — el storage del webview se recrea solo.
     """
-    if DB_FILE.exists():
+    if _OLD_APP_DIR is None or DB_FILE.exists():
         return
     old_db = _OLD_APP_DIR / "health.db"
     if not old_db.exists():
@@ -91,7 +101,7 @@ def _unblock_dlls():
     "Failed to resolve Python.Runtime.Loader.Initialize". Borrar el stream
     Zone.Identifier antes de importar webview lo cura.
     """
-    if not getattr(sys, "frozen", False):
+    if sys.platform != "win32" or not getattr(sys, "frozen", False):
         return
     internal = Path(sys.executable).parent / "_internal"
     for p in internal.rglob("*.dll"):
@@ -142,9 +152,12 @@ if __name__ == "__main__":
                     "  intenta desbloquearse sola en cada arranque.\n"
                     "• Falta .NET Framework 4.7.2+ (Windows Update lo trae).\n"
                     "• El antivirus puso una DLL en cuarentena.")
-        try:
-            import ctypes
-            ctypes.windll.user32.MessageBoxW(None, msg, WINDOW_TITLE, 0x10)
-        except Exception:
-            pass
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                ctypes.windll.user32.MessageBoxW(None, msg, WINDOW_TITLE, 0x10)
+            except Exception:
+                pass
+        else:
+            print(msg, file=sys.stderr)
         raise
