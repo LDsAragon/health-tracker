@@ -22,6 +22,18 @@ def test_calendario_carga(client):
     assert r.status_code == 200
     assert b"Lunes" in r.data
 
+def test_toggle_todo_preserva_ref_de_semana(client):
+    """Tildar un to-do desde el día (llegado con ?ref=week) no rompe el volver contextual."""
+    db.add_todo(DATE, "comprar pan")
+    tid = db.get_todos_for_date(DATE)[0]["id"]
+    r = client.post(f"/day/{DATE}/todo/{tid}/toggle",
+                    headers={"Referer": f"http://localhost/day/{DATE}?ref=week"})
+    assert r.headers["Location"] == f"/day/{DATE}?ref=week"
+    # sin referer (o de otra página) cae al default sano
+    r = client.post(f"/day/{DATE}/todo/{tid}/toggle")
+    assert r.headers["Location"] == f"/day/{DATE}"
+
+
 def test_dia_chips_de_categorias(client):
     """El alta de nota especial ofrece chips por categoría (no dropdown)."""
     import json

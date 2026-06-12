@@ -1,9 +1,23 @@
 """Vista del día y sus acciones: notas, to-dos, eventos, entradas de notas especiales."""
 from datetime import date, timedelta
+from urllib.parse import urlsplit
 from flask import Blueprint, render_template, request, redirect, url_for
 import database as db
 
 bp = Blueprint("day", __name__)
+
+
+def _back_to_day(date_str):
+    """Redirect a la vista del día preservando su query string (?ref=week).
+
+    Las acciones del día (tildar to-do, marcar rutina, notas...) postean y
+    vuelven al día: sin esto pierden el `ref` y el volver contextual cae al mes.
+    Solo se respeta el referer si es exactamente esta misma vista del día.
+    """
+    r = urlsplit(request.referrer or "")
+    if r.path == f"/day/{date_str}" and r.query:
+        return redirect(f"{r.path}?{r.query}")
+    return redirect(url_for("day.day_view", date_str=date_str))
 
 
 @bp.route("/day/<date_str>")
@@ -54,7 +68,7 @@ def note_add(date_str):
         return redirect(url_for("main.calendar_view", year=d.year, month=d.month))
     if next_page == "week":
         return redirect(url_for("main.week_view", date_str=date_str))
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 @bp.route("/day/<date_str>/note/<int:note_id>/edit", methods=["POST"])
@@ -63,13 +77,13 @@ def note_edit(date_str, note_id):
     color   = request.form.get("color", "").strip()
     if content:
         db.update_note(note_id, content, color)
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 @bp.route("/day/<date_str>/note/<int:note_id>/delete", methods=["POST"])
 def note_delete(date_str, note_id):
     db.delete_note(note_id)
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 # ── To-dos ──────────────────────────────────────────────────────────────────────
@@ -79,13 +93,13 @@ def todo_add(date_str):
     text = request.form.get("text", "").strip()
     if text:
         db.add_todo(date_str, text)
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 @bp.route("/day/<date_str>/todo/<int:todo_id>/toggle", methods=["POST"])
 def todo_toggle(date_str, todo_id):
     db.toggle_todo(todo_id)
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 @bp.route("/day/<date_str>/todo/<int:todo_id>/edit", methods=["POST"])
@@ -93,7 +107,7 @@ def todo_edit(date_str, todo_id):
     text = request.form.get("text", "").strip()
     if text:
         db.update_todo(todo_id, text)
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 @bp.route("/day/<date_str>/todo/<int:todo_id>/move", methods=["POST"])
@@ -101,13 +115,13 @@ def todo_move(date_str, todo_id):
     new_date = request.form.get("new_date", "").strip()
     if new_date:
         db.move_todo(todo_id, new_date)
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 @bp.route("/day/<date_str>/todo/<int:todo_id>/delete", methods=["POST"])
 def todo_delete(date_str, todo_id):
     db.delete_todo(todo_id)
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 @bp.route("/day/<date_str>/todos/reorder", methods=["POST"])
@@ -134,20 +148,20 @@ def todo_move_ajax(todo_id):
 def event_complete(date_str, event_id):
     note = request.form.get("note", "").strip()
     db.complete_event(event_id, date_str, note)
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 @bp.route("/day/<date_str>/event/<int:event_id>/skip", methods=["POST"])
 def event_skip(date_str, event_id):
     note = request.form.get("note", "").strip()
     db.complete_event(event_id, date_str, note, status="skipped")
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 @bp.route("/day/<date_str>/event/<int:event_id>/uncomplete", methods=["POST"])
 def event_uncomplete(date_str, event_id):
     db.uncomplete_event(event_id, date_str)
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 # ── Entradas de notas especiales ────────────────────────────────────────────────
@@ -170,7 +184,7 @@ def journal_entry_add(date_str):
         return redirect(url_for("main.calendar_view", year=d.year, month=d.month))
     if next_page == "week":
         return redirect(url_for("main.week_view", date_str=date_str))
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 @bp.route("/day/<date_str>/journal/<int:entry_id>/edit", methods=["POST"])
@@ -178,10 +192,10 @@ def journal_entry_edit(date_str, entry_id):
     values_json = request.form.get("values_json", "{}").strip() or "{}"
     tags        = request.form.get("tags", "").strip()
     db.update_journal_entry(entry_id, {"values_json": values_json, "tags": tags})
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
 
 
 @bp.route("/day/<date_str>/journal/<int:entry_id>/delete", methods=["POST"])
 def journal_entry_delete(date_str, entry_id):
     db.delete_journal_entry(entry_id)
-    return redirect(url_for("day.day_view", date_str=date_str))
+    return _back_to_day(date_str)
