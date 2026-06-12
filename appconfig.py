@@ -20,8 +20,8 @@ SETTINGS = {
     "theme":       {"default": "indigo", "choices": THEME_SLUGS},
     "week_start":  {"default": "mon",    "choices": ("mon", "sun")},
     "start_view":  {"default": "month",  "choices": ("month", "week", "today")},
-    "show_stats":  {"default": "show",   "choices": ("show", "hide")},
-    "show_export": {"default": "show",   "choices": ("show", "hide")},
+    "show_stats":  {"default": "hide",   "choices": ("show", "hide")},
+    "show_export": {"default": "hide",   "choices": ("show", "hide")},
     "note_form_default":    {"default": "open",      "choices": ("open", "collapsed")},
     "journal_form_default": {"default": "collapsed", "choices": ("open", "collapsed")},
 }
