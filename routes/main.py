@@ -150,10 +150,17 @@ def stats_view():
     fieldinfo = {(c["id"], f["label"]): (f.get("type", "text"), c["name"])
                  for c in cats for f in c.get("fields", [])}
 
+    def _hourify(s, ftype):
+        """Series de tiempo vienen en minutos: a horas + unidad, como los agrupados."""
+        if ftype in db.TIME_TYPES:
+            s["data"] = [round(v / 60, 2) for v in s["data"]]
+            s["unit"] = "horas"
+        return s
+
     charts = []
     # Automáticos: campos marcados con "graficar"
     for f in db.chartable_fields():
-        s = db.build_series(f["category_id"], f["label"], f["type"], start, end)
+        s = _hourify(db.build_series(f["category_id"], f["label"], f["type"], start, end), f["type"])
         if s["data"]:
             charts.append({"title": f"{f['category_name']} · {f['label']}", **s})
     # Personalizados: tabla charts (cada uno con su propio rango)
@@ -184,7 +191,7 @@ def stats_view():
             charts.append({"title": title, "chart_id": ch["id"], **s})
         else:
             label, ftype, _ = infos[0]
-            s = db.build_series(ch["category_id"], label, ftype, cstart, end)
+            s = _hourify(db.build_series(ch["category_id"], label, ftype, cstart, end), ftype)
             charts.append({"title": ch["title"] or f"{cname} · {label}",
                            "chart_id": ch["id"], **s})
 

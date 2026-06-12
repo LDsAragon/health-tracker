@@ -142,6 +142,20 @@ def test_chart_desglosado_via_ruta(client):
     assert "stats-totals" in body
 
 
+def test_grafico_simple_de_tiempo_en_horas_via_ruta(client):
+    """Los gráficos simples de duración/rango van en horas con unidad (no minutos crudos)."""
+    from datetime import date
+    hoy = date.today().isoformat()
+    db.add_journal_category({"name": "Descanso", "color": "#000",
+        "fields_json": json.dumps([{"label": "Sueño", "type": "rango", "chart": True}]),
+        "show_in_calendar": 0})
+    cid = db.get_journal_categories()[0]["id"]
+    _entry(cid, hoy, {"Sueño": "23:00-07:00"})   # 480 min = 8 h
+    body = client.get("/estadisticas").data.decode("utf-8")
+    assert '"data": [8.0]' in body
+    assert '"unit": "horas"' in body
+
+
 def test_charts_crud_via_ruta(client):
     db.add_journal_category({"name": "Peso", "color": "#000",
         "fields_json": json.dumps([{"label": "Peso", "type": "numero"}]), "show_in_calendar": 0})

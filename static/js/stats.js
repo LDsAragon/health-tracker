@@ -107,7 +107,8 @@ function statsGroupChanged() {
         plugins: { legend: { display: false } },
         scales: {
           x: { ticks: { color: muted, maxRotation: 0, autoSkip: true }, grid: { color: grid } },
-          y: { ticks: { color: muted }, grid: { color: grid }, beginAtZero: c.kind === 'bar' },
+          y: { ticks: { color: muted }, grid: { color: grid }, beginAtZero: c.kind === 'bar',
+               title: c.unit ? { display: true, text: c.unit, color: muted } : undefined },
         },
       },
     });
