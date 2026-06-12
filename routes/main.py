@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, make_r
 import database as db
 import services
 from appconfig import THEMES, SETTINGS
-from helpers import _setting, _first_weekday, _week_start, _dow_names, safe_back
+from helpers import _setting, _first_weekday, _week_start, _dow_names, safe_back, MESES
 from filters import dur_fmt_filter
 
 bp = Blueprint("main", __name__)
@@ -51,7 +51,7 @@ def calendar_view(year=None, month=None):
     return render_template(
         "calendar.html",
         year=year, month=month,
-        month_name=cal.month_name[month],
+        month_name=MESES[month],
         weeks=cal.Calendar(_first_weekday()).monthdayscalendar(year, month),
         dow_names=_dow_names(),
         notes_by_date=notes_by_date,

@@ -4,6 +4,11 @@ from flask import g
 
 _DOW_MON = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
+# Índice 1-12 (el 0 vacío, como calendar.month_name). Hardcodeado a propósito:
+# calendar.month_name depende del locale del sistema y en Linux sin es_* da inglés.
+MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
 
 def _setting(key, default=''):
     """Lee un ajuste de g.settings (cargado en before_request); default fuera de contexto."""

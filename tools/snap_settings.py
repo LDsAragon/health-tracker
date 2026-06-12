@@ -1,8 +1,8 @@
-"""Screenshot de /ajustes en WebKitGTK real, para verificar bugs de rendering
-de controles nativos (selects) que no se reproducen en Windows/WebView2.
+"""Screenshot de una página de la app en WebKitGTK real, para verificar bugs
+de rendering/locale que no se reproducen en Windows/WebView2.
 
-Uso (en Linux/WSL): venv-linux/bin/python tools/snap_settings.py salida.png
-Forzar tema GTK claro (caso usuario afectado): GTK_THEME=Adwaita:light ...
+Uso (en Linux/WSL): venv-linux/bin/python tools/snap_settings.py salida.png [/ruta]
+(ruta default: /ajustes). Forzar tema GTK claro: GTK_THEME=Adwaita:light ...
 Usa una DB temporal; no toca datos reales.
 """
 import os
@@ -12,6 +12,7 @@ import threading
 from pathlib import Path
 
 salida = sys.argv[1] if len(sys.argv) > 1 else "/tmp/ajustes.png"
+ruta = sys.argv[2] if len(sys.argv) > 2 else "/ajustes"
 os.environ["HT_DB"] = str(Path(tempfile.mkdtemp(prefix="bita-snap-")) / "health.db")
 
 root = Path(__file__).resolve().parent.parent
@@ -51,6 +52,6 @@ def on_snap(view, res):
 
 
 view.connect("load-changed", on_load)
-view.load_uri(f"http://127.0.0.1:{srv.server_port}/ajustes")
+view.load_uri(f"http://127.0.0.1:{srv.server_port}{ruta}")
 GLib.timeout_add_seconds(30, Gtk.main_quit)  # red de seguridad
 Gtk.main()
