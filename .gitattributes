@@ -3,3 +3,6 @@
 
 # Los scripts de shell SIEMPRE con LF (CRLF rompe bash en Linux/WSL)
 *.sh text eol=lf
+
+# El LEEME del release Linux viaja en el tarball: que no le entre CRLF
+docs/LEEME-Linux.txt text eol=lf
