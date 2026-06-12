@@ -7,8 +7,11 @@ export PYWEBVIEW_GUI=gtk
 # El renderer DMABUF de WebKitGTK crashea en NVIDIA + Wayland
 # ("Error 71 (Protocol error) dispatching to Wayland display").
 export WEBKIT_DISABLE_DMABUF_RENDERER=1
-[ -x venv/bin/python ] || {
-    echo "Bitácora todavía no está instalada acá: corré ./instalar.sh primero." >&2
+# No alcanza con que venv/ exista: cuando la distro actualiza Python
+# (ej. Arch 3.14 -> 3.15) el venv queda apuntando a un intérprete que ya no está.
+venv/bin/python -c '' 2>/dev/null || {
+    echo "El entorno de Python falta o quedó roto (¿se actualizó la distro?)." >&2
+    echo "Corré ./instalar.sh y se regenera solo." >&2
     exit 1
 }
 exec venv/bin/python desktop.py "$@"

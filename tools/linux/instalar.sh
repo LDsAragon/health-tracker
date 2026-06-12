@@ -34,6 +34,8 @@ else
 fi
 
 echo "== Entorno de Python (venv con acceso a los paquetes GI del sistema) =="
+# Si el venv quedó roto (la distro actualizó Python), regenerarlo de cero.
+[ ! -d venv ] || venv/bin/python -c '' 2>/dev/null || rm -rf venv
 [ -d venv ] || python3 -m venv --system-site-packages venv
 venv/bin/pip install --quiet -r requirements-desktop.txt
 
