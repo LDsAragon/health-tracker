@@ -459,8 +459,8 @@ def test_reset_deja_backup_prereset(client, test_db):
     import os, glob
     db.add_note("2026-06-11", "estaba-antes")
     client.post("/reset", data={"confirm_text": "BORRAR TODO"})
-    backups = glob.glob(os.path.join(os.path.dirname(test_db), "health-prereset-*.db"))
-    assert backups, "no se creó el backup pre-reset"
+    backups = glob.glob(os.path.join(os.path.dirname(test_db), "backups", "health-prereset-*.db"))
+    assert backups, "no se creó el backup pre-reset en backups/"
     assert db.is_valid_db(backups[0])   # el backup conserva el estado previo
 
 def test_reset_app_sigue_funcionando(client):

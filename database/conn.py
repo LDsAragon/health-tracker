@@ -60,16 +60,27 @@ def is_valid_db(path):
     return bool(integrity) and integrity[0] == "ok" and CORE_TABLES.issubset(tables)
 
 
+def backup_path(prefix: str) -> str:
+    """Ruta para un backup automático: <dir de la DB>/backups/<prefix>-<ts>.db.
+
+    Todos los backups (diarios y pre-operación) viven en la misma carpeta
+    backups/, en vez de ensuciar la raíz de los datos.
+    """
+    base = os.path.join(os.path.dirname(os.path.abspath(DB_PATH)) or ".", "backups")
+    os.makedirs(base, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return os.path.join(base, f"{prefix}-{ts}.db")
+
+
 def reset_db():
     """Borra TODOS los datos: backup automático previo + drop de todas las tablas.
 
-    Devuelve el nombre del backup pre-reset (queda junto a la DB). No recrea el
-    esquema: el caller debe llamar a init_db() después.
+    Devuelve el nombre del backup pre-reset (queda en backups/ junto a la DB).
+    No recrea el esquema: el caller debe llamar a init_db() después.
     """
-    base = os.path.dirname(os.path.abspath(DB_PATH)) or "."
-    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-    backup_name = f"health-prereset-{ts}.db"
-    snapshot_to(os.path.join(base, backup_name))
+    dest = backup_path("health-prereset")
+    backup_name = os.path.basename(dest)
+    snapshot_to(dest)
     conn = sqlite3.connect(DB_PATH)
     try:
         conn.execute("PRAGMA busy_timeout=5000")
@@ -94,9 +105,7 @@ def restore_from(src_path):
     """
     if not is_valid_db(src_path):
         return False, "El archivo no parece una base de datos válida de la app."
-    base = os.path.dirname(os.path.abspath(DB_PATH)) or "."
-    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-    snapshot_to(os.path.join(base, f"health-prerestore-{ts}.db"))
+    snapshot_to(backup_path("health-prerestore"))
     src = sqlite3.connect(src_path)
     try:
         dst = sqlite3.connect(DB_PATH)

@@ -19,7 +19,7 @@
 {% elif datos == 'err-nofile' %}
 <div class="datos-banner datos-err">✗ No seleccionaste ningún archivo.</div>
 {% elif datos == 'reset-ok' %}
-<div class="datos-banner datos-ok">✓ Base de datos borrada — empezás de cero. Quedó un backup automático (<code>health-prereset-*.db</code>) junto a la base de datos por si te arrepentís.</div>
+<div class="datos-banner datos-ok">✓ Base de datos borrada — empezás de cero. Quedó un backup automático en la carpeta <code>backups/</code> junto a la base de datos por si te arrepentís.</div>
 {% elif datos == 'err-reset-confirm' %}
 <div class="datos-banner datos-err">✗ No se borró nada: la frase de confirmación no coincide. Tenés que escribir exactamente <b>BORRAR TODO</b>.</div>
 {% endif %}
@@ -88,7 +88,7 @@
     <p class="page-sub" style="margin:0 0 8px;">
       Elimina de forma <b>permanente</b> todos tus datos: notas rápidas, tareas, rutinas y su
       historial, notas especiales, gráficos y ajustes. <b>No se puede deshacer desde la app.</b>
-      Antes de borrar se guarda un backup automático (<code>health-prereset-*.db</code>) junto a la
+      Antes de borrar se guarda un backup automático en la carpeta <code>backups/</code> junto a la
       base de datos — igual te recomendamos
       <a href="{{ url_for('main.backup_download') }}">descargar un backup</a> primero.
     </p>

@@ -1,8 +1,6 @@
 """Notas especiales: categorías (tipos) y entradas."""
 import json
-import os
-from datetime import datetime
-from .conn import get_db, snapshot_to, db_path
+from .conn import get_db, snapshot_to, backup_path
 
 
 def get_journal_categories() -> list:
@@ -52,9 +50,7 @@ def migrate_entry_values(cat_id: int, label_renames: dict | None = None,
     option_renames = option_renames or {}
     if not label_renames and not option_renames:
         return 0
-    base = os.path.dirname(os.path.abspath(db_path())) or "."
-    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-    snapshot_to(os.path.join(base, f"health-prerename-{ts}.db"))
+    snapshot_to(backup_path("health-prerename"))
 
     changed = 0
     with get_db() as conn:

@@ -344,8 +344,8 @@ def test_restore_reemplaza_y_hace_prerestore(test_db, tmp_path):
     ok, _ = db.restore_from(snap)              # restauro el snapshot (1 nota)
     assert ok is True
     assert len(db.get_notes_for_date("2026-06-11")) == 1
-    # se generó un pre-restore backup junto a la DB
-    assert any(p.name.startswith("health-prerestore-") for p in tmp_path.iterdir())
+    # se generó un pre-restore backup en backups/ junto a la DB
+    assert any(p.name.startswith("health-prerestore-") for p in (tmp_path / "backups").iterdir())
 
 def test_restore_invalido_no_toca_nada(test_db, tmp_path):
     db.add_note("2026-06-11", "intacta")
