@@ -15,6 +15,25 @@
   {% endfor %}
 </div>
 
+{% if time_summary %}
+<div class="stats-card stats-summary-card">
+  <h3 class="stats-card-title">⏱️ Tiempo por actividad</h3>
+  <table class="stats-summary">
+    <thead>
+      <tr><th>Actividad</th><th>Esta semana</th><th>Este mes</th><th>Últimos 3 meses</th></tr>
+    </thead>
+    <tbody>
+      {% for r in time_summary %}
+      <tr>
+        <td class="stats-summary-name">{{ r.name }}</td>
+        <td>{{ r.week }}</td><td>{{ r.month }}</td><td>{{ r.quarter }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
 {% if not charts and not adherence %}
 <p class="empty-msg">Todavía no hay nada para graficar. Marcá "📈" en un campo de una nota especial
   (peso, ánimo, sueño, estudio…) y aparecerá acá su tendencia.</p>

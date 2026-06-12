@@ -701,3 +701,19 @@ select.journal-cat-select {
 .stats-totals { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 13px; }
 .stats-totals td { padding: 4px 6px; border-top: 1px solid var(--line); color: var(--text); }
 .stats-totals-val { text-align: right; font-weight: 600; color: var(--accent); white-space: nowrap; }
+
+/* ── Resumen "tiempo por actividad" en Estadísticas ─────────────────────── */
+.stats-summary-card { margin-bottom: 16px; }
+.stats-summary { width: 100%; border-collapse: collapse; font-size: 14px; }
+.stats-summary th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.stats-summary td { padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.stats-summary tbody tr:last-child td { border-bottom: none; }
+.stats-summary-name { font-weight: 600; }
+.stats-summary td:not(.stats-summary-name) { font-variant-numeric: tabular-nums; }

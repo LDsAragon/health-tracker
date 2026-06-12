@@ -142,6 +142,27 @@ def test_chart_desglosado_via_ruta(client):
     assert "stats-totals" in body
 
 
+def test_time_summary_ventanas_y_desglose(test_db):
+    from datetime import date, timedelta
+    hoy = date(2026, 6, 12)                       # viernes; semana arranca lunes 8
+    cid = _cat(test_db, WORK_FIELDS)              # Proyecto (opciones) + Franja + Horas
+    _entry(cid, "2026-06-10", {"Proyecto": "A", "Horas": "120"})   # esta semana
+    _entry(cid, "2026-06-02", {"Proyecto": "A", "Horas": "60"})    # este mes, no esta semana
+    _entry(cid, "2026-04-20", {"Proyecto": "B", "Horas": "30"})    # solo últimos 90 días
+    _entry(cid, "2025-12-01", {"Proyecto": "B", "Horas": "999"})   # fuera de rango
+    rows = {r["name"]: r for r in db.time_summary(today=hoy)}
+    assert rows["T · A"] == {"name": "T · A", "week": 120, "month": 180, "quarter": 180}
+    assert rows["T · B"] == {"name": "T · B", "week": 0, "month": 0, "quarter": 30}
+
+
+def test_time_summary_sin_opciones_va_por_categoria(test_db):
+    from datetime import date
+    cid = _cat(test_db, [{"label": "Dormido", "type": "rango"}])
+    _entry(cid, "2026-06-12", {"Dormido": "23:00-07:00"})
+    rows = db.time_summary(today=date(2026, 6, 12))
+    assert rows == [{"name": "T", "week": 480, "month": 480, "quarter": 480}]
+
+
 def test_grafico_simple_de_tiempo_en_horas_via_ruta(client):
     """Los gráficos simples de duración/rango van en horas con unidad (no minutos crudos)."""
     from datetime import date

@@ -33,18 +33,46 @@ application = create_app()
 
 if seed:
     # Datos de muestra: categorías suficientes para que aparezca el filtro,
-    # y el form de nota especial abierto de entrada.
+    # el form de nota especial abierto, y datos graficables del último mes
+    # (para inspeccionar /estadisticas con todos los tipos de campo).
     import json
+    import random
+    from datetime import date as _date, timedelta as _td
     import database as dbm
     dbm.init_db()
-    paleta = ["#6366f1", "#22c55e", "#f97316", "#3b82f6", "#ef4444",
-              "#a855f7", "#ec4899", "#eab308"]
-    nombres = ["Ánimo", "Sueño", "Comidas", "Ejercicio", "Medicación",
-               "Trabajo", "Lectura", "Meditación"]
-    for n, c in zip(nombres, paleta):
+    random.seed(42)
+
+    def cat(n, c, fields):
         dbm.add_journal_category({"name": n, "color": c, "show_in_calendar": 1,
-            "fields_json": json.dumps([{"label": "Detalle", "type": "text"}])})
+                                  "fields_json": json.dumps(fields)})
+        return dbm.get_journal_categories()[-1]["id"]
+
+    cid_suenio = cat("Sueño", "#6366f1", [{"label": "Dormido", "type": "rango", "chart": True}])
+    cid_animo = cat("Ánimo", "#ec4899", [{"label": "Nivel", "type": "escala", "chart": True}])
+    cid_ejer = cat("Ejercicio", "#22c55e", [
+        {"label": "Tipo", "type": "opciones", "placeholder": "Correr, Pesas, Yoga"},
+        {"label": "Tiempo", "type": "duracion", "chart": True}])
+    cid_medic = cat("Medicación", "#ef4444", [{"label": "Tomada", "type": "sino", "chart": True}])
+    for n, c in [("Comidas", "#f97316"), ("Trabajo", "#a855f7"),
+                 ("Lectura", "#3b82f6"), ("Meditación", "#eab308")]:
+        cat(n, c, [{"label": "Detalle", "type": "text"}])
+
+    hoy = _date.today()
+    for i in range(30):
+        d = (hoy - _td(days=i)).isoformat()
+        def e(cid, vals):
+            dbm.add_journal_entry({"category_id": cid, "entry_date": d,
+                                   "values_json": json.dumps(vals), "tags": ""})
+        e(cid_suenio, {"Dormido": f"23:{random.randint(0,5)*10:02d}-0{random.randint(6,8)}:30"})
+        e(cid_animo, {"Nivel": str(random.randint(2, 9))})
+        if i % 2 == 0:
+            e(cid_ejer, {"Tipo": random.choice(["Correr", "Pesas", "Yoga"]),
+                         "Tiempo": str(random.choice([30, 45, 60, 90]))})
+        e(cid_medic, {"Tomada": "1" if random.random() < 0.8 else ""})
+    # Un gráfico personalizado: ejercicio por tipo, semanal
+    dbm.add_chart(cid_ejer, "Tiempo", "", 90, "Tipo", "week", "")
     dbm.set_setting("journal_form_default", "open")
+    dbm.set_setting("show_stats", "show")
 
 srv = make_server("127.0.0.1", 0, application)
 threading.Thread(target=srv.serve_forever, daemon=True).start()

@@ -215,8 +215,18 @@ def stats_view():
     ]
     builder_cats = [c for c in builder_cats if c["fields"]]
 
+    # Resumen "horas por actividad" (el uso central: cuánto le dediqué a qué)
+    time_summary = [
+        {"name": r["name"],
+         "week": dur_fmt_filter(r["week"]) or "—",
+         "month": dur_fmt_filter(r["month"]) or "—",
+         "quarter": dur_fmt_filter(r["quarter"]) or "—"}
+        for r in db.time_summary()
+    ]
+
     return render_template("stats.html", charts=charts, adherence=adherence,
-                           range_days=range_days, builder_cats=builder_cats)
+                           range_days=range_days, builder_cats=builder_cats,
+                           time_summary=time_summary)
 
 
 @bp.route("/estadisticas/grafico/add", methods=["POST"])
