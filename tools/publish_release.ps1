@@ -14,7 +14,7 @@ if ($LASTEXITCODE) {
 
 $fecha = Get-Date -Format yyyy-MM-dd
 $tag = if ($Tag) { $Tag } else { "v$fecha" }
-$zip = "dist\Bitacora-$fecha.zip"
+$zip = "dist\Bitacora-Windows-$fecha.zip"
 $tgz = "dist\Bitacora-linux-$fecha.tar.gz"
 
 Write-Output "== Build Windows =="

@@ -1,5 +1,5 @@
 # Genera el zip listo para compartir: build fresco + LEEME.txt + manual PDF
-# → dist\Bitacora-<fecha>.zip
+# → dist\Bitacora-Windows-<fecha>.zip
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
@@ -19,7 +19,7 @@ if (-not (Test-Path "$root\dist\Bitacora\Bitacora.exe")) {
 }
 
 $fecha = Get-Date -Format yyyy-MM-dd
-$zip = "$root\dist\Bitacora-$fecha.zip"
+$zip = "$root\dist\Bitacora-Windows-$fecha.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 
 $contenido = @("$root\dist\Bitacora", "$root\docs\LEEME.txt")
