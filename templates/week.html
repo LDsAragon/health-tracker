@@ -86,9 +86,9 @@
       <input type="text" name="content" class="cal-quick-input"
              placeholder="+ escribí una nota..." autocomplete="off">
       <div class="cal-color-mini" onmousedown="event.preventDefault()">
-        <label><input type="radio" name="color" value="" checked><span class="cal-cdot cal-cdot-none"></span></label>
+        <label><input type="radio" name="color" value="" checked onchange="previewCalColor(this, '')"><span class="cal-cdot cal-cdot-none"></span></label>
         {% for c in COLORS %}
-        <label><input type="radio" name="color" value="{{ c }}"><span class="cal-cdot" style="background:{{ c }};"></span></label>
+        <label><input type="radio" name="color" value="{{ c }}" onchange="previewCalColor(this, '{{ c }}')"><span class="cal-cdot" style="background:{{ c }};"></span></label>
         {% endfor %}
       </div>
     </form>
@@ -191,6 +191,12 @@ function submitJEntry(ds, url, next) {
   fd.append('tags', tags);
   fd.append('next', next);
   fetch(url, { method: 'POST', body: fd }).then(() => location.reload());
+}
+
+function previewCalColor(radio, color) {
+  const inp = radio.closest('.cal-quick-form').querySelector('.cal-quick-input');
+  if (color) { inp.style.setProperty('--c', color); inp.classList.add('cal-input-colored'); }
+  else        { inp.style.removeProperty('--c');     inp.classList.remove('cal-input-colored'); }
 }
 </script>
 {% endblock %}

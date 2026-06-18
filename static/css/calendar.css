@@ -171,6 +171,10 @@
   color: var(--text);
 }
 .cal-quick-input:focus::placeholder { color: rgba(255,255,255,.35); }
+.cal-quick-input.cal-input-colored {
+  background: color-mix(in srgb, var(--c) 18%, var(--surface2));
+  border-left: 3px solid var(--c);
+}
 
 /* Color picker mini — aparece solo al enfocar el input (A1) */
 .cal-color-mini {

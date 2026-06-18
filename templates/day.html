@@ -234,7 +234,7 @@
             <input type="text" name="tags" value="{{ entry.tags }}" placeholder="ej: ansiedad, trabajo">
           </div>
           <div style="display:flex;gap:8px;margin-top:8px;">
-            <button type="submit" class="btn-add">Guardar</button>
+            <button type="submit" class="btn-primary">Guardar</button>
             <button type="button" class="btn-cancel" onclick="cancelJEntry({{ entry.id }})">Cancelar</button>
           </div>
         </form>
@@ -279,7 +279,7 @@
             <input type="text" name="tags" placeholder="ej: ansiedad, trabajo, tarde">
           </div>
           <div style="display:flex;gap:8px;margin-top:12px;">
-            <button type="submit" class="btn-add">Guardar</button>
+            <button type="submit" class="btn-primary">Guardar</button>
             <button type="button" class="btn-cancel" onclick="closeEspecial()">Cancelar</button>
           </div>
         </form>
@@ -334,7 +334,7 @@
             {% endfor %}
           </div>
           <div style="display:flex;gap:8px;">
-            <button type="submit" class="btn-add">Guardar</button>
+            <button type="submit" class="btn-primary">Guardar</button>
             <button type="button" class="btn-cancel" onclick="cancelDayNote({{ note.id }})">Cancelar</button>
           </div>
         </div>
@@ -366,7 +366,7 @@
         {% endfor %}
       </div>
       <div style="display:flex; gap:8px;">
-        <button type="submit" class="day-add-btn">Agregar</button>
+        <button type="submit" class="btn-primary">Agregar</button>
         <button type="button" class="btn-cancel" onclick="collapseRapida()">Cancelar</button>
       </div>
     </div>

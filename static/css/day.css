@@ -295,29 +295,6 @@
   border-left: 3px solid var(--c);
 }
 
-/* Botones de alta del día sin fondo (notas rápidas + especiales): borde + texto accent */
-.day-add-btn {
-  align-self: flex-end;
-  background: transparent;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  padding: 8px 18px;
-  border-radius: var(--r);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .15s, color .15s;
-}
-.day-add-btn:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
-
-.day-card .btn-add {
-  background: transparent;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  transition: background .15s, color .15s;
-}
-.day-card .btn-add:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); opacity: 1; }
-
 .back-link {
   font-size: 13px;
   color: var(--text);
@@ -401,20 +378,6 @@
 }
 .note-input:focus { outline: none; border-color: var(--accent); }
 .note-input::placeholder { color: var(--muted); }
-
-.btn-add {
-  align-self: flex-start;
-  background: var(--accent);
-  color: white;
-  border: none;
-  padding: 9px 20px;
-  border-radius: var(--r);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity .15s;
-}
-.btn-add:hover { opacity: .85; }
 
 /* Sections */
 .day-section { margin-bottom: 28px; }
