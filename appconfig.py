@@ -24,5 +24,11 @@ SETTINGS = {
     "show_export": {"default": "hide",   "choices": ("show", "hide")},
     "note_form_default":    {"default": "open",      "choices": ("open", "collapsed")},
     "journal_form_default": {"default": "collapsed", "choices": ("open", "collapsed")},
+    "pet":                  {"default": "cat",       "choices": ("cat", "dog", "none")},
 }
 DEFAULT_SETTINGS = {k: v["default"] for k, v in SETTINGS.items()}
+
+PET_ART = {
+    "cat": "  /\\_/\\ \n ( ^.^ )\n  > ♥ < ",
+    "dog": "  / 0 \\ \n ( u.u )\n  \\___/ ",
+}

@@ -5,6 +5,7 @@ from flask import Flask, g
 import database as db
 import filters
 from fieldtypes import FIELD_TYPES
+from appconfig import PET_ART
 # Re-export para tests que hacen `from app import dur_fmt_filter, ...`
 from filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
 from routes import main, day, recurring, journal
@@ -30,7 +31,7 @@ def create_app():
     @app.context_processor
     def _inject():
         """Expone ajustes y el catálogo de tipos de campo a todas las plantillas."""
-        return {"settings": db.get_all_settings(), "field_types": FIELD_TYPES}
+        return {"settings": db.get_all_settings(), "field_types": FIELD_TYPES, "pet_art": PET_ART}
 
     for module in (main, day, recurring, journal):
         app.register_blueprint(module.bp)

@@ -29,12 +29,15 @@ def add_todo(todo_date: str, text: str):
         )
 
 
-def toggle_todo(todo_id: int):
+def toggle_todo(todo_id: int) -> bool:
+    """Invierte el estado done del to-do y retorna True si quedó como hecho."""
     with get_db() as conn:
         conn.execute(
             "UPDATE todos SET done = CASE done WHEN 1 THEN 0 ELSE 1 END WHERE id = ?",
             (todo_id,),
         )
+        row = conn.execute("SELECT done FROM todos WHERE id = ?", (todo_id,)).fetchone()
+        return bool(row and row["done"])
 
 
 def update_todo(todo_id: int, text: str):

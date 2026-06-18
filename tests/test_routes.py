@@ -28,8 +28,9 @@ def test_toggle_todo_preserva_ref_de_semana(client):
     tid = db.get_todos_for_date(DATE)[0]["id"]
     r = client.post(f"/day/{DATE}/todo/{tid}/toggle",
                     headers={"Referer": f"http://localhost/day/{DATE}?ref=week"})
-    assert r.headers["Location"] == f"/day/{DATE}?ref=week"
-    # sin referer (o de otra página) cae al default sano
+    # al marcar como hecho agrega ?pet=1 después del query string existente
+    assert r.headers["Location"] == f"/day/{DATE}?ref=week&pet=1"
+    # sin referer (al desmarcar: no celebra)
     r = client.post(f"/day/{DATE}/todo/{tid}/toggle")
     assert r.headers["Location"] == f"/day/{DATE}"
 

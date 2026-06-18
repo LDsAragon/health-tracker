@@ -107,6 +107,16 @@
       </select>
     </div>
 
+    <div class="field-group">
+      <label for="pet">Mascotita al completar</label>
+      <p class="page-sub" style="margin:0 0 8px;">Aparece una animación ASCII cuando marcás una rutina o to-do como hecho.</p>
+      <select name="pet" id="pet" class="journal-type-select" style="max-width:280px;">
+        <option value="cat" {% if settings.pet == 'cat' %}selected{% endif %}>🐱 Gatito</option>
+        <option value="dog" {% if settings.pet == 'dog' %}selected{% endif %}>🐶 Perrito</option>
+        <option value="none" {% if settings.pet == 'none' %}selected{% endif %}>Sin mascota</option>
+      </select>
+    </div>
+
     <button type="submit" class="btn-primary">Guardar</button>
   </form>
 </div>

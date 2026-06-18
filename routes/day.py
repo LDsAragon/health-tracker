@@ -7,7 +7,7 @@ import database as db
 bp = Blueprint("day", __name__)
 
 
-def _back_to_day(date_str):
+def _back_to_day(date_str, celebrate=False):
     """Redirect a la vista del día preservando su query string (?ref=week).
 
     Las acciones del día (tildar to-do, marcar rutina, notas...) postean y
@@ -16,8 +16,13 @@ def _back_to_day(date_str):
     """
     r = urlsplit(request.referrer or "")
     if r.path == f"/day/{date_str}" and r.query:
-        return redirect(f"{r.path}?{r.query}")
-    return redirect(url_for("day.day_view", date_str=date_str))
+        base = f"{r.path}?{r.query}"
+    else:
+        base = url_for("day.day_view", date_str=date_str)
+    if celebrate:
+        sep = "&" if "?" in base else "?"
+        base += f"{sep}pet=1"
+    return redirect(base)
 
 
 @bp.route("/day/<date_str>")
@@ -43,14 +48,15 @@ def day_view(date_str):
 
     prev_day = (d - timedelta(days=1)).isoformat()
     next_day = (d + timedelta(days=1)).isoformat()
-    ref      = request.args.get("ref", "cal")   # de dónde venimos: 'cal' | 'week'
+    ref       = request.args.get("ref", "cal")   # de dónde venimos: 'cal' | 'week'
+    celebrate = request.args.get("pet") == "1"
 
     return render_template(
         "day.html",
         date_str=date_str, d=d, notes=notes, day_events=day_events,
         journal_entries=journal_entries, journal_cats=journal_cats, todos=todos,
         prev_day=prev_day, next_day=next_day, ref=ref,
-        today=date.today().isoformat(),
+        today=date.today().isoformat(), celebrate=celebrate,
     )
 
 
@@ -98,8 +104,8 @@ def todo_add(date_str):
 
 @bp.route("/day/<date_str>/todo/<int:todo_id>/toggle", methods=["POST"])
 def todo_toggle(date_str, todo_id):
-    db.toggle_todo(todo_id)
-    return _back_to_day(date_str)
+    now_done = db.toggle_todo(todo_id)
+    return _back_to_day(date_str, celebrate=now_done)
 
 
 @bp.route("/day/<date_str>/todo/<int:todo_id>/edit", methods=["POST"])
@@ -148,7 +154,7 @@ def todo_move_ajax(todo_id):
 def event_complete(date_str, event_id):
     note = request.form.get("note", "").strip()
     db.complete_event(event_id, date_str, note)
-    return _back_to_day(date_str)
+    return _back_to_day(date_str, celebrate=True)
 
 
 @bp.route("/day/<date_str>/event/<int:event_id>/skip", methods=["POST"])

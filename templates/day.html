@@ -448,4 +448,29 @@ window.DAY_CTX = {
 };
 </script>
 <script src="{{ url_for('static', filename='js/day.js') }}"></script>
+
+{% if celebrate and settings.pet != 'none' %}
+<div id="pet-overlay" class="pet-overlay" onclick="closePet()">
+  <div class="pet-box">
+    <pre class="pet-art">{{ pet_art[settings.pet] }}</pre>
+    <div class="pet-msg">¡Hecho!</div>
+    <div class="pet-hint">clic para cerrar</div>
+  </div>
+</div>
+<script>
+(function () {
+  var t = setTimeout(closePet, 2500);
+  function closePet() {
+    clearTimeout(t);
+    var o = document.getElementById('pet-overlay');
+    if (!o) return;
+    o.classList.add('pet-hide');
+    setTimeout(function () { if (o) o.remove(); }, 300);
+    var s = (location.search || '').replace(/[?&]pet=1/, '').replace(/^&/, '?');
+    history.replaceState(null, '', location.pathname + s);
+  }
+  window.closePet = closePet;
+})();
+</script>
+{% endif %}
 {% endblock %}

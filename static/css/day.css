@@ -606,3 +606,37 @@
   background: color-mix(in srgb, var(--c, #6366f1) 55%, transparent);
   border-color: var(--c, #6366f1);
 }
+
+/* Mascotita */
+.pet-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+  animation: pet-in .2s ease;
+  cursor: pointer;
+}
+.pet-overlay.pet-hide { animation: pet-out .3s ease forwards; }
+.pet-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 40px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  pointer-events: none;
+}
+.pet-art {
+  font-family: monospace;
+  font-size: 22px;
+  line-height: 1.5;
+  margin: 0 0 14px;
+  color: var(--text);
+  white-space: pre;
+  animation: pet-bounce .7s ease infinite alternate;
+}
+.pet-msg { font-size: 24px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+.pet-hint { font-size: 12px; color: var(--muted); }
+@keyframes pet-in  { from { opacity:0; transform:scale(.8); } to { opacity:1; transform:scale(1); } }
+@keyframes pet-out { to   { opacity:0; transform:scale(.8); } }
+@keyframes pet-bounce { from { transform:translateY(0); } to { transform:translateY(-8px); } }
