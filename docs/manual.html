@@ -71,7 +71,7 @@
     <div class="logo">📅</div>
     <h1>Bitácora</h1>
     <p class="lead">Manual de uso — cómo está pensada y todo lo que podés hacer con ella</p>
-    <p class="muted small">Tu calendario personal de hábitos, registros y emociones · junio 2026</p>
+    <p class="muted small">Tu calendario personal de hábitos, registros y emociones · junio 2026 · v2</p>
   </div>
 
   <h3 style="margin-top:60px;">Contenido</h3>
@@ -285,20 +285,57 @@
 
   <h3>Los tipos de campo</h3>
   <table>
-    <tr><th>Tipo</th><th>Qué guarda</th><th>Ideal para</th></tr>
-    <tr><td><b>Texto</b></td><td>Libre</td><td>descripciones, contexto</td></tr>
-    <tr><td><b>Escala</b></td><td>1 a N (números, etiquetas o emojis)</td><td>calidad de sueño, ánimo, foco</td></tr>
-    <tr><td><b>Sí / No</b></td><td>Un tilde</td><td>"¿tomé la medicación?"</td></tr>
-    <tr><td><b>Opciones</b></td><td>Una de una lista tuya</td><td>momento de comida, proyecto</td></tr>
-    <tr><td><b>Número</b></td><td>Cantidad con unidad</td><td>peso, glucemia, vasos de agua</td></tr>
-    <tr><td><b>Duración</b></td><td>Horas y minutos</td><td>tiempo de estudio, ejercicio</td></tr>
-    <tr><td><b>Rango horario</b></td><td>Desde–hasta (banca cruzar medianoche)</td><td>sueño, franjas de trabajo</td></tr>
-    <tr><td><b>Rueda de emociones</b></td><td>Una emoción con precisión creciente</td><td>registro emocional (sección 8)</td></tr>
+    <tr><th>Tipo</th><th>Qué guarda</th><th>Cómo se usa</th></tr>
+    <tr>
+      <td><b>Texto</b></td>
+      <td>Libre</td>
+      <td>descripciones, contexto</td>
+    </tr>
+    <tr>
+      <td><b>Escala</b></td>
+      <td>1 a N puntos</td>
+      <td>Botones en fila. Sin etiquetas: puntitos que se "llenan" hasta el elegido + muestra "N/total".
+      Con etiquetas ("Mal,Regular,Bien"): cada botón lleva su texto y al elegir se resalta abajo.
+      Definís etiquetas o emojis en el campo Ayuda, separadas por coma.</td>
+    </tr>
+    <tr>
+      <td><b>Sí / No</b></td>
+      <td>"1" (Sí) / "0" (No)</td>
+      <td>Dos botones <b>✓ Sí</b> / <b>✗ No</b> lado a lado. Tocá el activo para deseleccionar.</td>
+    </tr>
+    <tr>
+      <td><b>Opciones</b></td>
+      <td>Una de tu lista</td>
+      <td>Botones horizontales con tus opciones (definidas en Ayuda, separadas por coma). Re-clic = deseleccionar.</td>
+    </tr>
+    <tr>
+      <td><b>Número</b></td>
+      <td>Cantidad con unidad</td>
+      <td>Input numérico con botones <b>−</b> / <b>+</b> para sumar o restar de a uno sin teclado.
+      La unidad (kg, vasos…) va en el campo Ayuda.</td>
+    </tr>
+    <tr>
+      <td><b>Duración</b></td>
+      <td>Minutos totales</td>
+      <td>Dos inputs conectados visualmente (horas · min). Al completar muestra el total formateado
+      en tiempo real: "1 h 30 min". Ideal para tiempos de estudio, ejercicio, sueño.</td>
+    </tr>
+    <tr>
+      <td><b>Rango horario</b></td>
+      <td>Desde–hasta</td>
+      <td>Dos selectores de hora nativos del sistema (HH:MM). Banca cruzar la medianoche (23:30–07:00).
+      Muestra la duración calculada al lado.</td>
+    </tr>
+    <tr>
+      <td><b>Rueda de emociones</b></td>
+      <td>Una o más emociones</td>
+      <td>Picker de cascada (Willcox o Ekman) o rueda visual giratoria. Podés agregar varias emociones al mismo registro;
+      cada una aparece como chip de color con su origen. Sección 8.</td>
+    </tr>
   </table>
 
-  <p class="small muted">El campo "Ayuda" de cada campo cumple doble función: es el texto de
-  ejemplo que ves al cargar, y en escala/opciones/número es donde definís las opciones
-  ("Desayuno, Almuerzo, Cena"), las etiquetas de la escala o la unidad.</p>
+  <p class="small muted">El campo "Ayuda" cumple doble función: texto de ejemplo al cargar,
+  y configuración del campo en escala ("Mal,Regular,Bien"), opciones ("Desayuno,Almuerzo,Cena") y número ("kg").</p>
 
   <h3>Plantillas rápidas</h3>
   <p>Para no arrancar de cero hay 7 presets de un clic: <b>🎡 Emociones · 😴 Sueño · 📚 Estudio ·
@@ -320,32 +357,43 @@
 <section>
   <h2>8 · La rueda de emociones</h2>
   <p>Ponerle nombre exacto a lo que sentís es difícil — y es la mitad del trabajo de regularlo.
-  La rueda existe para eso: en vez de elegir entre "bien" y "mal", explorás visualmente hasta
-  encontrar la palabra justa.</p>
+  La rueda existe para eso: en vez de elegir entre "bien" y "mal", explorás hasta encontrar
+  la palabra justa.</p>
 
-  <h3>Cómo se usa</h3>
+  <h3>Dos formas de elegir</h3>
+  <p>El campo de emoción tiene un <b>picker en cascada</b> directamente en el formulario:</p>
   <ol>
-    <li>En una nota especial con campo de emoción, tocá el campo: se abre la rueda giratoria.</li>
-    <li>Recorré con el mouse: cada gajo se ilumina y muestra su nombre. Girá con
-    <kbd>Q</kbd>/<kbd>E</kbd> o las flechas para ver todo el círculo.</li>
-    <li>De la emoción básica del centro avanzás hacia los anillos externos, cada vez más
-    específicos: Triste → Solo → Abandonado.</li>
-    <li>Clic y queda guardada. En el día se muestra como una cadena de chips con el color de
-    la emoción.</li>
+    <li>Elegís la emoción base en el primer selector (Enojado, Asustado, Alegre…).</li>
+    <li>Si querés más precisión, aparece un segundo nivel (Herido, Hostil, Enfadado…).</li>
+    <li>Y luego un tercer nivel aún más específico (Celoso, Furioso, Frustrado…).</li>
+    <li>Tocás <b>➕ Agregar</b> para sumar esa emoción al registro. Podés repetir y agregar
+    varias emociones al mismo campo.</li>
+  </ol>
+  <p>También podés abrir la <b>rueda visual giratoria</b> (botón 🎯 / 🧭 en el picker):</p>
+  <ol>
+    <li>Recorrés con el mouse: cada gajo se ilumina y muestra su nombre.</li>
+    <li>Girá con <kbd>Q</kbd>/<kbd>E</kbd> o las flechas para ver todo el círculo.</li>
+    <li>Clic en un gajo → se agrega al registro. Podés seguir eligiendo más.</li>
   </ol>
 
-  <h3>Dos ruedas, dos tradiciones</h3>
+  <h3>Multi-selección</h3>
+  <p>Un mismo campo puede registrar <b>varias emociones a la vez</b>: cada una aparece como un
+  chip de color con su cadena (p.ej. <i>Enojado › Herido</i>, <i>Triste › Solo</i>).
+  El chip tiene un <b>×</b> para quitarlo. Esto permite registrar emociones mixtas o contradictorias
+  sin forzar una sola respuesta.</p>
+
+  <h3>Dos tradiciones</h3>
   <ul>
     <li><b>Willcox</b> (la principal): la clásica rueda de Gloria Willcox de 1982, en español,
     con 6 emociones núcleo que se abren en dos niveles de matices.</li>
-    <li><b>Ekman</b>: basada en el <i>Atlas of Emotions</i> de Paul Ekman (el científico detrás
-    de los estudios de expresiones universales), con estados ordenados por intensidad.
-    Se cambia con una pestaña dentro de la misma rueda.</li>
+    <li><b>Ekman</b>: basada en el <i>Atlas of Emotions</i> de Paul Ekman, con estados
+    ordenados por intensidad. Se elige con una pestaña dentro del picker.
+    Las emociones Ekman se distinguen en los chips con la etiqueta <i>Ekman</i>.</li>
   </ul>
 
-  <p>Mientras explorás, un <b>panel lateral</b> te acompaña con contexto psicológico de la
-  emoción que estás mirando: qué es, para qué sirve sentirla, qué la suele disparar. La rueda
-  no solo registra — también enseña vocabulario emocional.</p>
+  <p>La rueda visual incluye un <b>panel lateral</b> con contexto psicológico de cada emoción:
+  qué es, para qué sirve sentirla, qué la suele disparar. La rueda no solo registra —
+  también enseña vocabulario emocional.</p>
 </section>
 
 <!-- ───────────────────────── 9. ESTADÍSTICAS ───────────────────────── -->
@@ -440,7 +488,12 @@
     <tr><td><kbd>Ctrl</kbd> + <kbd>0</kbd> &nbsp;·&nbsp; <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd></td><td>Restablecer el zoom</td></tr>
     <tr><td><kbd>Ctrl</kbd> + <kbd>R</kbd></td><td>Recargar la página / ventana</td></tr>
     <tr><td><kbd>Q</kbd> / <kbd>E</kbd> &nbsp;o&nbsp; <kbd>←</kbd> / <kbd>→</kbd></td><td>Girar la rueda de emociones</td></tr>
-    <tr><td><kbd>Esc</kbd></td><td>Cerrar la rueda</td></tr>
+    <tr>
+      <td><kbd>Esc</kbd></td>
+      <td>Cierra en orden de prioridad: ① la rueda de emociones si está abierta →
+      ② cancela cualquier panel o formulario inline abierto (equivale a tocar Cancelar) →
+      ③ navega atrás si hay un enlace Volver en la página (Ajustes, Estadísticas, etc.)</td>
+    </tr>
   </table>
 
   <h3>Trucos</h3>
