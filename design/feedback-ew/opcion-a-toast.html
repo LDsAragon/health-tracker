@@ -1,0 +1,200 @@
+<!-- @dsCard group="Feedback EW" name="A · Toast flotante" subtitle="Mensaje efímero dentro del modal al confirmar cada emoción" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    min-height: 100vh;
+    gap: 20px;
+  }
+
+  h2 { font-size: 13px; color: #8892a4; letter-spacing: .08em; text-transform: uppercase; }
+
+  /* ── Modal mockup ── */
+  .modal {
+    background: #1a1d27;
+    border: 1px solid #2e3148;
+    border-radius: 16px;
+    width: 560px;
+    max-width: 100%;
+    padding: 24px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .modal-tabs {
+    display: flex; gap: 8px;
+  }
+  .tab {
+    background: #242736; border: 1px solid #2e3148;
+    border-radius: 8px; padding: 6px 14px;
+    font-size: 13px; font-weight: 600; color: #8892a4; cursor: pointer;
+  }
+  .tab.active { background: rgba(99,102,241,.18); border-color: #6366f1; color: #6366f1; }
+
+  /* Wheel placeholder */
+  .wheel-area {
+    display: flex; justify-content: center; align-items: center;
+    height: 220px; position: relative;
+  }
+  .wheel-svg-placeholder {
+    width: 200px; height: 200px; border-radius: 50%;
+    background: conic-gradient(
+      #e8643c 0deg 60deg,
+      #8e7cc3 60deg 120deg,
+      #e79ab0 120deg 180deg,
+      #e8b93f 180deg 240deg,
+      #6cab6c 240deg 300deg,
+      #5b8fc7 300deg 360deg
+    );
+    position: relative;
+    box-shadow: 0 0 32px rgba(0,0,0,.5);
+  }
+  /* Sector Alegre resaltado (arriba-izquierda) */
+  .wheel-svg-placeholder::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+      transparent 0deg 120deg,
+      rgba(255,255,255,.22) 120deg 180deg,
+      transparent 180deg 360deg
+    );
+    animation: sector-flash .8s ease forwards;
+  }
+  @keyframes sector-flash {
+    0%   { opacity: 0; }
+    20%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .wheel-center {
+    position: absolute; width: 52px; height: 52px; border-radius: 50%;
+    background: #1a1d27; border: 1.5px solid #2e3148;
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+  }
+
+  /* Toast */
+  .toast-wrap {
+    position: absolute;
+    bottom: 16px; left: 50%; transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .toast {
+    background: #242736;
+    border: 1px solid #6cab6c;
+    border-radius: 10px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6cab6c;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.4);
+    animation: toast-in .25s ease, toast-out .3s ease 1.6s forwards;
+  }
+  .toast-dot { width: 8px; height: 8px; border-radius: 50%; background: #6cab6c; flex-shrink: 0; }
+  @keyframes toast-in  { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  @keyframes toast-out { to   { opacity:0; transform:translateY(-6px); } }
+
+  /* Hover label & hint */
+  .hover-label { font-size: 14px; font-weight: 700; color: #6cab6c; text-align: center; min-height: 20px; }
+  .hover-hint  { font-size: 12px; color: #8892a4; text-align: center; }
+
+  /* Actions */
+  .modal-actions { display: flex; justify-content: center; }
+  .btn-listo {
+    background: #6366f1; color: #fff; border: none; border-radius: 8px;
+    padding: 9px 28px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+
+  /* Picker debajo del modal */
+  .picker-after {
+    background: #1a1d27; border: 1px solid #2e3148; border-radius: 12px;
+    width: 560px; max-width: 100%; padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .picker-label { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: #8892a4; }
+  .chips-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: color-mix(in srgb, var(--c) 16%, #242736);
+    border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+    color: #e2e8f0; font-size: 12px; font-weight: 600;
+    padding: 4px 10px 4px 12px; border-radius: 99px;
+  }
+  .chip-x { color: #8892a4; font-size: 15px; line-height: 1; }
+  .chip-new { animation: chip-pop .3s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes chip-pop { from { transform: scale(0.5); opacity:0; } to { transform: scale(1); opacity:1; } }
+
+  /* Annotation */
+  .note {
+    width: 560px; max-width: 100%;
+    background: rgba(99,102,241,.08); border: 1px solid rgba(99,102,241,.25);
+    border-radius: 10px; padding: 12px 16px;
+    font-size: 13px; color: #8892a4; line-height: 1.6;
+  }
+  .note strong { color: #6366f1; }
+</style>
+</head>
+<body>
+
+<h2>Opción A — Toast flotante</h2>
+
+<!-- Modal abierto, segunda emoción recién agregada -->
+<div class="modal">
+  <div class="modal-tabs">
+    <button class="tab active">Willcox</button>
+    <button class="tab">Ekman</button>
+  </div>
+
+  <div class="wheel-area">
+    <div class="wheel-svg-placeholder">
+      <div class="wheel-center"></div>
+    </div>
+
+    <!-- Toast aparece después del click -->
+    <div class="toast-wrap">
+      <div class="toast">
+        <div class="toast-dot"></div>
+        Apacible añadida
+      </div>
+    </div>
+  </div>
+
+  <div class="hover-label">Apacible</div>
+  <div class="hover-hint">Click para añadir · seguí eligiendo o presioná Listo</div>
+
+  <div class="modal-actions">
+    <button class="btn-listo">Listo</button>
+  </div>
+</div>
+
+<!-- Picker con chips ya acumuladas (se ve después de cerrar el modal) -->
+<div class="picker-after">
+  <div class="picker-label">Emociones registradas</div>
+  <div class="chips-row">
+    <span class="chip" style="--c:#e79ab0">Alegre › Entusiasmado <span class="chip-x">×</span></span>
+    <span class="chip chip-new" style="--c:#6cab6c">Apacible <span class="chip-x">×</span></span>
+  </div>
+</div>
+
+<div class="note">
+  <strong>Cómo funciona:</strong> al hacer click en un sector, un toast pequeño aparece dentro del modal ("<em>Apacible añadida</em>") y desaparece solo en ~1.5s. El sector clickeado también hace un flash blanco breve. Debajo del modal, los chips se acumulan con animación pop-in.<br><br>
+  <strong>Pro:</strong> feedback inmediato sin interrumpir el flujo. El toast es contextual al sector elegido.<br>
+  <strong>Con:</strong> el toast desaparece; si el usuario mira la rueda no lo ve. No muestra el historial de lo elegido.
+</div>
+
+</body>
+</html>

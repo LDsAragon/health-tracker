@@ -1,0 +1,205 @@
+<!-- @dsCard group="Feedback EW" name="C · Combo: flash + contador" subtitle="Sector hace flash, botón Listo muestra contador, chips pop-in en el picker" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    min-height: 100vh;
+    gap: 20px;
+  }
+
+  h2 { font-size: 13px; color: #8892a4; letter-spacing: .08em; text-transform: uppercase; }
+
+  .modal {
+    background: #1a1d27;
+    border: 1px solid #2e3148;
+    border-radius: 16px;
+    width: 560px;
+    max-width: 100%;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .modal-tabs { display: flex; gap: 8px; }
+  .tab {
+    background: #242736; border: 1px solid #2e3148;
+    border-radius: 8px; padding: 6px 14px;
+    font-size: 13px; font-weight: 600; color: #8892a4;
+  }
+  .tab.active { background: rgba(99,102,241,.18); border-color: #6366f1; color: #6366f1; }
+
+  /* Rueda con checkmarks en sectores ya elegidos */
+  .wheel-area { display: flex; justify-content: center; align-items: center; height: 210px; position: relative; }
+  .wheel-svg-placeholder {
+    width: 190px; height: 190px; border-radius: 50%;
+    background: conic-gradient(
+      #e8643c 0deg 60deg, #8e7cc3 60deg 120deg,
+      color-mix(in srgb,#e79ab0 60%,#e2e8f0) 120deg 180deg,  /* Alegre — ya elegido, más claro */
+      #e8b93f 180deg 240deg,
+      color-mix(in srgb,#6cab6c 60%,#e2e8f0) 240deg 300deg, /* Apacible — ya elegido, más claro */
+      #5b8fc7 300deg 360deg
+    );
+    box-shadow: 0 0 32px rgba(0,0,0,.5);
+    position: relative;
+  }
+  /* Flash activo en Enojado (el que se acaba de clickear) */
+  .wheel-svg-placeholder::before {
+    content: '';
+    position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(
+      rgba(255,255,255,.35) 0deg 60deg,
+      transparent 60deg 360deg
+    );
+    animation: sector-flash .7s ease forwards;
+  }
+  @keyframes sector-flash {
+    0%   { opacity: 0; }
+    15%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* Checkmarks en los sectores elegidos (simulados como badges) */
+  .wheel-check {
+    position: absolute;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: rgba(255,255,255,.9); color: #0f1117;
+    font-size: 10px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wheel-check-alegre  { top: 28px; left: 95px; }
+  .wheel-check-apacible { bottom: 28px; left: 25px; }
+
+  .wheel-center {
+    position: absolute; width: 48px; height: 48px; border-radius: 50%;
+    background: #1a1d27; border: 1.5px solid #2e3148;
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #e8643c; font-weight: 800;
+  }
+
+  .hover-label { font-size: 14px; font-weight: 700; color: #e8643c; text-align: center; }
+  .hover-hint  { font-size: 12px; color: #8892a4; text-align: center; }
+
+  /* Botón Listo con contador */
+  .modal-actions { display: flex; justify-content: center; }
+  .btn-listo {
+    background: #6366f1; color: #fff; border: none; border-radius: 8px;
+    padding: 9px 28px; font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .btn-listo-badge {
+    background: rgba(255,255,255,.25);
+    border-radius: 99px;
+    padding: 2px 9px;
+    font-size: 12px;
+    font-weight: 800;
+    animation: badge-pop .35s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes badge-pop { from { transform:scale(.4); opacity:0; } to { transform:scale(1); opacity:1; } }
+
+  /* Picker debajo del modal */
+  .picker-after {
+    background: #1a1d27; border: 1px solid #2e3148; border-radius: 12px;
+    width: 560px; max-width: 100%; padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .picker-label { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: #8892a4; }
+  .picker-open-btns { display: flex; gap: 8px; }
+  .picker-open-btn {
+    background: #242736; border: 1px solid #2e3148; border-radius: 8px;
+    padding: 7px 14px; font-size: 13px; font-weight: 600; color: #e2e8f0;
+  }
+  .chips-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 600; padding: 4px 10px 4px 12px;
+    border-radius: 99px;
+  }
+  .chip-x { color: #8892a4; font-size: 14px; line-height: 1; }
+  .chip-new { animation: chip-pop .35s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes chip-pop { from { transform:scale(.5); opacity:0; } to { transform:scale(1); opacity:1; } }
+
+  .note {
+    width: 560px; max-width: 100%;
+    background: rgba(99,102,241,.08); border: 1px solid rgba(99,102,241,.25);
+    border-radius: 10px; padding: 12px 16px;
+    font-size: 13px; color: #8892a4; line-height: 1.6;
+  }
+  .note strong { color: #6366f1; }
+  .note ul { padding-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+</style>
+</head>
+<body>
+
+<h2>Opción C — Flash en sector + contador en "Listo" + chips pop-in</h2>
+
+<div class="modal">
+  <div class="modal-tabs">
+    <button class="tab active">Willcox</button>
+    <button class="tab">Ekman</button>
+  </div>
+
+  <div class="wheel-area">
+    <div class="wheel-svg-placeholder">
+      <div class="wheel-center">Enojado</div>
+      <!-- Checkmarks en sectores ya elegidos -->
+      <div class="wheel-check wheel-check-alegre">✓</div>
+      <div class="wheel-check wheel-check-apacible">✓</div>
+    </div>
+  </div>
+
+  <div class="hover-label">Enojado</div>
+  <div class="hover-hint">Click para añadir · seguí eligiendo o presioná Listo</div>
+
+  <!-- Botón Listo con badge contador -->
+  <div class="modal-actions">
+    <button class="btn-listo">
+      Listo
+      <span class="btn-listo-badge">2 ✓</span>
+    </button>
+  </div>
+</div>
+
+<!-- Picker con chips (visible detrás del modal o después de cerrarlo) -->
+<div class="picker-after">
+  <div class="picker-label">Emoción</div>
+  <div class="picker-open-btns">
+    <button class="picker-open-btn">🎯 Rueda Willcox</button>
+    <button class="picker-open-btn">🧭 Rueda Ekman</button>
+  </div>
+  <div class="chips-row">
+    <span class="chip" style="background:color-mix(in srgb,#e79ab0 16%,#242736);border:1px solid color-mix(in srgb,#e79ab0 40%,transparent);color:#e2e8f0;">
+      Alegre › Entusiasmado <span class="chip-x">×</span>
+    </span>
+    <span class="chip chip-new" style="background:color-mix(in srgb,#6cab6c 16%,#242736);border:1px solid color-mix(in srgb,#6cab6c 40%,transparent);color:#e2e8f0;">
+      Apacible <span class="chip-x">×</span>
+    </span>
+  </div>
+</div>
+
+<div class="note">
+  <strong>Cómo funciona:</strong> tres capas de feedback simultáneas, cada una en su contexto:
+  <ul>
+    <li><strong>Flash del sector</strong> — el sector clickeado hace un destello blanco breve (~0.6s). Inmediato, en el punto de interacción.</li>
+    <li><strong>Checkmarks en la rueda</strong> — los sectores ya elegidos se muestran levemente más claros y con ✓. El usuario sabe qué ya anotó sin cerrar el modal.</li>
+    <li><strong>Contador en "Listo"</strong> — el botón pasa de "Listo" a "Listo · 2 ✓", actualizado en tiempo real.</li>
+    <li><strong>Chip pop-in en el picker</strong> — al cerrar el modal, cada chip aparece con animación de escala.</li>
+  </ul>
+  <br>
+  <strong>Pro:</strong> feedback multisensorial sin ventanas extras; los checkmarks en la rueda son la pieza más original.<br>
+  <strong>Con:</strong> más complejo de implementar, especialmente los checkmarks en el SVG. Puede resultar visualmente cargado.
+</div>
+
+</body>
+</html>
