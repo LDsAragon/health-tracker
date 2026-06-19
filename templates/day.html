@@ -216,10 +216,6 @@
             </div>
             {% elif field.get('type','text') == 'duracion' %}
             <div class="time-field" data-tf="duracion">
-              <div class="tf-row">
-                <input type="number" class="tf-dur-h" min="0" max="99" placeholder="h"><span class="tf-u">h</span>
-                <input type="number" class="tf-dur-m" min="0" max="59" placeholder="min"><span class="tf-u">min</span>
-              </div>
               <input type="hidden" data-label="{{ field.label }}" value="{{ fval }}">
             </div>
             {% elif field.get('type','text') == 'rango' %}

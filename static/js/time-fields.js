@@ -34,14 +34,24 @@ function tfRangoRow() {
   '</div>';
 }
 
+// ── Fila de Duración: dos inputs numéricos conectados visualmente ──────────
+function tfDurRow() {
+  return '<div class="tf-row">' +
+    '<div class="tf-dur-wrap">' +
+      '<input type="number" class="tf-dur-h" min="0" max="99" placeholder="0">' +
+      '<span class="tf-dur-sep">h</span>' +
+      '<input type="number" class="tf-dur-m" min="0" max="59" placeholder="00">' +
+      '<span class="tf-dur-sep">min</span>' +
+    '</div>' +
+    '<span class="tf-rh-calc"></span>' +
+  '</div>';
+}
+
 // ── Builders (para formularios armados por JS) ─────────────────────────────
 function buildDuracionField(label, ph) {
   return '<div class="day-journal-field-input time-field" data-tf="duracion">' +
     '<label>' + label + '</label>' +
-    '<div class="tf-row">' +
-      '<input type="number" class="tf-dur-h" min="0" max="99" placeholder="0"><span class="tf-u">h</span>' +
-      '<input type="number" class="tf-dur-m" min="0" max="59" placeholder="00"><span class="tf-u">min</span>' +
-    '</div>' +
+    tfDurRow() +
     '<input type="hidden" data-label="' + _tfEsc(label) + '">' +
   '</div>';
 }
@@ -53,12 +63,19 @@ function buildRangoField(label, ph) {
   '</div>';
 }
 
-// Asegura los inputs de rango (para el form de edición, que llega como shell + hidden)
+// Asegura los inputs de rango/duración (para el form de edición, que llega como shell + hidden)
 function _tfEnsureRango(tf) {
   if (tf.dataset.tf !== 'rango' || tf.querySelector('.tf-row')) return;
   const hidden = tf.querySelector('input[data-label]');
   const tmp = document.createElement('div');
   tmp.innerHTML = tfRangoRow();
+  tf.insertBefore(tmp.firstChild, hidden);
+}
+function _tfEnsureDuracion(tf) {
+  if (tf.dataset.tf !== 'duracion' || tf.querySelector('.tf-row')) return;
+  const hidden = tf.querySelector('input[data-label]');
+  const tmp = document.createElement('div');
+  tmp.innerHTML = tfDurRow();
   tf.insertBefore(tmp.firstChild, hidden);
 }
 
@@ -71,6 +88,8 @@ function _tfSync(tf) {
     const m = parseInt(tf.querySelector('.tf-dur-m').value, 10) || 0;
     const total = h * 60 + m;
     hidden.value = total > 0 ? String(total) : '';
+    const calc = tf.querySelector('.tf-rh-calc');
+    if (calc) calc.textContent = total > 0 ? tfFmtDur(total) : '';
   } else if (tf.dataset.tf === 'rango') {
     const from = tf.querySelector('.tf-rng-from').value;
     const to   = tf.querySelector('.tf-rng-to').value;
@@ -90,7 +109,8 @@ document.addEventListener('change', _tfOnEvt);
 // ── Restaurar (edición): construye los inputs de rango si faltan y rellena desde el hidden ──
 function restoreTimeFields(root) {
   (root || document).querySelectorAll('.time-field').forEach(tf => {
-    if (tf.dataset.tf === 'rango') _tfEnsureRango(tf);
+    if (tf.dataset.tf === 'rango')    _tfEnsureRango(tf);
+    if (tf.dataset.tf === 'duracion') _tfEnsureDuracion(tf);
     const hidden = tf.querySelector('input[data-label]');
     const v = hidden && hidden.value;
     if (!v) return;
@@ -98,6 +118,8 @@ function restoreTimeFields(root) {
       const total = parseInt(v, 10) || 0;
       tf.querySelector('.tf-dur-h').value = Math.floor(total / 60) || '';
       tf.querySelector('.tf-dur-m').value = (total % 60) || '';
+      const calc = tf.querySelector('.tf-rh-calc');
+      if (calc) calc.textContent = total > 0 ? tfFmtDur(total) : '';
     } else if (tf.dataset.tf === 'rango') {
       const parts = v.split('-');
       const from = parts[0] || '', to = parts[1] || '';

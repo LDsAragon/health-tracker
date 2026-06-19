@@ -440,7 +440,7 @@ select.journal-cat-select {
 
 /* Campos de tiempo (duración / rango horario) */
 .tf-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.tf-row input[type="number"] {
+.tf-row > input[type="number"] {
   width: 56px; background: var(--surface2); border: 1px solid var(--border);
   color: var(--text); border-radius: 6px; padding: 5px 7px; font-size: 13px;
 }
@@ -448,9 +448,25 @@ select.journal-cat-select {
   background: var(--surface2); border: 1px solid var(--border);
   color: var(--text); border-radius: 6px; padding: 5px 7px; font-size: 13px;
 }
-.tf-row input:focus { outline: none; border-color: var(--accent); }
+.tf-row input[type="time"]:focus { outline: none; border-color: var(--accent); }
 .tf-u { font-size: 12px; color: var(--muted); }
 .tf-rh-calc { font-size: 12px; font-weight: 600; color: var(--accent); margin-left: 4px; }
+
+/* Duración: inputs h/min conectados como un solo componente */
+.tf-dur-wrap {
+  display: inline-flex; align-items: center;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 7px; overflow: hidden; transition: border-color .15s;
+}
+.tf-dur-wrap:focus-within { border-color: var(--accent); }
+.tf-dur-wrap input[type="number"] {
+  width: 40px; background: transparent; border: none; outline: none;
+  color: var(--text); padding: 6px 6px; font-size: 14px; text-align: center;
+  -moz-appearance: textfield;
+}
+.tf-dur-wrap input[type="number"]::-webkit-inner-spin-button,
+.tf-dur-wrap input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.tf-dur-sep { font-size: 12px; color: var(--muted); padding: 0 2px; user-select: none; }
 
 /* Bloques de campo: escala / sino / opciones / numero */
 .field-block { display: flex; flex-direction: column; gap: 6px; }
