@@ -98,7 +98,7 @@
     // La rueda de emociones tiene su propio handler — no interferir
     const ewModal = document.getElementById('ew-modal');
     if (ewModal && ewModal.style.display !== 'none') return;
-    // Buscar el primer botón Cancelar dentro de un panel visible
+    // 1) Cancelar panel/form inline abierto
     const cancel = Array.from(document.querySelectorAll('.btn-cancel, .btn-cancel-sm')).find(function (btn) {
       let el = btn;
       while (el) {
@@ -107,7 +107,10 @@
       }
       return true;
     });
-    if (cancel) { e.preventDefault(); cancel.click(); }
+    if (cancel) { e.preventDefault(); cancel.click(); return; }
+    // 2) Navegar atrás si hay un enlace "Volver" en la página
+    const back = document.querySelector('.page-back .back-link, .day-topnav .back-link');
+    if (back) { e.preventDefault(); back.click(); }
   });
   </script>
 </body>
