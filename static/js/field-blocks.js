@@ -41,9 +41,12 @@ function _opcionesControl(config) {
     '</div>';
 }
 function _numeroControl(config) {
+  const unit = _fbEsc((config || '').trim());
   return '<div class="fb-numero">' +
+    '<button type="button" class="fb-num-btn" data-dir="-1">−</button>' +
     '<input type="number" class="fb-num" step="any">' +
-    '<span class="fb-unit">' + _fbEsc((config || '').trim()) + '</span>' +
+    '<button type="button" class="fb-num-btn" data-dir="1">+</button>' +
+    (unit ? '<span class="fb-unit">' + unit + '</span>' : '') +
   '</div>';
 }
 function _fbControl(fb, config) {
@@ -115,6 +118,15 @@ document.addEventListener('click', function (e) {
     const block = sinopt.closest('.field-block');
     const cur = block.querySelector('input[data-label]').value;
     _fbSet(block, cur === sinopt.dataset.val ? '' : sinopt.dataset.val);
+    return;
+  }
+  const numbtn = e.target.closest && e.target.closest('.fb-num-btn');
+  if (numbtn) {
+    const block = numbtn.closest('.field-block');
+    const inp = block.querySelector('.fb-num');
+    const next = (parseFloat(inp.value) || 0) + parseInt(numbtn.dataset.dir);
+    inp.value = next;
+    block.querySelector('input[data-label]').value = next;
     return;
   }
   const opt = e.target.closest && e.target.closest('.fb-opt');

@@ -505,10 +505,19 @@ select.journal-cat-select {
 .fb-opt:hover { border-color: var(--accent); }
 .fb-opt.active { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent); color: var(--accent); }
 
-.fb-numero { display: flex; align-items: center; gap: 8px; }
+.fb-numero { display: flex; align-items: center; gap: 6px; }
+.fb-num-btn {
+  width: 30px; height: 32px; flex-shrink: 0;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 6px; cursor: pointer;
+  font-size: 17px; font-weight: 600; line-height: 1;
+  transition: border-color .15s, color .15s;
+}
+.fb-num-btn:hover { border-color: var(--accent); color: var(--accent); }
 .fb-num {
-  width: 110px; background: var(--surface2); border: 1px solid var(--border);
+  width: 80px; background: var(--surface2); border: 1px solid var(--border);
   color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 14px;
+  text-align: center;
 }
 .fb-num:focus { outline: none; border-color: var(--accent); }
 .fb-unit { font-size: 13px; color: var(--muted); }
