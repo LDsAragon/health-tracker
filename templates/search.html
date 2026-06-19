@@ -14,7 +14,8 @@
 
 <form class="search-form-main" action="{{ url_for('main.search_view') }}" method="GET">
   <input type="text" name="q" class="search-input-main"
-         value="{{ query or '' }}" placeholder="Buscar en todas las notas..." autofocus>
+         value="{{ query or '' }}" placeholder="Buscar en todas las notas..."
+         {% if not query %}autofocus{% endif %}>
   <button type="submit" class="btn-primary">Buscar</button>
 </form>
 

@@ -65,7 +65,14 @@
         <label>Campos de la nota</label>
         <button type="button" class="btn-undo" onclick="addField('jcat-add-fields')">+ Agregar campo</button>
       </div>
-      <p style="font-size:11px;color:var(--muted);margin:-4px 0 8px;">En <b>Opciones</b> el campo "Ayuda" son las opciones separadas por coma; en <b>Número</b> es la unidad; en <b>Escala</b> (opcional) son etiquetas separadas por coma (ej. <code>😣,😐,😄</code>), o vacío para 1–5.</p>
+      <p style="font-size:11px;color:var(--muted);margin:-4px 0 8px;">El campo <b>Ayuda</b> configura el tipo: <b>Opciones</b> → opciones separadas por coma &nbsp;·&nbsp; <b>Número</b> → unidad (kg, vasos…) &nbsp;·&nbsp; <b>Escala</b> → etiquetas opcionales (ej. <code>😣,😐,😄</code>) o vacío para 1–5.</p>
+      <div class="journal-fields-legend">
+        <span style="flex:1.2">Nombre del campo</span>
+        <span>Tipo</span>
+        <span style="flex:1">Ayuda / configuración</span>
+        <span title="Incluir en Estadísticas">📈</span>
+        <span></span>
+      </div>
       <div id="jcat-add-fields" class="journal-fields-builder">
         <div class="journal-field-row">
           <input type="text" name="field_label[]" placeholder="Nombre del campo (ej: ¿Qué sentí?)" style="flex:1.2;">
@@ -156,6 +163,13 @@
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <label>Campos</label>
             <button type="button" class="btn-undo" onclick="addField('jcat-edit-fields-{{ cat.id }}')">+ Agregar campo</button>
+          </div>
+          <div class="journal-fields-legend">
+            <span style="flex:1.2">Nombre del campo</span>
+            <span>Tipo</span>
+            <span style="flex:1">Ayuda / configuración</span>
+            <span title="Incluir en Estadísticas">📈</span>
+            <span></span>
           </div>
           <div id="jcat-edit-fields-{{ cat.id }}" class="journal-fields-builder">
             {% for f in cat.fields %}

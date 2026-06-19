@@ -70,8 +70,15 @@
     <form method="POST" action="{{ url_for('main.restore_upload') }}" enctype="multipart/form-data"
           onsubmit="return confirm('Esto reemplaza TODA la base de datos actual por la del archivo. ¿Continuar?');">
       <input type="hidden" name="back" value="{{ back or '' }}">
-      <input type="file" name="dbfile" accept=".db,.sqlite,.sqlite3" required
-             style="font-size:13px;margin-bottom:10px;display:block;color:var(--text);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <label class="btn-undo" style="cursor:pointer;margin:0;">
+          📂 Elegir archivo .db
+          <input type="file" name="dbfile" id="dbfile-input" accept=".db,.sqlite,.sqlite3" required
+                 style="display:none;"
+                 onchange="document.getElementById('dbfile-name').textContent = this.files[0] ? this.files[0].name : 'Ningún archivo seleccionado';">
+        </label>
+        <span id="dbfile-name" style="font-size:13px;color:var(--muted);">Ningún archivo seleccionado</span>
+      </div>
       <button type="submit" class="btn-primary">Restaurar base de datos</button>
     </form>
   </div>
