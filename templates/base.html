@@ -61,6 +61,7 @@
   <script src="{{ url_for('static', filename='js/field-blocks.js') }}"></script>
   <script src="{{ url_for('static', filename='js/field-registry.js') }}"></script>
   <script src="{{ url_for('static', filename='js/date-es.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/emotion-guided.js') }}"></script>
 
   <div id="ew-modal" class="ew-modal-overlay" style="display:none;" onclick="ewOverlayClick(event)">
     <div class="ew-modal-box">
@@ -68,7 +69,9 @@
         <div class="ew-wheel-tabs">
           <button type="button" class="ew-wheel-tab active" data-wheel="es" onclick="ewSwitchWheel('es')">Willcox</button>
           <button type="button" class="ew-wheel-tab" data-wheel="ek" onclick="ewSwitchWheel('ek')">Ekman</button>
+          <button type="button" class="ew-wheel-tab" data-wheel="guided" onclick="ewSwitchWheel('guided')">🧭 Guiada</button>
         </div>
+        <div id="ew-guided" class="ew-guided-panel" style="display:none;"></div>
         <div class="ew-wheel-wrap">
           <svg id="ew-svg" viewBox="-180 -180 360 360" width="600" height="600"></svg>
           <div id="ew-center-label" class="ew-center-label"></div>

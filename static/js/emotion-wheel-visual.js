@@ -113,17 +113,18 @@ window.addEventListener('app-zoom', ewFitModal);
 // ── Abrir / cerrar ────────────────────────────────────────────────────────
 
 function openEWModal(pickerEl, wheelId) {
-  ewState = { angle: 90, picker: pickerEl, wheel: ewWheelSpec(wheelId || 'es') };
-  buildFullWheel();
+  const id = wheelId || 'es';
+  ewState = { angle: 90, picker: pickerEl, wheel: id === 'guided' ? null : ewWheelSpec(id) };
   ewFitModal();
   document.getElementById('ew-modal').style.display = 'flex';
-  document.querySelectorAll('.ew-wheel-tab').forEach(t =>
-    t.classList.toggle('active', t.dataset.wheel === ewState.wheel.id));
-  document.addEventListener('keydown',    ewKeyHandler);
-  document.addEventListener('mousemove',  _ewTrackMouse);
+  document.addEventListener('keydown',   ewKeyHandler);
+  document.addEventListener('mousemove', _ewTrackMouse);
   const toast = document.getElementById('ew-toast');
   if (toast) toast.style.display = 'none';
-  _ewRefreshPanel();
+  _ewSetGuideMode(id === 'guided');
+  if (id !== 'guided') { buildFullWheel(); _ewRefreshPanel(); }
+  document.querySelectorAll('.ew-wheel-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.wheel === id));
 }
 
 function closeEWModal() {
@@ -139,15 +140,43 @@ function ewOverlayClick(e) {
   if (e.target === document.getElementById('ew-modal')) closeEWModal();
 }
 
+// Alterna visibilidad del panel guiado vs. la rueda SVG
+function _ewSetGuideMode(on) {
+  const guided = document.getElementById('ew-guided');
+  const wrap    = document.querySelector('.ew-wheel-wrap');
+  const hlabel  = document.getElementById('ew-hover-label');
+  const hhint   = document.getElementById('ew-hover-hint');
+  const hint    = document.querySelector('.ew-hint');
+  if (on) {
+    if (wrap)   wrap.style.display   = 'none';
+    if (hlabel) hlabel.style.display = 'none';
+    if (hhint)  hhint.style.display  = 'none';
+    if (hint)   hint.style.display   = 'none';
+    if (guided) { guided.style.display = 'flex'; ewGuidedOpen(ewState.picker); }
+  } else {
+    if (guided) guided.style.display = 'none';
+    if (wrap)   wrap.style.display   = '';
+    if (hlabel) hlabel.style.display = '';
+    if (hhint)  hhint.style.display  = '';
+    if (hint)   hint.style.display   = '';
+  }
+}
+
 // Cambiar de rueda en vivo (toggle dentro del modal)
 function ewSwitchWheel(wheelId) {
-  if (!ewState.wheel || ewState.wheel.id === wheelId) return;
-  ewState.angle = 90;
-  ewState.wheel = ewWheelSpec(wheelId);
-  buildFullWheel();
-  document.querySelectorAll('.ew-wheel-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.wheel === wheelId);
-  });
+  const isGuided = wheelId === 'guided';
+  if (isGuided && !ewState.wheel) return;
+  if (!isGuided && ewState.wheel && ewState.wheel.id === wheelId) return;
+  _ewSetGuideMode(isGuided);
+  if (!isGuided) {
+    ewState.angle = 90;
+    ewState.wheel = ewWheelSpec(wheelId);
+    buildFullWheel();
+  } else {
+    ewState.wheel = null;
+  }
+  document.querySelectorAll('.ew-wheel-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.wheel === wheelId));
 }
 
 // ── Teclado ───────────────────────────────────────────────────────────────

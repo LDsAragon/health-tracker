@@ -235,6 +235,8 @@ function buildEWPicker(label) {
                 onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Rueda Willcox</button>
         <button type="button" class="ew-open-btn ew-open-btn-ek"
                 onclick="openEWModal(this.closest('.emotion-wheel-picker'),'ek')">🧭 Rueda Ekman</button>
+        <button type="button" class="ew-open-btn ew-open-btn-guided"
+                onclick="openEWModal(this.closest('.emotion-wheel-picker'),'guided')">🌿 Exploración guiada</button>
       </div>
       <div class="ew-selects">
         <select class="ew-select ew-level1" onchange="ewL2(this)">
@@ -266,6 +268,8 @@ function buildEWPickerCompact(label) {
               onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Willcox</button>
       <button type="button" class="ew-open-btn ew-open-btn-ek"
               onclick="openEWModal(this.closest('.emotion-wheel-picker'),'ek')">🧭 Ekman</button>
+      <button type="button" class="ew-open-btn ew-open-btn-guided"
+              onclick="openEWModal(this.closest('.emotion-wheel-picker'),'guided')">🌿 Guiada</button>
     </div>
     <select class="ew-select ew-level1" onchange="ewL2(this)">
       <option value="">Emoción base...</option>${opts}
