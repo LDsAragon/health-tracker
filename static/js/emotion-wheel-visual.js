@@ -2,9 +2,10 @@
 // ew-wheel-g → paths que ROTAN · ew-label-g → textos · Selector (◄) a la derecha (90°)
 // La rueda activa vive en ewState.wheel (spec normalizado): española (3 niveles) o Ekman (2).
 
-let ewState   = { angle: 90, picker: null, wheel: null };
-let _ewAnimId = null;
-let _ewMouse  = { x: null, y: null };
+let ewState      = { angle: 90, picker: null, wheel: null };
+let _ewAnimId    = null;
+let _ewMouse     = { x: null, y: null };
+let _ewToastTimer = null;
 
 function _ewTrackMouse(e) { _ewMouse.x = e.clientX; _ewMouse.y = e.clientY; }
 
@@ -120,6 +121,9 @@ function openEWModal(pickerEl, wheelId) {
     t.classList.toggle('active', t.dataset.wheel === ewState.wheel.id));
   document.addEventListener('keydown',    ewKeyHandler);
   document.addEventListener('mousemove',  _ewTrackMouse);
+  const toast = document.getElementById('ew-toast');
+  if (toast) toast.style.display = 'none';
+  _ewRefreshPanel();
 }
 
 function closeEWModal() {
@@ -127,7 +131,8 @@ function closeEWModal() {
   document.removeEventListener('keydown',    ewKeyHandler);
   document.removeEventListener('mousemove',  _ewTrackMouse);
   _ewMouse.x = null;
-  if (_ewAnimId) { cancelAnimationFrame(_ewAnimId); _ewAnimId = null; }
+  if (_ewAnimId)    { cancelAnimationFrame(_ewAnimId); _ewAnimId = null; }
+  if (_ewToastTimer) { clearTimeout(_ewToastTimer); _ewToastTimer = null; }
 }
 
 function ewOverlayClick(e) {
@@ -497,7 +502,57 @@ function ewSelect(base, mid, spec, depth) {
   let val = parts.join(' > ');
   if (W.id !== 'es') val = W.id + '::' + val;
   ewAddValue(ewState.picker, val);
-  // No cerrar el modal — el usuario puede seguir agregando emociones
+  _ewShowToast(val);
+  _ewRefreshPanel();
+}
+
+function _ewShowToast(val) {
+  const toast = document.getElementById('ew-toast');
+  if (!toast) return;
+  const isEk  = val.startsWith('ek::');
+  const clean = isEk ? val.slice(4) : val;
+  const label = clean.replace(/ > /g, ' › ');
+  const col   = _ewValColor(val);
+  toast.style.setProperty('--toast-c', col);
+  toast.innerHTML = `<span class="ew-toast-dot" style="background:${col};"></span>+ ${label}`;
+  toast.classList.remove('ew-toast-hide');
+  toast.style.display = 'flex';
+  void toast.offsetWidth; // reflow para reiniciar la animación
+  if (_ewToastTimer) clearTimeout(_ewToastTimer);
+  _ewToastTimer = setTimeout(() => {
+    toast.classList.add('ew-toast-hide');
+    setTimeout(() => { toast.style.display = 'none'; }, 300);
+    _ewToastTimer = null;
+  }, 1400);
+}
+
+function _ewRefreshPanel() {
+  const panel = document.getElementById('ew-sel-panel');
+  const chips = document.getElementById('ew-sel-chips');
+  const count = document.getElementById('ew-sel-count');
+  if (!panel || !chips || !ewState.picker) return;
+  const vals = ewGetValues(ewState.picker);
+  if (vals.length === 0) { panel.style.display = 'none'; return; }
+  count.textContent = vals.length;
+  chips.innerHTML = vals.map((v, i) => {
+    const isEk  = v.startsWith('ek::');
+    const clean = isEk ? v.slice(4) : v;
+    const label = clean.replace(/ > /g, ' › ');
+    const badge = isEk ? ' <span class="ew-chip-src">Ekman</span>' : '';
+    const col   = _ewValColor(v);
+    return `<span class="ew-chip-item" style="--c:${col};">` +
+           `<span>${label}${badge}</span>` +
+           `<button type="button" class="ew-chip-x" onclick="_ewPanelRemove(${i})">×</button></span>`;
+  }).join('');
+  panel.style.display = '';
+}
+
+function _ewPanelRemove(idx) {
+  if (!ewState.picker) return;
+  const vals = ewGetValues(ewState.picker);
+  vals.splice(idx, 1);
+  ewSetValues(ewState.picker, vals);
+  _ewRefreshPanel();
 }
 
 // ── Construir SVG (genérico según el spec activo) ──────────────────────────

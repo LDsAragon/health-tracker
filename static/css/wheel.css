@@ -102,6 +102,66 @@
 }
 .ew-ek-chip::before { content: "🧭 "; }
 
+/* ── Toast de confirmación dentro del modal ──────────────────────────────── */
+
+.ew-toast {
+  align-self: center;
+  background: color-mix(in srgb, var(--toast-c, var(--accent)) 14%, var(--surface2));
+  border: 1px solid color-mix(in srgb, var(--toast-c, var(--accent)) 50%, transparent);
+  border-radius: 10px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: ew-toast-in .2s ease;
+  pointer-events: none;
+}
+.ew-toast.ew-toast-hide { animation: ew-toast-out .3s ease forwards; }
+.ew-toast-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+@keyframes ew-toast-in  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+@keyframes ew-toast-out { to   { opacity:0; transform:translateY(-4px); } }
+
+/* ── Panel de seleccionadas dentro del modal ─────────────────────────────── */
+
+.ew-sel-panel {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: ew-panel-in .2s ease;
+}
+@keyframes ew-panel-in { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+.ew-sel-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+}
+.ew-sel-count {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 99px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.ew-sel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 /* ── Chips de multi-selección en el picker ───────────────────────────────── */
 
 .ew-chips {
