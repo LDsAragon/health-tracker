@@ -481,13 +481,21 @@ select.journal-cat-select {
 .fb-step.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 25%, transparent); }
 .fb-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--border); display: block; }
 .fb-step.filled .fb-dot, .fb-step.active .fb-dot { background: var(--accent); }
+.fb-scale-label { font-size: 12px; font-weight: 600; color: var(--accent); min-height: 16px; }
 
-.fb-sino {
-  align-self: flex-start; padding: 5px 14px; border-radius: 7px;
-  background: var(--surface2); border: 1px solid var(--border);
+.fb-sino-group { display: flex; align-self: flex-start; }
+.fb-sino-opt {
+  padding: 5px 16px; background: var(--surface2); border: 1px solid var(--border);
   color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 600;
+  transition: color .15s, border-color .15s, background .15s;
 }
-.fb-sino.on { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent); color: var(--accent); }
+.fb-sino-opt:first-child { border-radius: 7px 0 0 7px; }
+.fb-sino-opt:last-child  { border-radius: 0 7px 7px 0; margin-left: -1px; }
+.fb-sino-opt:hover { color: var(--text); border-color: var(--accent); position: relative; z-index: 1; }
+.fb-sino-opt.active {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-color: var(--accent); color: var(--accent); position: relative; z-index: 1;
+}
 
 .fb-opt {
   padding: 5px 12px; border-radius: 999px;

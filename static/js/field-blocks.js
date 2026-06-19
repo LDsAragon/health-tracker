@@ -8,7 +8,7 @@
 //   opciones → lista separada por coma: "Desayuno, Almuerzo, Cena".
 //   numero   → la unidad: "kg", "vasos".
 // Valor guardado:
-//   escala → "1".."N"   sino → "1"/""   opciones → texto elegido   numero → el número
+//   escala → "1".."N"   sino → "1" (Sí) / "0" (No) / "" (sin respuesta)   opciones → texto elegido   numero → el número
 
 function _fbEsc(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 function _fbLabels(config) {
@@ -25,10 +25,13 @@ function _escalaControl(config) {
     h += '<button type="button" class="fb-step" data-idx="' + (i + 1) + '" title="' + _fbEsc(s) + '">' +
       (labeled ? _fbEsc(s) : '<span class="fb-dot"></span>') + '</button>';
   });
-  return h + '</div>';
+  return h + '</div><div class="fb-scale-label"></div>';
 }
 function _sinoControl() {
-  return '<button type="button" class="fb-sino">No</button>';
+  return '<div class="fb-sino-group">' +
+    '<button type="button" class="fb-sino-opt" data-val="1">✓ Sí</button>' +
+    '<button type="button" class="fb-sino-opt" data-val="0">✗ No</button>' +
+  '</div>';
 }
 function _opcionesControl(config) {
   const opts = _fbLabels(config);
@@ -68,15 +71,28 @@ function buildNumeroField(label, config)   { return _fbField('numero', label, co
 function _fbApply(block, value) {
   const fb = block.dataset.fb;
   if (fb === 'escala') {
-    const labeled = _fbLabels(block.dataset.config).length >= 2;
+    const labels = _fbLabels(block.dataset.config);
+    const labeled = labels.length >= 2;
     block.querySelectorAll('.fb-step').forEach(b => {
       const idx = +b.dataset.idx;
       b.classList.toggle('active', value !== '' && idx === +value);
       b.classList.toggle('filled', !labeled && value !== '' && idx <= +value);
     });
+    const lbl = block.querySelector('.fb-scale-label');
+    if (lbl) {
+      if (value === '') {
+        lbl.textContent = '';
+      } else if (labeled) {
+        lbl.textContent = labels[+value - 1] || '';
+      } else {
+        const total = block.querySelectorAll('.fb-step').length;
+        lbl.textContent = value + ' / ' + total;
+      }
+    }
   } else if (fb === 'sino') {
-    const b = block.querySelector('.fb-sino');
-    if (b) { const on = value === '1'; b.classList.toggle('on', on); b.textContent = on ? '✓ Sí' : 'No'; }
+    block.querySelectorAll('.fb-sino-opt').forEach(b => {
+      b.classList.toggle('active', value !== '' && b.dataset.val === value);
+    });
   } else if (fb === 'opciones') {
     block.querySelectorAll('.fb-opt').forEach(b => b.classList.toggle('active', b.dataset.val === value));
   } else if (fb === 'numero') {
@@ -94,11 +110,11 @@ function _fbSet(block, value) {
 document.addEventListener('click', function (e) {
   const step = e.target.closest && e.target.closest('.fb-step');
   if (step) { _fbSet(step.closest('.field-block'), step.dataset.idx); return; }
-  const sino = e.target.closest && e.target.closest('.fb-sino');
-  if (sino) {
-    const block = sino.closest('.field-block');
+  const sinopt = e.target.closest && e.target.closest('.fb-sino-opt');
+  if (sinopt) {
+    const block = sinopt.closest('.field-block');
     const cur = block.querySelector('input[data-label]').value;
-    _fbSet(block, cur === '1' ? '' : '1');
+    _fbSet(block, cur === sinopt.dataset.val ? '' : sinopt.dataset.val);
     return;
   }
   const opt = e.target.closest && e.target.closest('.fb-opt');
@@ -116,7 +132,7 @@ document.addEventListener('input', function (e) {
 
 // ── Restaurar (edición): construye el control desde el shell y aplica el valor ──
 function _fbEnsure(block) {
-  if (block.querySelector('.fb-scale, .fb-sino, .fb-opts, .fb-numero, .fb-hint')) return;
+  if (block.querySelector('.fb-scale, .fb-sino-group, .fb-opts, .fb-numero, .fb-hint')) return;
   const hidden = block.querySelector('input[data-label]');
   const tmp = document.createElement('div');
   tmp.innerHTML = _fbControl(block.dataset.fb, block.dataset.config || '');
