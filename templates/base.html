@@ -92,5 +92,23 @@
     </div>
   </div>
   {% block page_scripts %}{% endblock %}
+  <script>
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    // La rueda de emociones tiene su propio handler — no interferir
+    const ewModal = document.getElementById('ew-modal');
+    if (ewModal && ewModal.style.display !== 'none') return;
+    // Buscar el primer botón Cancelar dentro de un panel visible
+    const cancel = Array.from(document.querySelectorAll('.btn-cancel, .btn-cancel-sm')).find(function (btn) {
+      let el = btn;
+      while (el) {
+        if (el.style && el.style.display === 'none') return false;
+        el = el.parentElement;
+      }
+      return true;
+    });
+    if (cancel) { e.preventDefault(); cancel.click(); }
+  });
+  </script>
 </body>
 </html>
