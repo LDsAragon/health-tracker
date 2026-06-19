@@ -122,8 +122,11 @@
           <div class="day-journal-field">
             <span class="day-journal-field-label">{{ field.label }}</span>
             {% if field.get('type','text') == 'emotion-wheel' %}
-            {% set is_ek = val.startswith('ek::') %}
-            {% set clean = val[4:] if is_ek else val %}
+            {% for emo_raw in val.split(' | ') %}
+            {% set emo = emo_raw.strip() %}
+            {% if emo %}
+            {% set is_ek = emo.startswith('ek::') %}
+            {% set clean = emo[4:] if is_ek else emo %}
             {% set base0 = clean.split(' > ')[0] %}
             {% set ew_color = (EKMAN_COLORS.get(base0) if is_ek else EW_COLORS.get(base0)) or '#8892a4' %}
             <div class="ew-display" style="--ew-c: {{ ew_color }};">
@@ -133,6 +136,8 @@
               {% endfor %}
               {% if is_ek %}<span class="ew-display-src">Ekman</span>{% endif %}
             </div>
+            {% endif %}
+            {% endfor %}
             {% elif field.get('type','text') == 'duracion' %}
             <p class="day-journal-field-value">{{ val | dur_fmt }}</p>
             {% elif field.get('type','text') == 'rango' %}
@@ -184,6 +189,7 @@
             {% if field.get('type','text') == 'emotion-wheel' %}
             <div class="emotion-wheel-picker" data-label="{{ field.label }}"
                  data-ew-saved="{{ fval }}">
+              <div class="ew-chips"></div>
               <div class="ew-open-btns">
                 <button type="button" class="ew-open-btn"
                         onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Rueda Willcox</button>
@@ -203,8 +209,9 @@
                 <select class="ew-select ew-level3" style="display:none;">
                   <option value="">Aún más específico...</option>
                 </select>
+                <button type="button" class="ew-cascade-add" style="display:none;"
+                        onclick="ewCascadeAdd(this.closest('.emotion-wheel-picker'))">+ Agregar emoción</button>
               </div>
-              <div class="ew-ek-chip" style="display:none;"></div>
               <input type="hidden" data-ew-value="">
             </div>
             {% elif field.get('type','text') == 'duracion' %}

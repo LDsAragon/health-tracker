@@ -343,7 +343,7 @@ function ewHover(base, mid, spec, depth, color) {
   lbl.innerHTML = html;
 
   const hint = document.getElementById('ew-hover-hint');
-  if (hint) hint.textContent = 'Click para guardar';
+  if (hint) hint.textContent = 'Click para añadir · seguí eligiendo o presioná Listo';
 }
 
 function ewHoverClear() {
@@ -351,7 +351,7 @@ function ewHoverClear() {
   const lbl  = document.getElementById('ew-hover-label');
   const hint = document.getElementById('ew-hover-hint');
   if (lbl)  lbl.innerHTML = '';
-  if (hint) hint.textContent = 'Rotá para explorar · hover para leer · click para guardar';
+  if (hint) hint.textContent = 'Rotá para explorar · hover para leer · click para añadir';
   // El panel nunca queda vacío: muestra la emoción base activa (centro)
   const tb = ewState.wheel.bases[topIdx(ewState.angle)];
   ewRenderInfo(tb.id, null, null, 1, tb.color);
@@ -495,9 +495,9 @@ function ewSelect(base, mid, spec, depth) {
   if (depth >= 2 && mid)  parts.push(_esOf(W, base, mid));
   if (depth >= 3 && spec) parts.push(_esOf(W, base, mid, spec));
   let val = parts.join(' > ');
-  if (W.id !== 'es') val = W.id + '::' + val; // origen de taxonomía (ej. "ek::Ira > Frustración")
-  ewRestore(ewState.picker, val);
-  closeEWModal();
+  if (W.id !== 'es') val = W.id + '::' + val;
+  ewAddValue(ewState.picker, val);
+  // No cerrar el modal — el usuario puede seguir agregando emociones
 }
 
 // ── Construir SVG (genérico según el spec activo) ──────────────────────────

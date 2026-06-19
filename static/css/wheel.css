@@ -102,6 +102,63 @@
 }
 .ew-ek-chip::before { content: "🧭 "; }
 
+/* ── Chips de multi-selección en el picker ───────────────────────────────── */
+
+.ew-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.ew-chips:empty { margin-bottom: 0; }
+
+.ew-chip-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: color-mix(in srgb, var(--c, var(--accent)) 16%, var(--surface2));
+  border: 1px solid color-mix(in srgb, var(--c, var(--accent)) 45%, transparent);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px 3px 10px;
+  border-radius: 99px;
+}
+
+.ew-chip-x {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  margin-left: 2px;
+}
+.ew-chip-x:hover { color: var(--text); }
+
+.ew-chip-src {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.65;
+  letter-spacing: .04em;
+}
+
+/* Botón de agregar emoción desde la cascada */
+.ew-cascade-add {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 2px;
+  transition: opacity .15s;
+}
+.ew-cascade-add:hover { opacity: 0.85; }
+
 /* Badge "Ekman" en el display de la entrada guardada */
 .ew-display-src {
   font-size: 10px;

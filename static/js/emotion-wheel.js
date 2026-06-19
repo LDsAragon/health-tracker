@@ -74,11 +74,11 @@ const EMOTION_WHEEL = {
 // ── Handlers de cascada ────────────────────────────────────────────────────
 
 function ewL2(sel) {
-  const p   = sel.closest('.emotion-wheel-picker');
-  const l2  = p.querySelector('.ew-level2');
-  const l3  = p.querySelector('.ew-level3');
-  const hid = p.querySelector('[data-ew-value]');
-  const base = sel.value;
+  const p      = sel.closest('.emotion-wheel-picker');
+  const l2     = p.querySelector('.ew-level2');
+  const l3     = p.querySelector('.ew-level3');
+  const addBtn = p.querySelector('.ew-cascade-add');
+  const base   = sel.value;
 
   l2.innerHTML = '<option value="">Más específico...</option>';
   l3.innerHTML = '<option value="">Aún más específico...</option>';
@@ -87,7 +87,8 @@ function ewL2(sel) {
 
   if (!base) {
     l2.style.display = 'none';
-    hid.value = '';
+    delete p.dataset.ewPending;
+    if (addBtn) addBtn.style.display = 'none';
     sel.style.color = '';
     sel.style.borderColor = '';
     return;
@@ -95,7 +96,8 @@ function ewL2(sel) {
   const cat = EMOTION_WHEEL[base];
   Object.keys(cat.children).forEach(m => l2.add(new Option(m, m)));
   l2.style.display = '';
-  hid.value = base;
+  p.dataset.ewPending = base;
+  if (addBtn) addBtn.style.display = '';
   _ewColor(sel, cat.color);
   _ewColor(l2, cat.color);
 }
@@ -104,7 +106,6 @@ function ewL3(sel) {
   const p    = sel.closest('.emotion-wheel-picker');
   const l1   = p.querySelector('.ew-level1');
   const l3   = p.querySelector('.ew-level3');
-  const hid  = p.querySelector('[data-ew-value]');
   const base = l1.value;
   const mid  = sel.value;
 
@@ -113,18 +114,18 @@ function ewL3(sel) {
 
   if (!mid) {
     l3.style.display = 'none';
-    hid.value = base;
+    p.dataset.ewPending = base;
     return;
   }
   const specific = EMOTION_WHEEL[base].children[mid];
   specific.forEach(sp => l3.add(new Option(sp, sp)));
   l3.style.display = '';
-  hid.value = base + ' > ' + mid;
+  p.dataset.ewPending = base + ' > ' + mid;
   const c = EMOTION_WHEEL[base].color;
   _ewColor(sel, c);
   _ewColor(l3, c);
   l3.onchange = function() {
-    hid.value = this.value
+    p.dataset.ewPending = this.value
       ? base + ' > ' + mid + ' > ' + this.value
       : base + ' > ' + mid;
     _ewColor(this, c);
@@ -136,43 +137,87 @@ function _ewColor(el, color) {
   el.style.borderColor = color;
 }
 
+// ── Gestión multi-valor ─────────────────────────────────────────────────────
+
+function ewGetValues(picker) {
+  const hid = picker.querySelector('[data-ew-value]');
+  const raw = hid ? hid.value.trim() : '';
+  return raw ? raw.split(' | ').filter(Boolean) : [];
+}
+
+function ewSetValues(picker, vals) {
+  const hid = picker.querySelector('[data-ew-value]');
+  if (hid) hid.value = vals.join(' | ');
+  ewRenderChips(picker, vals);
+}
+
+function ewAddValue(picker, val) {
+  if (!val) return;
+  const vals = ewGetValues(picker);
+  if (!vals.includes(val)) vals.push(val);
+  ewSetValues(picker, vals);
+}
+
+function ewRenderChips(picker, vals) {
+  const cont = picker.querySelector('.ew-chips');
+  if (!cont) return;
+  cont.innerHTML = vals.map((v, i) => {
+    const isEk  = v.startsWith('ek::');
+    const clean = isEk ? v.slice(4) : v;
+    const col   = _ewValColor(v);
+    const label = clean.replace(/ > /g, ' › ');
+    const badge = isEk ? ' <span class="ew-chip-src">Ekman</span>' : '';
+    return `<span class="ew-chip-item" style="--c:${col};" data-ew-idx="${i}">` +
+           `<span>${label}${badge}</span>` +
+           `<button type="button" class="ew-chip-x" onclick="ewRemoveChipAt(this)">×</button></span>`;
+  }).join('');
+}
+
+function _ewValColor(val) {
+  const isEk  = val.startsWith('ek::');
+  const base0 = (isEk ? val.slice(4) : val).split(' > ')[0];
+  if (isEk) {
+    const EK_COLORS = { 'Ira':'#e2403b','Miedo':'#7c5cbf','Tristeza':'#3b6fb5',
+                        'Asco':'#4f9d69','Disfrute':'#e6b53c','Felicidad':'#e6b53c','Sorpresa':'#8e7cc3' };
+    return EK_COLORS[base0] || '#8892a4';
+  }
+  return (EMOTION_WHEEL[base0] && EMOTION_WHEEL[base0].color) || '#8892a4';
+}
+
+function ewRemoveChipAt(btn) {
+  const picker = btn.closest('.emotion-wheel-picker');
+  const chip   = btn.closest('.ew-chip-item');
+  const idx    = parseInt(chip.dataset.ewIdx, 10);
+  const vals   = ewGetValues(picker);
+  vals.splice(idx, 1);
+  ewSetValues(picker, vals);
+}
+
+function ewCascadeAdd(picker) {
+  const val = picker.dataset.ewPending;
+  if (!val) return;
+  ewAddValue(picker, val);
+  _ewCascadeReset(picker);
+}
+
+function _ewCascadeReset(picker) {
+  const l1 = picker.querySelector('.ew-level1');
+  const l2 = picker.querySelector('.ew-level2');
+  const l3 = picker.querySelector('.ew-level3');
+  const addBtn = picker.querySelector('.ew-cascade-add');
+  if (l1) { l1.value = ''; l1.style.color = ''; l1.style.borderColor = ''; }
+  if (l2) { l2.innerHTML = '<option value="">Más específico...</option>'; l2.style.display = 'none'; l2.style.color = ''; l2.style.borderColor = ''; }
+  if (l3) { l3.innerHTML = '<option value="">Aún más específico...</option>'; l3.style.display = 'none'; l3.style.color = ''; l3.style.borderColor = ''; l3.onchange = null; }
+  if (addBtn) addBtn.style.display = 'none';
+  delete picker.dataset.ewPending;
+}
+
 // ── Restaurar valor guardado ────────────────────────────────────────────────
 
 function ewRestore(picker, val) {
   if (!val) return;
-  const hid     = picker.querySelector('[data-ew-value]');
-  const selects = picker.querySelector('.ew-selects');
-  const chip    = picker.querySelector('.ew-ek-chip');
-
-  // Valor de la rueda Ekman: "ek::Ira > Frustración" → chip de solo lectura, sin cascada
-  if (val.indexOf('ek::') === 0) {
-    const path = val.slice(4);
-    if (hid) hid.value = val;
-    if (selects) selects.style.display = 'none';
-    if (chip) { chip.style.display = ''; chip.textContent = path; chip.dataset.origin = 'ek'; }
-    return;
-  }
-  // Valor de la rueda española (sin prefijo): cascada normal
-  if (chip)    chip.style.display = 'none';
-  if (selects) selects.style.display = '';
-
-  const parts = val.split(' > ');
-  const l1 = picker.querySelector('.ew-level1');
-  if (!parts[0] || !EMOTION_WHEEL[parts[0]]) return;
-  l1.value = parts[0];
-  ewL2(l1);
-  if (parts[1]) {
-    const l2 = picker.querySelector('.ew-level2');
-    l2.value = parts[1];
-    ewL3(l2);
-    if (parts[2]) {
-      const l3  = picker.querySelector('.ew-level3');
-      const hid = picker.querySelector('[data-ew-value]');
-      l3.value  = parts[2];
-      hid.value = parts[0] + ' > ' + parts[1] + ' > ' + parts[2];
-      _ewColor(l3, EMOTION_WHEEL[parts[0]].color);
-    }
-  }
+  const vals = val.split(' | ').filter(Boolean);
+  ewSetValues(picker, vals);
 }
 
 // ── Construir picker en formularios dinámicos ──────────────────────────────
@@ -184,6 +229,7 @@ function buildEWPicker(label) {
   return `<div class="day-journal-field-input">
     <label>${label}</label>
     <div class="emotion-wheel-picker" data-label="${esc(label)}">
+      <div class="ew-chips"></div>
       <div class="ew-open-btns">
         <button type="button" class="ew-open-btn"
                 onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Rueda Willcox</button>
@@ -200,8 +246,9 @@ function buildEWPicker(label) {
         <select class="ew-select ew-level3" style="display:none;">
           <option value="">Aún más específico...</option>
         </select>
+        <button type="button" class="ew-cascade-add" style="display:none;"
+                onclick="ewCascadeAdd(this.closest('.emotion-wheel-picker'))">+ Agregar emoción</button>
       </div>
-      <div class="ew-ek-chip" style="display:none;"></div>
       <input type="hidden" data-ew-value="">
     </div>
   </div>`;
@@ -213,6 +260,7 @@ function buildEWPickerCompact(label) {
   const opts = Object.keys(EMOTION_WHEEL)
     .map(e => `<option value="${e}">${e}</option>`).join('');
   return `<div class="emotion-wheel-picker ew-compact" data-label="${esc(label)}">
+    <div class="ew-chips"></div>
     <div class="ew-open-btns">
       <button type="button" class="ew-open-btn"
               onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Willcox</button>
@@ -228,7 +276,8 @@ function buildEWPickerCompact(label) {
     <select class="ew-select ew-level3" style="display:none;">
       <option value="">Aún más específico...</option>
     </select>
-    <div class="ew-ek-chip" style="display:none;"></div>
+    <button type="button" class="ew-cascade-add" style="display:none;"
+            onclick="ewCascadeAdd(this.closest('.emotion-wheel-picker'))">+ Agregar emoción</button>
     <input type="hidden" data-ew-value="">
   </div>`;
 }
