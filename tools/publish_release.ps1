@@ -15,7 +15,6 @@ if ($LASTEXITCODE) {
 $fecha = Get-Date -Format yyyy-MM-dd
 $tag = if ($Tag) { $Tag } else { "v$fecha" }
 $zip = "dist\Bitacora-Windows-$fecha.zip"
-$tgz = "dist\Bitacora-linux-$fecha.tar.gz"
 
 Write-Output "== Build Windows =="
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\make_release.ps1
@@ -23,7 +22,11 @@ if ($LASTEXITCODE -or -not (Test-Path $zip)) { Write-Error "falló el build Wind
 
 Write-Output "== Build Linux (WSL) =="
 wsl -d Ubuntu-24.04 -- bash tools/make_release_linux.sh
-if ($LASTEXITCODE -or -not (Test-Path $tgz)) { Write-Error "falló el build Linux"; exit 1 }
+if ($LASTEXITCODE) { Write-Error "falló el build Linux"; exit 1 }
+
+# WSL puede usar UTC y generar una fecha distinta a la de Windows; buscamos el tar.gz más reciente
+$tgz = Get-ChildItem "dist\Bitacora-linux-*.tar.gz" | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+if (-not $tgz) { Write-Error "no se encontró el tar.gz de Linux en dist\"; exit 1 }
 
 Write-Output "== Publicando $tag =="
 gh release view $tag *> $null
