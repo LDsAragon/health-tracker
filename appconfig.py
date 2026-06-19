@@ -30,5 +30,5 @@ DEFAULT_SETTINGS = {k: v["default"] for k, v in SETTINGS.items()}
 
 PET_ART = {
     "cat": "  /\\_/\\ \n ( ^.^ )\n  > ♥ < ",
-    "dog": "  / 0 \\ \n ( u.u )\n  \\___/ ",
+    "dog": "  ∩   ∩\n ( ^ᴥ^ )\n  >  ω <",
 }
