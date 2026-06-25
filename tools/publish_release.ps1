@@ -3,6 +3,11 @@
 # Necesita gh CLI autenticada (gh auth login).
 # -Tag para un tag distinto al del día (ej: v2026-06-12.1 si hubo que re-publicar).
 param([string]$Tag = "")
+# PS 5.1 defaults $OutputEncoding to ASCII; los caracteres no-ASCII (tildes, em dash)
+# se corrompen al pasarlos a procesos externos como gh CLI. Forzar UTF-8.
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
@@ -20,6 +25,7 @@ $zip = "dist\Bitacora-Windows-$fecha.zip"
 $meses = @('enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre')
 $hoy = Get-Date
 $fechaEs = "$($hoy.Day) de $($meses[$hoy.Month - 1]) de $($hoy.Year)"
+$titulo = "Bitácora $([char]0x2014) $fechaEs"
 
 Write-Output "== Build Windows =="
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\make_release.ps1
@@ -39,24 +45,26 @@ if (-not $prevTag) { $prevTag = git rev-list --max-parents=0 HEAD }
 $commitLines = git log "$prevTag..HEAD" --pretty=format:"- %s" --no-merges 2>$null
 $commits = if ($commitLines) { $commitLines -join "`n" } else { "- Mejoras y correcciones" }
 $notesFile = [System.IO.Path]::GetTempFileName()
-@"
+# Set-Content -Encoding UTF8 en PS 5.1 escribe con BOM; usar WriteAllText con UTF8 sin BOM.
+$notesBody = @"
 ## Cambios
 
 $commits
 
 ---
-**Windows:** descomprimí el zip, entrá a la carpeta `Bitacora` y ejecutá `Bitacora.exe`.
-**Linux:** descomprimí el tar.gz, entrá a la carpeta `Bitacora` y ejecutá `./instalar.sh`.
-"@ | Set-Content -Path $notesFile -Encoding UTF8
+**Windows:** descomprimí el zip, entrá a la carpeta ``Bitacora`` y ejecutá ``Bitacora.exe``.
+**Linux:** descomprimí el tar.gz, entrá a la carpeta ``Bitacora`` y ejecutá ``./instalar.sh``.
+"@
+[System.IO.File]::WriteAllText($notesFile, $notesBody, (New-Object System.Text.UTF8Encoding $false))
 
 Write-Output "== Publicando $tag =="
 gh release view $tag *> $null
 if ($LASTEXITCODE) {
-    gh release create $tag $zip $tgz --title "Bitácora — $fechaEs" --notes-file $notesFile --latest
+    gh release create $tag $zip $tgz --title $titulo --notes-file $notesFile --latest
 } else {
     # ya existe el release de hoy: reemplazar archivos y actualizar notas
     gh release upload $tag $zip $tgz --clobber
-    gh release edit $tag --title "Bitácora — $fechaEs" --notes-file $notesFile
+    gh release edit $tag --title $titulo --notes-file $notesFile
 }
 Remove-Item $notesFile -ErrorAction SilentlyContinue
 if ($LASTEXITCODE) { exit 1 }
