@@ -17,6 +17,15 @@ if ($LASTEXITCODE) {
     exit 1
 }
 
+$pending = git status --porcelain 2>$null
+if ($pending) {
+    Write-Error "Hay cambios sin commitear. Commiteá o descartá antes de publicar."
+    exit 1
+}
+Write-Output "== Push a main =="
+git push
+if ($LASTEXITCODE) { Write-Error "git push falló"; exit 1 }
+
 $fecha = Get-Date -Format yyyy-MM-dd
 $tag = if ($Tag) { $Tag } else { "v$fecha" }
 $zip = "dist\Bitacora-Windows-$fecha.zip"
