@@ -48,6 +48,14 @@
       </a>
     </div>
   </nav>
+  <div id="update-banner" class="update-banner" style="display:none;">
+    <span id="update-banner-text"></span>
+    <div class="update-banner-actions">
+      <button class="btn-primary" onclick="updateShowModal()">Instalar actualización</button>
+      <button class="update-banner-dismiss" onclick="document.getElementById('update-banner').style.display='none'" title="Ignorar">×</button>
+    </div>
+  </div>
+
   <main class="{% block main_class %}main{% endblock %}">
     {% block content %}{% endblock %}
   </main>
@@ -95,12 +103,111 @@
     </div>
   </div>
   {% block page_scripts %}{% endblock %}
+
+  <!-- Modal de actualización -->
+  <div id="update-modal" class="update-modal-overlay" style="display:none;">
+    <div class="update-modal-box">
+      <p class="update-modal-title">Actualizar Bitácora</p>
+      <div id="update-step-dl" class="update-modal-step">
+        <p id="update-dl-label">Descargando...</p>
+        <div class="update-progress-track"><div id="update-progress-fill" class="update-progress-fill"></div></div>
+        <p id="update-progress-pct" class="update-progress-pct">0%</p>
+      </div>
+      <div id="update-step-ready" class="update-modal-step" style="display:none;">
+        <p>Descarga completa. La aplicación se cerrará para aplicar la actualización y se reabrirá sola.</p>
+        <p class="update-note">Se creó un backup de tu base de datos en la carpeta de backups.</p>
+        <button class="btn-primary" onclick="updateApply()">Aplicar y reiniciar</button>
+      </div>
+      <div id="update-step-error" class="update-modal-step" style="display:none;">
+        <p id="update-error-text" class="update-error"></p>
+        <button class="btn-cancel" onclick="document.getElementById('update-modal').style.display='none'">Cerrar</button>
+      </div>
+      <div id="update-step-applying" class="update-modal-step" style="display:none;">
+        <p>Aplicando actualización, la aplicación se cerrará en un momento...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    var _pollTimer = null;
+
+    function _checkUpdate() {
+      fetch('/update/status').then(function(r) { return r.json(); }).then(function(s) {
+        if (s.available) {
+          document.getElementById('update-banner-text').textContent =
+            'Nueva versión disponible: ' + s.latest + ' (actual: ' + s.current + ')';
+          document.getElementById('update-banner').style.display = 'flex';
+        } else if (!s.checked) {
+          setTimeout(_checkUpdate, 3000);
+        }
+      }).catch(function(){});
+    }
+    setTimeout(_checkUpdate, 2000);
+
+    window.updateShowModal = function() {
+      document.getElementById('update-banner').style.display = 'none';
+      document.getElementById('update-modal').style.display  = 'flex';
+      fetch('/update/progress').then(function(r) { return r.json(); }).then(function(p) {
+        if (p.ready) {
+          _showReady();
+        } else if (p.error) {
+          _showError(p.error);
+        } else {
+          fetch('/update/download', {method: 'POST'});
+          _pollDownload();
+        }
+      });
+    };
+
+    function _pollDownload() {
+      _pollTimer = setInterval(function() {
+        fetch('/update/progress').then(function(r) { return r.json(); }).then(function(p) {
+          if (p.error)  { clearInterval(_pollTimer); _showError(p.error); return; }
+          if (p.total > 0) {
+            var pct = Math.min(100, Math.round(p.done / p.total * 100));
+            document.getElementById('update-progress-fill').style.width = pct + '%';
+            document.getElementById('update-progress-pct').textContent  = pct + '%';
+            var mb = (p.done / 1048576).toFixed(1) + ' / ' + (p.total / 1048576).toFixed(1) + ' MB';
+            document.getElementById('update-dl-label').textContent = 'Descargando... ' + mb;
+          }
+          if (p.ready) { clearInterval(_pollTimer); _showReady(); }
+        }).catch(function(){});
+      }, 500);
+    }
+
+    function _showReady() {
+      document.getElementById('update-step-dl').style.display    = 'none';
+      document.getElementById('update-step-ready').style.display = '';
+    }
+
+    function _showError(msg) {
+      document.getElementById('update-step-dl').style.display    = 'none';
+      document.getElementById('update-error-text').textContent   = 'Error: ' + msg;
+      document.getElementById('update-step-error').style.display = '';
+    }
+
+    window.updateApply = function() {
+      document.getElementById('update-step-ready').style.display    = 'none';
+      document.getElementById('update-step-applying').style.display = '';
+      fetch('/update/apply', {method: 'POST'}).then(function(r) { return r.json(); }).then(function(r) {
+        if (!r.ok) { _showError(r.error || 'Error desconocido'); return; }
+        setTimeout(function() {
+          fetch('/update/quit', {method: 'POST'}).catch(function(){});
+        }, 600);
+      }).catch(function(e) { _showError(String(e)); });
+    };
+  })();
+  </script>
+
   <script>
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
-    // La rueda de emociones tiene su propio handler — no interferir
-    const ewModal = document.getElementById('ew-modal');
-    if (ewModal && ewModal.style.display !== 'none') return;
+    // Modales propios — no interferir
+    const ewModal  = document.getElementById('ew-modal');
+    if (ewModal  && ewModal.style.display  !== 'none') return;
+    const updModal = document.getElementById('update-modal');
+    if (updModal && updModal.style.display !== 'none') return;
     // 1) Cancelar panel/form inline abierto
     const cancel = Array.from(document.querySelectorAll('.btn-cancel, .btn-cancel-sm')).find(function (btn) {
       let el = btn;

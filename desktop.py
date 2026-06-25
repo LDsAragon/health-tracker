@@ -149,6 +149,9 @@ def main():
     from app import create_app
     flask_app = create_app()
 
+    import updater
+    updater.check_in_background()
+
     import webview
     # Sin esto pywebview CANCELA las descargas (en todas las plataformas) y el
     # botón "Descargar backup" no hace nada. Con esto: diálogo de guardado en

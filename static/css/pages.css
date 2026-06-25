@@ -764,3 +764,96 @@ select.journal-cat-select {
 .stats-summary tbody tr:last-child td { border-bottom: none; }
 .stats-summary-name { font-weight: 600; }
 .stats-summary td:not(.stats-summary-name) { font-variant-numeric: tabular-nums; }
+
+/* ── BANNER Y MODAL DE ACTUALIZACIÓN ────────────────────────────────────── */
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 24px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  position: sticky;
+  top: 52px;
+  z-index: 9;
+}
+
+.update-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.update-banner-dismiss {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+  font-family: inherit;
+}
+.update-banner-dismiss:hover { color: var(--text); }
+
+.update-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.update-modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px 32px;
+  width: min(460px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.update-modal-title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.update-modal-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.update-progress-track {
+  height: 5px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.update-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width .25s ease;
+}
+
+.update-progress-pct {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+}
+
+.update-note { font-size: 12px; color: var(--muted); }
+.update-error { color: var(--red); }

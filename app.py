@@ -8,7 +8,7 @@ from fieldtypes import FIELD_TYPES
 from appconfig import PET_ART
 # Re-export para tests que hacen `from app import dur_fmt_filter, ...`
 from filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
-from routes import main, day, recurring, journal
+from routes import main, day, recurring, journal, update
 
 
 def create_app():
@@ -33,7 +33,7 @@ def create_app():
         """Expone ajustes y el catálogo de tipos de campo a todas las plantillas."""
         return {"settings": db.get_all_settings(), "field_types": FIELD_TYPES, "pet_art": PET_ART}
 
-    for module in (main, day, recurring, journal):
+    for module in (main, day, recurring, journal, update):
         app.register_blueprint(module.bp)
 
     return app

@@ -19,6 +19,8 @@ if (-not (Test-Path "$root\dist\Bitacora\Bitacora.exe")) {
 }
 
 $fecha = Get-Date -Format yyyy-MM-dd
+# version.txt permite el auto-update: el ejecutable sabe su propia versión en runtime.
+"v$fecha" | Set-Content -Path "$root\dist\Bitacora\version.txt" -Encoding UTF8
 $zip = "$root\dist\Bitacora-Windows-$fecha.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 
