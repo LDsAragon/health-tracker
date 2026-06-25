@@ -21,8 +21,8 @@ cp -r database routes static templates "$APP/"
 find "$APP" -type d -name __pycache__ -prune -exec rm -rf {} +
 
 cp tools/linux/instalar.sh tools/linux/bitacora.sh "$APP/"
-# version.txt permite el auto-update: la app sabe su propia versión en runtime.
-echo "v$FECHA" > "$APP/version.txt"
+# _version.py: generado en el stage para que la app sepa su versión en runtime.
+printf 'VERSION = "v%s"\n' "$FECHA" > "$APP/_version.py"
 cp docs/LEEME-Linux.txt "$APP/LEEME.txt"
 [ -f docs/Bitacora-Manual.pdf ] && cp docs/Bitacora-Manual.pdf "$APP/"
 

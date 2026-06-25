@@ -43,11 +43,22 @@ def _base_dir():
 
 
 def current_version():
-    """Versión desde version.txt junto al ejecutable. None en modo dev."""
+    """Versión desde _version.py, generado por el build e incluido en el bundle.
+    Devuelve None en modo dev (el archivo no existe en el repo)."""
     try:
-        return (_base_dir() / "version.txt").read_text(encoding="utf-8").strip()
-    except OSError:
+        import _version
+        return _version.VERSION
+    except (ImportError, AttributeError):
         return None
+
+
+def _version_tuple(tag):
+    """v2026-06-12.1 → (2026, 6, 12, 1); v2026-06-24 → (2026, 6, 24, 0)"""
+    import re
+    m = re.match(r"v?(\d+)-(\d+)-(\d+)(?:\.(\d+))?", tag or "")
+    if not m:
+        return (0,)
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4) or 0))
 
 
 def check_in_background():
@@ -80,7 +91,7 @@ def _do_check(current):
             _state["checked"]   = True
             _state["current"]   = current
             _state["latest"]    = latest
-            _state["available"] = bool(latest and latest != current and asset)
+            _state["available"] = bool(latest and _version_tuple(latest) > _version_tuple(current) and asset)
             _state["asset_url"]  = asset["browser_download_url"] if asset else None
             _state["asset_name"] = asset["name"] if asset else None
     except Exception:

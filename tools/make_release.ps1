@@ -8,19 +8,21 @@ if (Get-Process Bitacora -ErrorAction SilentlyContinue) {
     exit 1
 }
 
+$fecha = Get-Date -Format yyyy-MM-dd
+# _version.py se genera ANTES del build para que PyInstaller lo bundlee en _internal/.
+# No se commitea (está en .gitignore): es un artefacto del build.
+'VERSION = "v{0}"' -f $fecha | Set-Content -Path "$root\_version.py" -Encoding UTF8
+
 Write-Output "Compilando Bitacora.exe..."
 & "$root\venv\Scripts\pyinstaller.exe" --noconfirm --windowed --name Bitacora `
     --icon static\icon.ico `
     --add-data "templates;templates" --add-data "static;static" `
     desktop.py 2>&1 | Out-Null
+Remove-Item "$root\_version.py" -ErrorAction SilentlyContinue
 if (-not (Test-Path "$root\dist\Bitacora\Bitacora.exe")) {
     Write-Error "El build falló (no apareció dist\Bitacora\Bitacora.exe)."
     exit 1
 }
-
-$fecha = Get-Date -Format yyyy-MM-dd
-# version.txt permite el auto-update: el ejecutable sabe su propia versión en runtime.
-"v$fecha" | Set-Content -Path "$root\dist\Bitacora\version.txt" -Encoding UTF8
 $zip = "$root\dist\Bitacora-Windows-$fecha.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 

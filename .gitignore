@@ -8,3 +8,4 @@ venv-linux/
 build/
 dist/
 *.spec
+_version.py
