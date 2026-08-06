@@ -71,7 +71,7 @@
     <div class="logo">📅</div>
     <h1>Bitácora</h1>
     <p class="lead">Manual de uso — cómo está pensada y todo lo que podés hacer con ella</p>
-    <p class="muted small">Tu calendario personal de hábitos, registros y emociones · junio 2026 · v2</p>
+    <p class="muted small">Tu calendario personal de hábitos, registros y emociones · agosto 2026 · v2</p>
   </div>
 
   <h3 style="margin-top:60px;">Contenido</h3>
@@ -143,6 +143,19 @@
   <span class="pill">Notas especiales</span>, <span class="pill">📈 Estadísticas</span>,
   <span class="pill">Datos</span> y <span class="pill">⚙️ Ajustes</span>. Estadísticas y Datos
   se pueden ocultar desde Ajustes si no los usás.</p>
+
+  <h3>Actualizaciones automáticas</h3>
+  <p>Cuando sale una versión nueva, Bitácora <b>te avisa sola</b>: al abrir la app chequea en
+  segundo plano si hay una actualización y, si la hay, aparece un aviso discreto. Desde ahí la
+  <b>descargás e instalás con un clic</b> — Bitácora baja la versión nueva, <b>hace un backup de
+  tu base antes de tocar nada</b>, reemplaza los archivos y se reinicia.</p>
+
+  <div class="card"><span class="t">Tus datos no se tocan:</span> la actualización solo cambia el
+  programa, nunca tu <code>health.db</code>. Igual, por las dudas, se guarda un respaldo automático
+  antes de aplicar.</div>
+
+  <p class="small muted">El aviso solo aparece en la app instalada (el ejecutable). Si la corrés
+  desde el código o en modo desarrollo, actualizás con <code>git</code> como siempre.</p>
 </section>
 
 <!-- ───────────────────────── 3. CALENDARIO ───────────────────────── -->
@@ -329,8 +342,8 @@
     <tr>
       <td><b>Rueda de emociones</b></td>
       <td>Una o más emociones</td>
-      <td>Picker de cascada (Willcox o Ekman) o rueda visual giratoria. Podés agregar varias emociones al mismo registro;
-      cada una aparece como chip de color con su origen. Sección 8.</td>
+      <td>Picker de cascada (Willcox o Ekman), rueda visual giratoria o exploración guiada por preguntas.
+      Podés agregar varias emociones al mismo registro; cada una aparece como chip de color con su origen. Sección 8.</td>
     </tr>
   </table>
 
@@ -360,7 +373,7 @@
   La rueda existe para eso: en vez de elegir entre "bien" y "mal", explorás hasta encontrar
   la palabra justa.</p>
 
-  <h3>Dos formas de elegir</h3>
+  <h3>Tres formas de elegir</h3>
   <p>El campo de emoción tiene un <b>picker en cascada</b> directamente en el formulario:</p>
   <ol>
     <li>Elegís la emoción base en el primer selector (Enojado, Asustado, Alegre…).</li>
@@ -369,12 +382,30 @@
     <li>Tocás <b>➕ Agregar</b> para sumar esa emoción al registro. Podés repetir y agregar
     varias emociones al mismo campo.</li>
   </ol>
-  <p>También podés abrir la <b>rueda visual giratoria</b> (botón 🎯 / 🧭 en el picker):</p>
+  <p>También podés abrir la <b>rueda visual giratoria</b> (botón <b>🎯 Rueda Willcox</b> /
+  <b>🧭 Rueda Ekman</b> en el picker):</p>
   <ol>
     <li>Recorrés con el mouse: cada gajo se ilumina y muestra su nombre.</li>
     <li>Girá con <kbd>Q</kbd>/<kbd>E</kbd> o las flechas para ver todo el círculo.</li>
     <li>Clic en un gajo → se agrega al registro. Podés seguir eligiendo más.</li>
   </ol>
+
+  <h3>Cuando no sabés qué sentís: la exploración guiada 🌿</h3>
+  <p>A veces el problema no es elegir entre matices sino que <b>no tenés idea de qué estás
+  sintiendo</b>. Para eso está el botón <b>🌿 Exploración guiada</b> del picker (o la pestaña
+  <b>🧭 Guiada</b> dentro de la rueda visual): en vez de buscar la palabra, respondés preguntas
+  y la app te lleva hasta ella.</p>
+  <ol>
+    <li>Arranca por lo más general: <i>«¿algo se siente bien, algo se siente mal, o es confuso?»</i>.
+    Si estás perdido, la rama <b>confuso</b> te pregunta por el <b>cuerpo</b> (tensión y calor,
+    mariposas, pesadez…) para entrar por ahí.</li>
+    <li>En <b>dos o tres pasos</b> llegás a un puñado de <b>tarjetas</b>: cada una con el nombre de
+    una emoción y una descripción corta (<i>«Herido — dolor por algo que alguien hizo o dijo»</i>).</li>
+    <li>Tocás la que más se parece y <b>se agrega al registro</b>, igual que en las otras dos formas.</li>
+  </ol>
+  <p>En cualquier momento tenés <b>← Volver</b> para rehacer el último paso y <b>↺ Reiniciar</b>
+  para empezar de nuevo, sin cerrar la rueda. Es la puerta de entrada pensada para los días en que
+  «me siento raro» es todo lo que podés decir.</p>
 
   <h3>Multi-selección</h3>
   <p>Un mismo campo puede registrar <b>varias emociones a la vez</b>: cada una aparece como un
