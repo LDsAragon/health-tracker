@@ -19,6 +19,7 @@ appconfig.py            # THEMES y SETTINGS (fuente única de defaults)
 helpers.py              # _week_start, MESES[], _fmt_clock, safe_back
 filters.py              # Filtros Jinja2 (dur_fmt_filter, rango_fmt_filter, etc.)
 fieldtypes.py           # Catálogo de tipos de campo de notas especiales
+updater.py              # Auto-actualización via GitHub Releases (check/download/apply)
 
 database/
   conn.py               # get_db, snapshot_to, backup_path, reset_db, restore_from
@@ -32,10 +33,12 @@ routes/
   day.py                # /day/<date> y todas las acciones del día
   recurring.py          # /events/* (rutinas)
   journal.py            # /journal/* (notas especiales + categorías)
+  update.py             # /update/* (auto-actualización: status/download/progress/apply/quit)
 
 templates/              # Jinja2; base.html → herencia; _macros.html para date_field
 static/css/             # base.css, calendar.css, day.css, pages.css, wheel.css
-static/js/              # day.js y JS inline en templates
+static/js/              # day.js; emotion-wheel*.js + emotion-guided.js (rueda de emociones); JS inline en templates
+docs/                   # manual.html → Bitacora-Manual.pdf (shipeado en zip/tar.gz); LEEME*.txt
 ```
 
 ## Datos de usuario
@@ -85,6 +88,13 @@ powershell -File tools\publish_release.ps1 -Tag v2026-06-12.1
 ```
 
 **CI**: `.github/workflows/ci.yml` — pytest + tarball Linux como artifact, corre en push/PR a main.
+
+## Auto-actualización
+
+`updater.py` + `routes/update.py` — chequea GitHub Releases (`LDsAragon/health-tracker`) en un hilo daemon al arrancar (`check_in_background()` desde `desktop.py`). Flujo: `/update/status` → `/update/download` → `/update/progress` → `/update/apply` (backup DB → extrae asset → lanza script externo) → `/update/quit`. UI en `base.html` + `static/css/pages.css`.
+
+- La versión sale de `_version.py`, **generado por el build** e incluido en el bundle (no está en el repo). En modo dev no existe → `current_version()` devuelve `None` y el updater no corre.
+- Comparación de versiones por tupla: `v2026-06-12.1` → `(2026, 6, 12, 1)` (`_version_tuple`).
 
 ## Convenciones de código
 
