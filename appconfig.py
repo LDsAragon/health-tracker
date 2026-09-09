@@ -1,6 +1,6 @@
 """Datos de configuración: temas y esquema de ajustes (fuente única)."""
 
-# Temas: slug + nombre + 4 colores para el swatch (las paletas reales están en style.css → [data-theme]).
+# Temas: slug + nombre + 4 colores para el swatch (las paletas reales están en base.css → [data-theme]).
 THEMES = [
     {"slug": "indigo",     "name": "Índigo",     "dark": True,  "bg": "#0f1117", "surface": "#1a1d27", "text": "#e2e8f0", "accent": "#6366f1"},
     {"slug": "bosque",     "name": "Bosque",     "dark": True,  "bg": "#14211a", "surface": "#1b2a1b", "text": "#cfe8c8", "accent": "#6fbf73"},

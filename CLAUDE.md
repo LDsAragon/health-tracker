@@ -6,7 +6,7 @@ Diario personal de hábitos y salud. App de escritorio cross-platform (Windows +
 
 - **Python**: Flask (app factory en `app.py`), pywebview para la ventana nativa
 - **Renderer**: Edge WebView2 (Windows) / WebKitGTK vía PyGObject (Linux)
-- **Frontend**: Jinja2 + vanilla JS + Chart.js; sin bundler, sin framework JS
+- **Frontend**: Jinja2 + vanilla JS + Chart.js (vendorizado en `static/js/vendor/`); sin bundler, sin framework JS
 - **DB**: SQLite (`database/conn.py`); `get_db()` lee `DB_PATH` dinámicamente (los tests lo parchean)
 - **Tema**: CSS variables en `static/css/base.css`; `data-theme` en `<html>`; 8 temas en `appconfig.py`
 
@@ -15,30 +15,51 @@ Diario personal de hábitos y salud. App de escritorio cross-platform (Windows +
 ```
 app.py                  # Flask app factory (create_app)
 desktop.py              # Entrada pywebview; auto-backup diario; APP_DIR por plataforma
-appconfig.py            # THEMES y SETTINGS (fuente única de defaults)
-helpers.py              # _week_start, MESES[], _fmt_clock, safe_back
-filters.py              # Filtros Jinja2 (dur_fmt_filter, rango_fmt_filter, etc.)
+appconfig.py            # THEMES, SETTINGS y PET_ART (fuente única de defaults)
+services.py             # Presentación compartida mes/semana: events_by_date, journal_badges
+helpers.py              # _setting, _week_start, _dow_names, MESES[], _fmt_clock, safe_back
+filters.py              # Filtros Jinja2 (humantime, fechacorta, dur_fmt, rango_fmt)
 fieldtypes.py           # Catálogo de tipos de campo de notas especiales
 updater.py              # Auto-actualización via GitHub Releases (check/download/apply)
 
-database/
-  conn.py               # get_db, snapshot_to, backup_path, reset_db, restore_from
+database/               # Paquete; __init__.py re-exporta todo (`import database as db`)
+  conn.py               # get_db, snapshot_to, backup_path, is_valid_db, reset_db, restore_from
   schema.py             # SCHEMA + MIGRATIONS declarativas (idempotente)
-  stats.py              # time_summary() para "Tiempo por actividad"
+  stats.py              # Motor de series de Estadísticas: build_series, grouped_series,
+                        #   chartable_fields, y time_summary() para "Tiempo por actividad"
   journal.py            # Categorías + entradas de notas especiales; migrate_entry_values
   notes.py / events.py / todos.py / charts.py / settings.py
 
 routes/
-  main.py               # /  (home/mes), /stats, /export, /backup, /restore, /reset, /settings
-  day.py                # /day/<date> y todas las acciones del día
-  recurring.py          # /events/* (rutinas)
+  main.py               # / (home según start_view), /calendar/<año>/<mes>, /week/<fecha>,
+                        #   /search, /ajustes[/guardar], /estadisticas[/grafico/add|delete],
+                        #   /export[/download], /backup, /restore, /reset
+  day.py                # /day/<fecha> y todas las acciones del día; /todos/<id>/move (AJAX)
+  recurring.py          # /recurring/* (rutinas)
   journal.py            # /journal/* (notas especiales + categorías)
   update.py             # /update/* (auto-actualización: status/download/progress/apply/quit)
 
-templates/              # Jinja2; base.html → herencia; _macros.html para date_field
+templates/              # base.html → herencia; _macros.html para date_field
+                        # calendar.html, week.html, day.html, journal.html, recurring.html,
+                        # stats.html, search.html, export.html ("Datos"), settings.html
 static/css/             # base.css, calendar.css, day.css, pages.css, wheel.css
-static/js/              # day.js; emotion-wheel*.js + emotion-guided.js (rueda de emociones); JS inline en templates
-docs/                   # manual.html → Bitacora-Manual.pdf (shipeado en zip/tar.gz); LEEME*.txt
+static/js/
+  zoom.js               # Zoom Ctrl+rueda / Ctrl±, persistido en localStorage
+  date-es.js            # Campo de fecha con formato configurable (hidden ISO para el backend)
+  day.js / stats.js     # JS de la vista del día y del constructor de gráficos
+  field-registry.js     # window.FIELD_BUILDERS: tipo → builder (despacho único)
+  field-blocks.js       # Builders escala / sino / opciones / numero
+  time-fields.js        # Builders duracion / rango
+  emotion-wheel*.js     # Rueda Willcox (3 niveles) + su contenido psicológico
+  ekman-wheel*.js       # Rueda Ekman (Atlas of Emotions, 2 niveles) + contenido
+  emotion-wheel-visual.js  # Render SVG data-driven, común a ambas ruedas
+  emotion-guided.js     # Exploración guiada (árbol de decisión, tercer tab del modal)
+  vendor/               # chart.umd.min.js
+docs/                   # manual.html → Bitacora-Manual.pdf (tools/make_manual.ps1,
+                        #   shipeado en zip/tar.gz); LEEME.txt y LEEME-Linux.txt
+tools/                  # Builds (make_release*.ps1|sh, publish_release.ps1), instalador y
+                        #   launcher Linux (linux/), smoke tests, make_icon.py, compare_dbs.py,
+                        #   screenshots_audit.mjs (Playwright, auditoría visual de todas las pantallas)
 ```
 
 ## Datos de usuario
@@ -52,6 +73,7 @@ Todos los backups (diarios + pre-operación) van a `<dir DB>/backups/` via `back
 
 Prefijos de backup:
 - `health-auto-<date>` — diario automático (rotación a 7, gestionado en `desktop.py`)
+- `health-preupdate-<ts>` — antes de aplicar una auto-actualización
 - `health-prereset-<ts>` — antes de borrar todo
 - `health-prerestore-<ts>` — antes de restaurar un backup externo
 - `health-prerename-<ts>` — antes de migrar renombres de campos/opciones
@@ -59,10 +81,12 @@ Prefijos de backup:
 ## Tests
 
 ```bash
-pytest tests/
+pytest tests/          # 225 tests, ~8s
 ```
 
 Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).
+
+Smoke tests fuera de pytest (necesitan display / ventana real): `tools/smoke_desktop.py` (migración de primer arranque, headless), `tools/smoke_download_linux.py` (descargas en GTK), `tools/snap_settings.py` (screenshot en WebKitGTK para bugs de rendering que no se reproducen en Windows).
 
 ## Build y release
 
@@ -72,7 +96,7 @@ Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mocke
 # o solo el build:
 powershell -File tools\make_release.ps1
 ```
-Ojo: `Bitacora.exe` debe estar cerrada antes del build (PyInstaller falla si está abierta).
+Ojo: `Bitacora.exe` debe estar cerrada antes del build (`make_release.ps1` aborta si detecta el proceso). El zip lleva la carpeta `Bitacora`, `docs/LEEME.txt` y `docs/Bitacora-Manual.pdf`; el PDF se regenera aparte con `tools\make_manual.ps1` (Edge headless) cuando cambia `docs/manual.html`.
 
 **Linux** — tarball con instalador:
 ```bat
@@ -103,6 +127,9 @@ powershell -File tools\publish_release.ps1 -Tag v2026-06-12.1
 - Sin comentarios que expliquen el *qué* — solo el *por qué* cuando no es obvio.
 - `MESES[]` hardcodeado en `helpers.py` (no `calendar.month_name` — depende del locale del sistema).
 - Renames de datos de usuario: solo con señal explícita (hidden `field_oldlabel[]` o control de UI); nunca por heurística.
+- **Agregar un ajuste**: una entrada en `appconfig.SETTINGS` (default + choices). `settings_save()` itera el esquema y valida contra `choices`; no hay que tocar la ruta.
+- **Agregar un tipo de campo**: entrada en `fieldtypes.FIELD_TYPES` + builder registrado en `static/js/field-registry.js` + su display en `day.html`.
+- Los valores de las entradas se guardan como `{etiqueta: valor}` en `values_json` — por eso renombrar un campo obliga a `migrate_entry_values()` (que además re-clava las etiquetas en la tabla `charts`).
 
 ## Quirks conocidos
 
@@ -110,4 +137,6 @@ powershell -File tools\publish_release.ps1 -Tag v2026-06-12.1
 - **Linux / WebKitGTK**: `color-scheme: dark/light` en CSS controla el rendering de `<select>` nativos (sin esto salen con tema GTK del sistema, blanco sobre blanco en tema oscuro).
 - **Linux / descargas**: `webview.settings["ALLOW_DOWNLOADS"] = True` es necesario (está en `desktop.py`); por defecto pywebview cancela descargas silenciosamente.
 - **Arch / keyring**: `instalar.sh` detecta keyring sin inicializar chequeando `/etc/pacman.d/gnupg/trustdb.gpg` (no solo el directorio — el dir puede existir vacío).
+- **Windows / Mark of the Web**: si el zip viajó por internet, .NET se niega a cargar `Python.Runtime.dll`. `desktop.py::_unblock_dlls()` borra el stream `Zone.Identifier` de las DLLs de `_internal/` en cada arranque; el updater hace lo mismo tras copiar los archivos nuevos.
+- **pywebview / localStorage**: `webview.start(private_mode=False, storage_path=...)` — sin eso pywebview borra el zoom y el tamaño de celdas al cerrar.
 - **DB path en tests**: `database.conn.DB_PATH` se parchea directamente; `get_db()` lo lee en cada call.

@@ -16,12 +16,17 @@ CÓMO INSTALARLA
 REQUISITOS
 - Ubuntu 22.04+ / Debian 12+ / Mint 21+ (apt), Fedora (dnf),
   o Arch/Manjaro/EndeavourOS (pacman; conviene el sistema actualizado).
-- Internet solo durante la instalación; después la app no lo usa.
+- Internet para instalar y para buscar actualizaciones; tus datos nunca
+  salen de tu máquina.
 
 CÓMO ACTUALIZAR
-Cuando te pasen una versión nueva, descomprimila encima de la carpeta
-existente (o borrá la carpeta vieja y extraé de cero) y corré ./instalar.sh
-de nuevo. Tus datos no se tocan: viven fuera de la carpeta de la app.
+La app avisa sola cuando hay una versión nueva: aparece un cartel arriba
+con "Instalar actualización". Hace un backup de tu base, reemplaza los
+archivos y se reabre sola.
+
+A mano: descomprimí la versión nueva encima de la carpeta existente (o
+borrá la carpeta vieja y extraé de cero) y corré ./instalar.sh de nuevo.
+Tus datos no se tocan: viven fuera de la carpeta de la app.
 
 TUS DATOS
 - Todo se guarda en tu máquina, en ~/.local/share/Bitacora/health.db

@@ -17,9 +17,16 @@ SI WINDOWS SE QUEJA
   descomprimir. (La app intenta desbloquearse sola en cada arranque,
   pero por si acaso.)
 
+CÓMO ACTUALIZAR
+La app avisa sola cuando hay una versión nueva: aparece un cartel arriba
+con "Instalar actualización". Hace un backup de tu base, reemplaza los
+archivos y se reabre sola. También podés bajar el zip nuevo y
+descomprimirlo encima de la carpeta: tus datos no se tocan.
+
 TUS DATOS
 - Todo se guarda en tu máquina, en %LOCALAPPDATA%\Bitacora\health.db
-  Sin internet, sin cuentas, sin nube.
+  Sin cuentas y sin nube; lo único que sale a internet es el chequeo de
+  actualizaciones.
 - Hacé copias de seguridad desde la pestaña "Datos" de la app
   (botón "Descargar backup") cada tanto.
 
