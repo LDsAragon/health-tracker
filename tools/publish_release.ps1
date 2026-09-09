@@ -25,6 +25,10 @@ if ($pending) {
 Write-Output "== Push a main =="
 git push
 if ($LASTEXITCODE) { Write-Error "git push falló"; exit 1 }
+# gh release create crea el tag SOLO en el remoto: sin este fetch los tags de los
+# releases anteriores no existen localmente, git describe devuelve uno viejisimo y
+# el changelog repite todo lo ya publicado.
+git fetch --tags --quiet
 
 $fecha = Get-Date -Format yyyy-MM-dd
 $tag = if ($Tag) { $Tag } else { "v$fecha" }
