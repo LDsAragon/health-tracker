@@ -48,8 +48,15 @@ if ($LASTEXITCODE) { Write-Error "falló el build Linux"; exit 1 }
 $tgz = Get-ChildItem "dist\Bitacora-linux-*.tar.gz" | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
 if (-not $tgz) { Write-Error "no se encontró el tar.gz de Linux en dist\"; exit 1 }
 
-# Changelog: commits desde el tag anterior hasta HEAD
-$prevTag = git describe --tags --abbrev=0 "$tag^" 2>$null
+# Changelog: commits desde el tag anterior hasta HEAD.
+# Ojo: gh release create crea el tag SOLO en el remoto, asi que aca el tag nuevo
+# todavia no existe localmente y describe sobre "$tag^" falla — caiamos al commit
+# raiz y el changelog salia con la historia entera del proyecto.
+$prevTag = git describe --tags --abbrev=0 HEAD 2>$null
+if ($prevTag -eq $tag) {
+    # Re-publicacion de un tag que ya existe: saltar al anterior.
+    $prevTag = git describe --tags --abbrev=0 "$tag^" 2>$null
+}
 if (-not $prevTag) { $prevTag = git rev-list --max-parents=0 HEAD }
 $commitLines = git log "$prevTag..HEAD" --pretty=format:"- %s" --no-merges 2>$null
 $commits = if ($commitLines) { $commitLines -join "`n" } else { "- Mejoras y correcciones" }
