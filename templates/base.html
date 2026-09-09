@@ -131,6 +131,10 @@
   <script>
   (function() {
     var _pollTimer = null;
+    // El chequeo de arranque tiene 10 s de timeout: 10 reintentos lo cubren de sobra.
+    // Con tope porque en dev no hay _version.py, check_in_background() ni corre y
+    // `checked` no pasa nunca a true — sin esto el poleo no termina jamás.
+    var _tries = 0;
 
     function _checkUpdate() {
       fetch('/update/status').then(function(r) { return r.json(); }).then(function(s) {
@@ -138,7 +142,7 @@
           document.getElementById('update-banner-text').textContent =
             'Nueva versión disponible: ' + s.latest + ' (actual: ' + s.current + ')';
           document.getElementById('update-banner').style.display = 'flex';
-        } else if (!s.checked) {
+        } else if (!s.checked && ++_tries < 10) {
           setTimeout(_checkUpdate, 3000);
         }
       }).catch(function(){});
