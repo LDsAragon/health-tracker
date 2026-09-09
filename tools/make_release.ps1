@@ -1,5 +1,8 @@
 # Genera el zip listo para compartir: build fresco + LEEME.txt + manual PDF
 # → dist\Bitacora-Windows-<fecha>.zip
+# -Version: tag a estampar en _version.py (default v<fecha>). Tiene que coincidir
+# con el tag del release o el updater ofrece actualizar en loop.
+param([string]$Version = "")
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
@@ -11,7 +14,8 @@ if (Get-Process Bitacora -ErrorAction SilentlyContinue) {
 $fecha = Get-Date -Format yyyy-MM-dd
 # _version.py se genera ANTES del build para que PyInstaller lo bundlee en _internal/.
 # No se commitea (está en .gitignore): es un artefacto del build.
-'VERSION = "v{0}"' -f $fecha | Set-Content -Path "$root\_version.py" -Encoding UTF8
+$ver = if ($Version) { $Version } else { "v$fecha" }
+'VERSION = "{0}"' -f $ver | Set-Content -Path "$root\_version.py" -Encoding UTF8
 
 Write-Output "Compilando Bitacora.exe..."
 & "$root\venv\Scripts\pyinstaller.exe" --noconfirm --windowed --name Bitacora `

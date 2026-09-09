@@ -23,6 +23,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash tools/make_release_linux.sh
+      # El tarball se arma copiando archivos: si falta un modulo, pytest no lo ve
+      # (corre sobre el repo) y la app no arranca. Paso con updater.py desde
+      # v2026-06-25 y no se noto por dos meses.
+      - name: el tarball arranca
+        run: |
+          pip install -r requirements.txt
+          tmp=$(mktemp -d)
+          tar -xzf dist/Bitacora-linux-*.tar.gz -C "$tmp"
+          cd "$tmp/Bitacora"
+          python -c "import app; app.create_app(); print('el tarball importa y crea la app')"
       - uses: actions/upload-artifact@v4
         with:
           name: bitacora-linux

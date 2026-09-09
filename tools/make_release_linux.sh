@@ -6,6 +6,10 @@ set -e
 cd "$(dirname "$0")/.."
 
 FECHA=$(date +%F)
+# Version a estampar: por defecto la fecha, pero publish_release.ps1 pasa el tag
+# real (puede ser v<fecha>.1 en una re-publicacion). Si no coincide con el tag del
+# release, el updater compara mal y ofrece actualizar en loop para siempre.
+VERSION="${1:-v$FECHA}"
 TGZ="dist/Bitacora-linux-$FECHA.tar.gz"
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
@@ -15,14 +19,16 @@ mkdir -p "$APP"
 
 # Solo lo que la app necesita en runtime: sin tests, scripts de build,
 # ni la health.db personal (cada usuario arranca con su DB limpia).
-cp app.py appconfig.py desktop.py fieldtypes.py filters.py helpers.py services.py \
-   requirements.txt requirements-desktop.txt "$APP/"
+# Todos los modulos de la raiz, sin lista explicita: la lista se desactualiza sola
+# (updater.py falto desde v2026-06-25 y la app de Linux ni arrancaba).
+cp *.py "$APP/"
+cp requirements.txt requirements-desktop.txt "$APP/"
 cp -r database routes static templates "$APP/"
 find "$APP" -type d -name __pycache__ -prune -exec rm -rf {} +
 
 cp tools/linux/instalar.sh tools/linux/bitacora.sh "$APP/"
 # _version.py: generado en el stage para que la app sepa su versión en runtime.
-printf 'VERSION = "v%s"\n' "$FECHA" > "$APP/_version.py"
+printf 'VERSION = "%s"\n' "$VERSION" > "$APP/_version.py"
 cp docs/LEEME-Linux.txt "$APP/LEEME.txt"
 [ -f docs/Bitacora-Manual.pdf ] && cp docs/Bitacora-Manual.pdf "$APP/"
 

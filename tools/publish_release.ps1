@@ -37,11 +37,11 @@ $fechaEs = "$($hoy.Day) de $($meses[$hoy.Month - 1]) de $($hoy.Year)"
 $titulo = "Bitácora $([char]0x2014) $fechaEs"
 
 Write-Output "== Build Windows =="
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\make_release.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\make_release.ps1 -Version $tag
 if ($LASTEXITCODE -or -not (Test-Path $zip)) { Write-Error "falló el build Windows"; exit 1 }
 
 Write-Output "== Build Linux (WSL) =="
-wsl -d Ubuntu-24.04 -- bash tools/make_release_linux.sh
+wsl -d Ubuntu-24.04 -- bash tools/make_release_linux.sh $tag
 if ($LASTEXITCODE) { Write-Error "falló el build Linux"; exit 1 }
 
 # WSL puede usar UTC y generar una fecha distinta a la de Windows; buscamos el tar.gz más reciente
