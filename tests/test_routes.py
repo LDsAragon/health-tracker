@@ -22,17 +22,53 @@ def test_calendario_carga(client):
     assert r.status_code == 200
     assert b"Lunes" in r.data
 
-def test_toggle_todo_preserva_ref_de_semana(client):
+def _dado(monkeypatch, sale):
+    """Fija el dado de la mascotita: sale=True gana siempre, False pierde siempre."""
+    import routes.day
+    monkeypatch.setattr(routes.day.random, "random", lambda: 0.0 if sale else 0.99)
+
+
+def test_toggle_todo_preserva_ref_de_semana(client, monkeypatch):
     """Tildar un to-do desde el día (llegado con ?ref=week) no rompe el volver contextual."""
+    _dado(monkeypatch, False)   # sin mascotita, para aislar lo que importa acá
     db.add_todo(DATE, "comprar pan")
     tid = db.get_todos_for_date(DATE)[0]["id"]
     r = client.post(f"/day/{DATE}/todo/{tid}/toggle",
                     headers={"Referer": f"http://localhost/day/{DATE}?ref=week"})
-    # al marcar como hecho agrega ?pet=1 después del query string existente
-    assert r.headers["Location"] == f"/day/{DATE}?ref=week&pet=1"
+    assert r.headers["Location"] == f"/day/{DATE}?ref=week"
     # sin referer (al desmarcar: no celebra)
     r = client.post(f"/day/{DATE}/todo/{tid}/toggle")
     assert r.headers["Location"] == f"/day/{DATE}"
+
+
+def test_mascotita_no_sale_en_cada_completado(client, monkeypatch):
+    """Aun activada sale solo a veces: en cada tilde se vuelve invasiva."""
+    db.add_todo(DATE, "comprar pan")
+    tid = db.get_todos_for_date(DATE)[0]["id"]
+    ref = {"Referer": f"http://localhost/day/{DATE}?ref=week"}
+
+    _dado(monkeypatch, True)
+    assert "pet=1" in client.post(f"/day/{DATE}/todo/{tid}/toggle", headers=ref).headers["Location"]
+
+    client.post(f"/day/{DATE}/todo/{tid}/toggle")          # destildar para volver a tildar
+    _dado(monkeypatch, False)
+    assert "pet=1" not in client.post(f"/day/{DATE}/todo/{tid}/toggle", headers=ref).headers["Location"]
+
+
+def test_mascotita_apagada_por_defecto(client):
+    """Una base nueva no festeja hasta que la prendas."""
+    from appconfig import DEFAULT_SETTINGS
+    assert DEFAULT_SETTINGS["pet"] == "none"
+    assert db.get_all_settings()["pet"] == "none"
+
+
+def test_mascotita_apagada_no_dibuja_aunque_gane_el_dado(client, monkeypatch):
+    """El ?pet=1 puede quedar en la URL (link pegado, recarga): la plantilla igual no la dibuja."""
+    _dado(monkeypatch, True)
+    body = client.get(f"/day/{DATE}?pet=1").data.decode()
+    assert "pet-overlay" not in body
+    db.set_setting("pet", "cat")
+    assert "pet-overlay" in client.get(f"/day/{DATE}?pet=1").data.decode()
 
 
 def test_dia_chips_de_categorias(client):

@@ -24,9 +24,13 @@ SETTINGS = {
     "show_export": {"default": "hide",   "choices": ("show", "hide")},
     "note_form_default":    {"default": "open",      "choices": ("open", "collapsed")},
     "journal_form_default": {"default": "collapsed", "choices": ("open", "collapsed")},
-    "pet":                  {"default": "cat",       "choices": ("cat", "dog", "none")},
+    "pet":                  {"default": "none",      "choices": ("cat", "dog", "none")},
 }
 DEFAULT_SETTINGS = {k: v["default"] for k, v in SETTINGS.items()}
+
+# Aun activada, la mascotita sale solo a veces: si apareciera en cada tilde se
+# vuelve invasiva y deja de causar gracia a los dos dias.
+PET_CHANCE = 0.10
 
 PET_ART = {
     "cat": "  /\\_/\\ \n ( ^.^ )\n  > ♥ < ",

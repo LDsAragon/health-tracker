@@ -1,8 +1,10 @@
 """Vista del día y sus acciones: notas, to-dos, eventos, entradas de notas especiales."""
+import random
 from datetime import date, timedelta
 from urllib.parse import urlsplit
 from flask import Blueprint, render_template, request, redirect, url_for
 import database as db
+from appconfig import PET_CHANCE
 
 bp = Blueprint("day", __name__)
 
@@ -19,7 +21,9 @@ def _back_to_day(date_str, celebrate=False):
         base = f"{r.path}?{r.query}"
     else:
         base = url_for("day.day_view", date_str=date_str)
-    if celebrate:
+    # El dado se tira acá y no en la plantilla: así el ?pet=1 solo viaja cuando
+    # de verdad va a festejar, y recargar el día no vuelve a mostrarla.
+    if celebrate and random.random() < PET_CHANCE:
         sep = "&" if "?" in base else "?"
         base += f"{sep}pet=1"
     return redirect(base)
