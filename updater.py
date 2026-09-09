@@ -14,6 +14,7 @@ import stat
 import threading
 import tempfile
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 
 GITHUB_REPO = "LDsAragon/health-tracker"
@@ -257,6 +258,12 @@ def _launch_win(src, dst, pid):
     log = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Bitacora" / "update.log"
     exe = dst / "Bitacora.exe"
 
+    # Dejar rastro ANTES de lanzar: si el script externo no llega a loguear, el
+    # problema fue el lanzamiento y no el script (así se diagnosticó este bug).
+    log.parent.mkdir(parents=True, exist_ok=True)
+    with open(log, "a", encoding="utf-8") as f:
+        f.write(f"{datetime.now().isoformat(timespec='seconds')}: lanzando actualizador externo\n")
+
     script = f"""
 $log = '{_ps(log)}'
 function Log($m) {{ "$(Get-Date -f s): $m" | Add-Content $log }}
@@ -286,10 +293,14 @@ Log "OK"
 """
     ps_path = Path(tempfile.gettempdir()) / "bitacora_updater.ps1"
     ps_path.write_text(script, encoding="utf-8")
+    # CREATE_NO_WINDOW, NO DETACHED_PROCESS: powershell.exe es una app de consola y
+    # con DETACHED_PROCESS arranca sin consola, no ejecuta el script y sale con 0 en
+    # silencio — la actualización en Windows nunca se aplicaba. CREATE_NO_WINDOW le da
+    # una consola oculta, y el hijo igual sobrevive al os._exit() de /update/quit.
     subprocess.Popen(
         ["powershell", "-NoProfile", "-WindowStyle", "Hidden",
          "-ExecutionPolicy", "Bypass", "-File", str(ps_path)],
-        creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+        creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP,
     )
 
 

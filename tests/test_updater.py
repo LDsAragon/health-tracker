@@ -118,3 +118,40 @@ def test_force_check_con_version_detecta_la_nueva(monkeypatch, estado_limpio):
 def test_force_check_no_pisa_una_descarga_en_curso(estado_limpio):
     updater._state["downloading"] = True
     assert updater.force_check() is False
+
+
+# ── Lanzamiento del actualizador externo (Windows) ───────────────────────────
+
+def test_launch_win_no_usa_detached_process(monkeypatch, tmp_path):
+    """DETACHED_PROCESS deja a powershell.exe sin consola: sale 0 sin correr el script.
+
+    Con ese flag la actualizacion en Windows no se aplicaba nunca, y en silencio
+    (ni siquiera se escribia update.log). Regresion cara: no volver a ponerlo.
+    """
+    import subprocess
+    monkeypatch.setattr(updater.os.environ, "get",
+                        lambda k, d=None: str(tmp_path) if k == "LOCALAPPDATA" else d)
+    capturado = {}
+
+    def _popen_falso(args, **kw):
+        capturado["args"] = args
+        capturado["flags"] = kw.get("creationflags", 0)
+        return object()
+
+    monkeypatch.setattr(subprocess, "Popen", _popen_falso)
+    updater._launch_win(tmp_path / "src", tmp_path / "dst", 1234)
+
+    flags = capturado["flags"]
+    assert not (flags & subprocess.DETACHED_PROCESS)
+    assert flags & subprocess.CREATE_NO_WINDOW
+    assert "powershell" in capturado["args"][0]
+
+
+def test_launch_win_loguea_antes_de_lanzar(monkeypatch, tmp_path):
+    """Sin este rastro, un fallo de lanzamiento no deja ninguna pista."""
+    import subprocess
+    monkeypatch.setattr(updater.os.environ, "get",
+                        lambda k, d=None: str(tmp_path) if k == "LOCALAPPDATA" else d)
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: object())
+    updater._launch_win(tmp_path / "src", tmp_path / "dst", 1234)
+    assert "lanzando actualizador" in (tmp_path / "Bitacora" / "update.log").read_text(encoding="utf-8")
