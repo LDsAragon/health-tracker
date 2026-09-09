@@ -1,4 +1,4 @@
-"""Vistas de nivel sitio: home, calendario, semana, búsqueda, export, backup, ajustes."""
+"""Vistas de nivel sitio: home, calendario, semana, búsqueda, export, backup, ajustes, versión."""
 from datetime import date, timedelta
 import calendar as cal
 from flask import Blueprint, render_template, request, redirect, url_for, make_response, send_file
@@ -118,7 +118,12 @@ def week_view(date_str):
 @bp.route("/ajustes")
 def settings_view():
     return render_template("settings.html", themes=THEMES,
-                           version=updater.current_version(),
+                           back=safe_back(request.args.get("back")))
+
+
+@bp.route("/version")
+def version_view():
+    return render_template("version.html", version=updater.current_version(),
                            back=safe_back(request.args.get("back")))
 
 

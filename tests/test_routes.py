@@ -386,11 +386,23 @@ def test_ajustes_muestra_swatches(client):
     assert b"theme-swatch" in body
     assert "Bosque".encode() in body
 
-def test_ajustes_muestra_la_version(client):
-    """Sin _version.py (modo dev) la seccion lo dice, en vez de mentir una version."""
-    body = client.get("/ajustes").data.decode()
+def test_pagina_version(client):
+    """Sin _version.py (modo dev) la pagina lo dice, en vez de mentir una version."""
+    body = client.get("/version").data.decode()
     assert "developer" in body
     assert "Buscar actualizaciones" in body
+
+
+def test_version_tiene_tab_propio_en_el_navbar(client):
+    """El tab sale de base.html: tiene que aparecer en cualquier pagina."""
+    for ruta in ("/ajustes", "/journal", "/recurring"):
+        assert 'href="/version' in client.get(ruta).data.decode(), ruta
+
+
+def test_ajustes_ya_no_tiene_la_seccion_de_version(client):
+    """Se mudo a su propio tab: no duplicar el chequeo en dos paginas."""
+    body = client.get("/ajustes").data.decode()
+    assert "upd-check-btn" not in body
 
 
 def test_update_status_expone_notas_y_reinstalable(client):

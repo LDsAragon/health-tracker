@@ -46,6 +46,10 @@
          class="nav-link {% if request.endpoint in ('main.settings_view', 'main.settings_save') %}active{% endif %}">
         ⚙️ Ajustes
       </a>
+      <a href="{{ url_for('main.version_view', back=request.full_path) }}"
+         class="nav-link {% if request.endpoint == 'main.version_view' %}active{% endif %}">
+        🔄 Versión
+      </a>
     </div>
   </nav>
   <div id="update-banner" class="update-banner" style="display:none;">

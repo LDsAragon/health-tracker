@@ -32,7 +32,7 @@ database/               # Paquete; __init__.py re-exporta todo (`import database
 
 routes/
   main.py               # / (home según start_view), /calendar/<año>/<mes>, /week/<fecha>,
-                        #   /search, /ajustes[/guardar], /estadisticas[/grafico/add|delete],
+                        #   /search, /ajustes[/guardar], /version, /estadisticas[/grafico/...],
                         #   /export[/download], /backup, /restore, /reset
   day.py                # /day/<fecha> y todas las acciones del día; /todos/<id>/move (AJAX)
   recurring.py          # /recurring/* (rutinas)
@@ -41,7 +41,8 @@ routes/
 
 templates/              # base.html → herencia; _macros.html para date_field
                         # calendar.html, week.html, day.html, journal.html, recurring.html,
-                        # stats.html, search.html, export.html ("Datos"), settings.html
+                        # stats.html, search.html, export.html ("Datos"), settings.html,
+                        # version.html (tab 🔄 Versión: chequeo manual + changelog)
 static/css/             # base.css, calendar.css, day.css, pages.css, wheel.css
 static/js/
   zoom.js               # Zoom Ctrl+rueda / Ctrl±, persistido en localStorage
@@ -119,7 +120,7 @@ powershell -File tools\publish_release.ps1 -Tag v2026-06-12.1
 
 - La versión sale de `_version.py`, **generado por el build** e incluido en el bundle (no está en el repo). En modo dev no existe → `current_version()` devuelve `None` y el updater no corre.
 - Comparación de versiones por tupla: `v2026-06-12.1` → `(2026, 6, 12, 1)` (`_version_tuple`).
-- Chequeo bajo demanda desde Ajustes: `POST /update/check` → `force_check()` (mismo `_do_check`, pero sin exigir versión propia). El front poletea `/update/status` hasta `checked: true` y reusa `updateShowModal()` de `base.html` para instalar o reinstalar.
+- Chequeo bajo demanda desde el tab 🔄 Versión (`/version`): `POST /update/check` → `force_check()` (mismo `_do_check`, pero sin exigir versión propia). El front poletea `/update/status` hasta `checked: true` y reusa `updateShowModal()` de `base.html` para instalar o reinstalar.
 - `changelog(body)` parsea el cuerpo del release que arma `publish_release.ps1` (bullets de commits; corta en el `---` que separa las instrucciones de instalación).
 - ⚠️ **`available` y `can_reinstall` exigen `current_version()`**: `apply_update()` copia sobre `_base_dir()`, que en dev es el repo, y en Windows con `robocopy /MIR`. Sin esa guarda, un chequeo forzado en dev habilitaría un botón que borra el repo.
 
