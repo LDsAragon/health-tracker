@@ -4,6 +4,7 @@ import calendar as cal
 from flask import Blueprint, render_template, request, redirect, url_for, make_response, send_file
 import database as db
 import services
+import updater
 from appconfig import THEMES, SETTINGS
 from helpers import _setting, _first_weekday, _week_start, _dow_names, safe_back, MESES
 from filters import dur_fmt_filter
@@ -117,6 +118,7 @@ def week_view(date_str):
 @bp.route("/ajustes")
 def settings_view():
     return render_template("settings.html", themes=THEMES,
+                           version=updater.current_version(),
                            back=safe_back(request.args.get("back")))
 
 

@@ -152,6 +152,122 @@
   </div>
 </div>
 
+<!-- Version y actualizaciones -->
+<div class="page-top" style="margin-top:36px;margin-bottom:12px;">
+  <h2 class="page-title" style="font-size:20px;">Versión</h2>
+  <p class="page-sub">Qué versión tenés instalada y si hay una más nueva.</p>
+</div>
+<div class="rec-form-wrap">
+  <div class="field-group">
+    <label>Bitácora {{ version or '— versión developer' }}</label>
+    <p class="page-sub" style="margin:0 0 10px;">
+      {% if version %}
+      La app busca actualizaciones sola al arrancar. Acá podés volver a chequear cuando quieras.
+      {% else %}
+      Corriendo desde el código, sin versión empaquetada: se puede chequear, pero no instalar.
+      {% endif %}
+    </p>
+    <button type="button" id="upd-check-btn" class="btn-primary" onclick="updCheck()">Buscar actualizaciones</button>
+    <div id="upd-result" class="upd-result" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+// Chequeo de versión bajo demanda. El flujo de instalación (descarga, progreso,
+// aplicar, reiniciar) es el modal de base.html: acá solo se lo invoca.
+(function () {
+  var DEV = {{ 'false' if version else 'true' }};
+  var timer = null;
+
+  function box()  { return document.getElementById('upd-result'); }
+  function btn()  { return document.getElementById('upd-check-btn'); }
+
+  function _msg(text) {
+    var b = box();
+    b.innerHTML = '';
+    var p = document.createElement('p');
+    p.className = 'page-sub';
+    p.style.margin = '0';
+    p.textContent = text;
+    b.appendChild(p);
+    b.style.display = '';
+  }
+
+  function _idle(label) {
+    btn().disabled = false;
+    btn().textContent = label;
+  }
+
+  window.updCheck = function () {
+    btn().disabled = true;
+    btn().textContent = 'Buscando...';
+    _msg('Consultando GitHub...');
+    fetch('/update/check', {method: 'POST'})
+      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) { _msg('Hay una descarga en curso.'); _idle('Buscar actualizaciones'); return; }
+        timer = setInterval(_poll, 500);
+      })
+      .catch(function () { _fail(); });
+  };
+
+  function _poll() {
+    fetch('/update/status')
+      .then(function (r) { return r.json(); })
+      .then(function (s) {
+        if (!s.checked) return;
+        clearInterval(timer);
+        _idle('Buscar de nuevo');
+        if (!s.latest) { _msg('No se pudo consultar GitHub. ¿Hay internet?'); return; }
+        _render(s);
+      })
+      .catch(function () { clearInterval(timer); _fail(); });
+  }
+
+  function _fail() {
+    _idle('Buscar de nuevo');
+    _msg('No se pudo consultar GitHub. ¿Hay internet?');
+  }
+
+  function _render(s) {
+    if (s.available)  { _msg('Hay una versión nueva: ' + s.latest); }
+    else if (DEV)     { _msg('Última publicada: ' + s.latest + ' — desde el código no se instala.'); }
+    else              { _msg('Estás al día (' + s.latest + ').'); }
+
+    // textContent en cada línea: las notas vienen de la API de GitHub, no se inyectan como HTML.
+    if (s.notes && s.notes.length) {
+      var t = document.createElement('p');
+      t.className = 'upd-notes-title';
+      t.textContent = s.available ? 'Qué trae:' : 'Cambios de esta versión:';
+      box().appendChild(t);
+      var ul = document.createElement('ul');
+      ul.className = 'upd-notes';
+      s.notes.forEach(function (n) {
+        var li = document.createElement('li');
+        li.textContent = n;
+        ul.appendChild(li);
+      });
+      box().appendChild(ul);
+    }
+
+    if (s.available)          { box().appendChild(_installBtn('Instalar actualización', 'btn-primary')); }
+    else if (s.can_reinstall) { box().appendChild(_installBtn('Reinstalar esta versión', 'upd-btn-alt')); }
+  }
+
+  // Ojo: nada de la clase btn-cancel acá — el handler de Esc de base.html clickea
+  // el primer .btn-cancel visible, y reinstalar con Esc sería una sorpresa fea.
+  function _installBtn(text, cls) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls;
+    b.style.marginTop = '12px';
+    b.textContent = text;
+    b.onclick = function () { updateShowModal(); };
+    return b;
+  }
+})();
+</script>
+
 <script>
 // Preview en vivo del tema: al elegir un swatch, aplica data-theme sin guardar.
 // Si no guardás, al navegar vuelve al tema guardado (la página recarga con settings.theme).

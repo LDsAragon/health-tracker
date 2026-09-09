@@ -25,6 +25,7 @@ _state = {
     "available":   False,
     "current":     None,
     "latest":      None,
+    "notes":       [],
     "asset_url":   None,
     "asset_name":  None,
     "downloading": False,
@@ -61,12 +62,46 @@ def _version_tuple(tag):
     return (int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4) or 0))
 
 
+def changelog(body):
+    """Lista de cambios del cuerpo del release (el formato que arma publish_release.ps1).
+
+    El cuerpo es '## Cambios' + bullets '- <asunto>' + '---' + instrucciones de
+    instalación; esas instrucciones no sirven acá adentro (la app se instala sola),
+    así que cortamos en el separador. Si no hay bullets (release escrito a mano),
+    devolvemos el texto como está.
+    """
+    text = (body or "").split("\n---")[0]
+    bullets = [l.strip()[1:].strip() for l in text.splitlines() if l.strip().startswith("- ")]
+    if bullets:
+        return bullets
+    return [l.strip() for l in text.splitlines()
+            if l.strip() and not l.strip().startswith("#")]
+
+
 def check_in_background():
     """Consulta GitHub en un hilo daemon. No bloquea el arranque."""
     ver = current_version()
     if not ver:
         return
     threading.Thread(target=_do_check, args=(ver,), daemon=True).start()
+
+
+def force_check():
+    """Re-consulta GitHub ahora, en background (el botón de Ajustes).
+
+    A diferencia de check_in_background() no exige tener versión propia: en dev
+    sirve para ver cuál es el último release publicado. Devuelve False si hay una
+    descarga en curso — resetear dl_* debajo de ese hilo lo dejaría escribiendo
+    sobre un asset que ya no corresponde.
+    """
+    with _lock:
+        if _state["downloading"]:
+            return False
+        _state.update(checked=False, available=False, notes=[],
+                      dl_total=0, dl_done=0, dl_error=None,
+                      dl_ready=False, dl_path=None)
+    threading.Thread(target=_do_check, args=(current_version(),), daemon=True).start()
+    return True
 
 
 def _do_check(current):
@@ -91,7 +126,11 @@ def _do_check(current):
             _state["checked"]   = True
             _state["current"]   = current
             _state["latest"]    = latest
-            _state["available"] = bool(latest and _version_tuple(latest) > _version_tuple(current) and asset)
+            _state["notes"]     = changelog(data.get("body"))
+            # `current` es None en dev: sin versión propia no hay con qué comparar, y
+            # ofrecer instalar sobreescribiría el repo (apply_update copia sobre _base_dir).
+            _state["available"] = bool(current and latest
+                                       and _version_tuple(latest) > _version_tuple(current) and asset)
             _state["asset_url"]  = asset["browser_download_url"] if asset else None
             _state["asset_name"] = asset["name"] if asset else None
     except Exception:

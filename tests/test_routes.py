@@ -386,6 +386,38 @@ def test_ajustes_muestra_swatches(client):
     assert b"theme-swatch" in body
     assert "Bosque".encode() in body
 
+def test_ajustes_muestra_la_version(client):
+    """Sin _version.py (modo dev) la seccion lo dice, en vez de mentir una version."""
+    body = client.get("/ajustes").data.decode()
+    assert "developer" in body
+    assert "Buscar actualizaciones" in body
+
+
+def test_update_status_expone_notas_y_reinstalable(client):
+    j = client.get("/update/status").get_json()
+    assert set(("checked", "available", "current", "latest", "notes", "can_reinstall")) <= set(j)
+    # En dev no hay version propia: reinstalar copiaria el release sobre el repo.
+    assert j["can_reinstall"] is False
+
+
+def test_update_check_responde(client, monkeypatch):
+    """Sin red: _do_check traga la excepcion y deja checked=True."""
+    import updater
+    previo = dict(updater._state)
+    def _sin_red(*a, **k):
+        raise OSError("sin red")
+    monkeypatch.setattr(updater.urllib.request, "urlopen", _sin_red)
+    monkeypatch.setattr(updater.threading, "Thread",
+                        lambda target, args=(), daemon=None: type(
+                            "T", (), {"start": lambda self: target(*args)})())
+    try:
+        assert client.post("/update/check").get_json()["ok"] is True
+        assert client.get("/update/status").get_json()["checked"] is True
+    finally:
+        updater._state.clear()
+        updater._state.update(previo)
+
+
 def test_ajustes_volver_contextual(client):
     body = client.get("/ajustes?back=/calendar/2026/6").data
     assert b'href="/calendar/2026/6"' in body

@@ -15,7 +15,17 @@ def status():
         "available": s["available"],
         "current":   s["current"],
         "latest":    s["latest"],
+        "notes":     s["notes"],
+        # Reinstalar reaplica el asset sobre la carpeta de la app; en dev esa carpeta es
+        # el repo, así que sin versión propia no se ofrece (ver updater.apply_update).
+        "can_reinstall": bool(s["asset_url"]) and bool(updater.current_version()),
     })
+
+
+@bp.route("/update/check", methods=["POST"])
+def check():
+    """Re-chequeo bajo demanda. ok=False si hay una descarga en curso."""
+    return jsonify({"ok": updater.force_check()})
 
 
 @bp.route("/update/download", methods=["POST"])

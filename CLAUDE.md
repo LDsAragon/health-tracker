@@ -37,7 +37,7 @@ routes/
   day.py                # /day/<fecha> y todas las acciones del día; /todos/<id>/move (AJAX)
   recurring.py          # /recurring/* (rutinas)
   journal.py            # /journal/* (notas especiales + categorías)
-  update.py             # /update/* (auto-actualización: status/download/progress/apply/quit)
+  update.py             # /update/* (auto-actualización: status/check/download/progress/apply/quit)
 
 templates/              # base.html → herencia; _macros.html para date_field
                         # calendar.html, week.html, day.html, journal.html, recurring.html,
@@ -119,6 +119,9 @@ powershell -File tools\publish_release.ps1 -Tag v2026-06-12.1
 
 - La versión sale de `_version.py`, **generado por el build** e incluido en el bundle (no está en el repo). En modo dev no existe → `current_version()` devuelve `None` y el updater no corre.
 - Comparación de versiones por tupla: `v2026-06-12.1` → `(2026, 6, 12, 1)` (`_version_tuple`).
+- Chequeo bajo demanda desde Ajustes: `POST /update/check` → `force_check()` (mismo `_do_check`, pero sin exigir versión propia). El front poletea `/update/status` hasta `checked: true` y reusa `updateShowModal()` de `base.html` para instalar o reinstalar.
+- `changelog(body)` parsea el cuerpo del release que arma `publish_release.ps1` (bullets de commits; corta en el `---` que separa las instrucciones de instalación).
+- ⚠️ **`available` y `can_reinstall` exigen `current_version()`**: `apply_update()` copia sobre `_base_dir()`, que en dev es el repo, y en Windows con `robocopy /MIR`. Sin esa guarda, un chequeo forzado en dev habilitaría un botón que borra el repo.
 
 ## Convenciones de código
 
