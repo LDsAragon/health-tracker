@@ -89,13 +89,11 @@ def week_view(date_str):
     prev_week = (monday - timedelta(days=7)).isoformat()
     next_week = (monday + timedelta(days=7)).isoformat()
 
-    MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-              'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-
     if monday.month == sunday.month:
-        week_label = f"{monday.day}–{sunday.day} de {MONTHS[monday.month-1]} {monday.year}"
+        week_label = f"{monday.day}–{sunday.day} de {MESES[monday.month].lower()} {monday.year}"
     else:
-        week_label = f"{monday.day} {MONTHS[monday.month-1]} – {sunday.day} {MONTHS[sunday.month-1]} {sunday.year}"
+        week_label = (f"{monday.day} {MESES[monday.month].lower()} – "
+                      f"{sunday.day} {MESES[sunday.month].lower()} {sunday.year}")
 
     return render_template(
         "week.html",
