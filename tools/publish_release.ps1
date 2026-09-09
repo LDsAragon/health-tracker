@@ -2,7 +2,10 @@
 # plataformas + gh release create v<fecha> con el zip y el tar.gz.
 # Necesita gh CLI autenticada (gh auth login).
 # -Tag para un tag distinto al del día (ej: v2026-06-12.1 si hubo que re-publicar).
-param([string]$Tag = "")
+# -Aviso: advertencia para los usuarios (cambio de comportamiento, migracion a mano).
+# Va como primer bullet y no como parrafo aparte a proposito: updater.changelog() se
+# queda solo con los bullets, asi que un parrafo no llegaria al tab Version de la app.
+param([string]$Tag = "", [string]$Aviso = "")
 # PS 5.1 defaults $OutputEncoding to ASCII; los caracteres no-ASCII (tildes, em dash)
 # se corrompen al pasarlos a procesos externos como gh CLI. Forzar UTF-8.
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -64,6 +67,7 @@ if ($prevTag -eq $tag) {
 if (-not $prevTag) { $prevTag = git rev-list --max-parents=0 HEAD }
 $commitLines = git log "$prevTag..HEAD" --pretty=format:"- %s" --no-merges 2>$null
 $commits = if ($commitLines) { $commitLines -join "`n" } else { "- Mejoras y correcciones" }
+if ($Aviso) { $commits = "- $([char]0x26A0)$([char]0xFE0F) $Aviso`n$commits" }
 $notesFile = [System.IO.Path]::GetTempFileName()
 # Set-Content -Encoding UTF8 en PS 5.1 escribe con BOM; usar WriteAllText con UTF8 sin BOM.
 $notesBody = @"
