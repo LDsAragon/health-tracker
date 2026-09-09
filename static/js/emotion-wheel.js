@@ -1,6 +1,5 @@
 // Rueda de emociones — Feeling Wheel de Gloria Willcox (1982), traducida al español.
 // 6 centros (adjetivos) × 6 secundarias × 1 terciaria. Misma forma {base:{color,children:{sec:[terc]}}}.
-// La versión vieja (Junto, mal traducida) quedó archivada en emotion-wheel-old.js.
 // ⚠️ Traducciones BORRADOR — a verificar/afinar contra la imagen fuente.
 const EMOTION_WHEEL = {
   "Enojado": {        // Mad

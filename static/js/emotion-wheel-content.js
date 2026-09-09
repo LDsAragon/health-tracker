@@ -1,5 +1,5 @@
 // Contenido de la rueda Willcox (es) — keyeado por path "Base", "Base|Sec", "Base|Sec|Terc".
-// Sourced y citado por entrada. El contenido viejo (Junto) está en emotion-wheel-content-old.js.
+// Sourced y citado por entrada.
 // La rueda en sí: Feeling Wheel · Gloria Willcox (1982). Las definiciones se apoyan en literatura
 // psicológica (Ekman, Cowen & Keltner 2017, Brené Brown, Plutchik, Bandura, Adler, Gilbert,
 // Ryan & Deci, Silvia, Csikszentmihalyi…); las pocas puramente léxicas citan el propio wheel.

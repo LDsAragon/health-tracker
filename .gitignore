@@ -10,3 +10,4 @@ dist/
 *.spec
 _version.py
 /.playwright-mcp
+/screenshots
