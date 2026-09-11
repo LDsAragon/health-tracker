@@ -20,7 +20,7 @@ PERIODOS = (
     ("proximas", "Próximas", "Tareas que vienen"),
     ("todo",     "Todo",     "Todas las tareas"),
 )
-PERIODO_DEFAULT = "30"
+PERIODO_DEFAULT = "hoy"
 # Mover a hoy / mañana / la semana que viene, siempre relativo a hoy: un "+1 sem" sobre algo
 # de julio tiene que caer la semana que viene, no seguir en el pasado.
 MOVER_DIAS = ("0", "1", "7")

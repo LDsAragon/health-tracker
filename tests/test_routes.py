@@ -651,6 +651,14 @@ def test_contadores_no_dependen_del_periodo(client):
         i = html.index("Próximas")
         assert ">1<" in html[i - 120:i], f"Próximas quedó en 0 con periodo={periodo}"
 
+def test_visor_abre_en_hoy(client):
+    """El visor arranca en Hoy: es lo que se mira el 90% de las veces."""
+    db.add_todo(HOY.isoformat(), "de hoy")
+    db.add_todo((HOY - timedelta(days=20)).isoformat(), "de hace 20 dias")
+    html = client.get("/tareas?estado=todas").data.decode()
+    assert "Tareas de hoy" in html
+    assert "de hace 20 dias" not in html.split("stats-section")[-1]
+
 def test_periodo_hoy_es_una_ventana_exacta(client):
     """Ni ayer ni mañana: el botón lista exactamente lo que dice."""
     db.add_todo((HOY - timedelta(days=1)).isoformat(), "de ayer")

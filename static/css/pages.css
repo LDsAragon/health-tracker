@@ -925,7 +925,8 @@ select.journal-cat-select {
 .todos-dia-head a:hover { color: var(--accent); }
 .todos-hoy-tag {
   font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
-  color: var(--accent); background: rgba(99,102,241,.15); padding: 1px 6px; border-radius: 4px;
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent);
+  padding: 1px 6px; border-radius: 4px;
 }
 
 /* Los formularios de acción conviven en una fila: sin esto cada uno rompe línea. */

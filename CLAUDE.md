@@ -147,7 +147,7 @@ mano** sí está bien y es la operación central del visor.
   propósito: `get_all_settings()` clampea contra `choices` solo lo que está en el esquema, así que
   una fecha ISO libre sobreviviría igual.
 - El filtro de tiempo se llama `periodo` (en la URL y en el código), nunca "rango": la palabra suena
-  antinatural en la UI. `services.periodo_ventana()` devuelve `(start, end)` y es una **ventana
+  antinatural en la UI. El default es `hoy`. `services.periodo_ventana()` devuelve `(start, end)` y es una **ventana
   exacta** — el botón lista exactamente lo que dice, sin futuro, salvo `proximas` y `todo`. El título
   del listado sale de la tercera columna de `routes.todos.PERIODOS`.
 - El bloque de atrasadas ignora el período (lo viejo se avisa siempre). De los contadores del
