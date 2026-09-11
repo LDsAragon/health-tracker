@@ -16,11 +16,13 @@ Diario personal de hábitos y salud. App de escritorio cross-platform (Windows +
 app.py                  # Flask app factory (create_app)
 desktop.py              # Entrada pywebview; auto-backup diario; APP_DIR por plataforma
 appconfig.py            # THEMES, SETTINGS y PET_ART (fuente única de defaults)
-services.py             # Presentación compartida mes/semana: events_by_date, journal_badges
+services.py             # Presentación compartida: events_by_date, journal_badges y, para el
+                        #   visor de tareas, overdue_buckets / todos_overview / overdue_cutoff
 helpers.py              # _setting, _week_start, _dow_names, MESES[], _fmt_clock, safe_back
 filters.py              # Filtros Jinja2 (humantime, fechacorta, dur_fmt, rango_fmt)
 fieldtypes.py           # Catálogo de tipos de campo de notas especiales
 updater.py              # Auto-actualización via GitHub Releases (check/download/apply)
+notify.py               # Notificación del escritorio (toast WinRT vía PowerShell / notify-send)
 
 database/               # Paquete; __init__.py re-exporta todo (`import database as db`)
   conn.py               # get_db, snapshot_to, backup_path, is_valid_db, reset_db, restore_from
@@ -28,13 +30,16 @@ database/               # Paquete; __init__.py re-exporta todo (`import database
   stats.py              # Motor de series de Estadísticas: build_series, grouped_series,
                         #   chartable_fields, y time_summary() para "Tiempo por actividad"
   journal.py            # Categorías + entradas de notas especiales; migrate_entry_values
-  notes.py / events.py / todos.py / charts.py / settings.py
+  notes.py / events.py / charts.py / settings.py
+  todos.py              # Tareas por día + el motor del visor: get_overdue_todos,
+                        #   count_overdue_todos, snooze_todo, move_todos, get_todos_filtered
 
 routes/
   main.py               # / (home según start_view), /calendar/<año>/<mes>, /week/<fecha>,
                         #   /search, /ajustes[/guardar], /version, /estadisticas[/grafico/...],
                         #   /export[/download], /backup, /restore, /reset
   day.py                # /day/<fecha> y todas las acciones del día; /todos/<id>/move (AJAX)
+  todos.py              # /tareas (visor) + acciones sobre atrasadas + /tareas/alerta (JSON)
   recurring.py          # /recurring/* (rutinas)
   journal.py            # /journal/* (notas especiales + categorías)
   update.py             # /update/* (auto-actualización: status/check/download/progress/apply/quit)
@@ -42,6 +47,7 @@ routes/
 templates/              # base.html → herencia; _macros.html para date_field
                         # calendar.html, week.html, day.html, journal.html, recurring.html,
                         # stats.html, search.html, export.html ("Datos"), settings.html,
+                        # todos.html (visor de tareas),
                         # version.html (tab 🔄 Versión: chequeo manual + changelog)
 static/css/             # base.css, calendar.css, day.css, pages.css, wheel.css
 static/js/
@@ -82,7 +88,7 @@ Prefijos de backup:
 ## Tests
 
 ```bash
-pytest tests/          # 225 tests, ~8s
+pytest tests/          # 278 tests, ~9s
 ```
 
 Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).
@@ -113,6 +119,31 @@ powershell -File tools\publish_release.ps1 -Tag v2026-06-12.1
 ```
 
 **CI**: `.github/workflows/ci.yml` — pytest + tarball Linux como artifact, corre en push/PR a main.
+
+## Tareas y tareas atrasadas
+
+Una tarea pertenece a **un** día (`todos.todo_date`) y **nunca se mueve sola**: si queda sin cerrar
+se queda en su fecha hasta que el usuario la traiga a hoy, posponga el aviso o la borre. Arrastrarlas
+automáticamente reescribiría datos históricos sobre una suposición (mismo criterio que los renombres).
+
+- `done_at` — timestamp local del cierre; el toggle lo setea y lo borra al reabrir.
+- `snoozed_until` — fecha ISO hasta la que la tarea no cuenta como atrasada. Es el "posponer el
+  aviso" **sin** tocar `todo_date`.
+- Qué es "atrasada": `services.overdue_cutoff(hoy, modo, _week_start)` → con `todo_overdue_from=week`
+  (default) el corte es el inicio de la semana en curso; con `day`, hoy. El corte es exclusivo.
+- Avisos, en escalera por el ajuste `todo_alert` (`off` → `badge` → `modal`): contador en el navbar
+  (`overdue_count`, inyectado por el context processor de `app.py`; con `off` no paga la query) y
+  modal al arrancar (`#todo-modal` en `base.html`, una vez por arranque vía `sessionStorage`).
+- "Empezó una semana nueva" sale de comparar el lunes actual contra la clave
+  `appconfig.LAST_WEEK_SEEN_KEY` en la tabla `settings`. **Esa clave va fuera de `SETTINGS`** a
+  propósito: `get_all_settings()` clampea contra `choices` solo lo que está en el esquema, así que
+  una fecha ISO libre sobreviviría igual.
+- El bloque de atrasadas ignora el filtro de período (lo viejo se avisa siempre); período y estado
+  solo acotan el listado de abajo. Los contadores se calculan sobre todo el período **sin** filtrar
+  por estado — si no, con "Pendientes" el contador de hechas daría siempre 0.
+- El filtro de tiempo se llama `periodo` (en la URL y en el código), nunca "rango": la palabra suena
+  antinatural en la UI. El título del listado dice el período en palabras ("Tareas de los últimos
+  3 meses"), que sale de la tercera columna de `routes.todos.PERIODOS`.
 
 ## Auto-actualización
 

@@ -25,7 +25,16 @@ SETTINGS = {
     "note_form_default":    {"default": "open",      "choices": ("open", "collapsed")},
     "journal_form_default": {"default": "collapsed", "choices": ("open", "collapsed")},
     "pet":                  {"default": "none",      "choices": ("cat", "dog", "none")},
+    "show_todos":        {"default": "show",  "choices": ("show", "hide")},
+    "todo_alert":        {"default": "modal", "choices": ("off", "badge", "modal")},
+    "todo_overdue_from": {"default": "week",  "choices": ("week", "day")},
+    "todo_notify":       {"default": "off",   "choices": ("on", "off")},
 }
+
+# Clave de la tabla settings que NO va en SETTINGS: guarda una fecha ISO libre (el lunes de
+# la última semana en que se avisó de tareas atrasadas) y get_all_settings solo clampea las
+# claves que están en el esquema.
+LAST_WEEK_SEEN_KEY = "todos_last_week_seen"
 DEFAULT_SETTINGS = {k: v["default"] for k, v in SETTINGS.items()}
 
 # Aun activada, la mascotita sale solo a veces: si apareciera en cada tilde se

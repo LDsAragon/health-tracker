@@ -1,5 +1,5 @@
 """Capa de servicios — lógica pura de presentación (sin HTTP, sin DB fixture)."""
-from datetime import date
+from datetime import date, timedelta
 import services
 
 
@@ -25,3 +25,47 @@ def test_journal_badges_dedup_y_filtra():
     ]}
     out = services.journal_badges(raw)
     assert out["2026-06-09"] == [{"name": "Sueño", "color": "#3b82f6"}]
+
+
+# ── Visor de tareas ─────────────────────────────────────────────────────────────
+
+def _lunes(d):
+    """Inicio de semana en lunes, sin depender de los ajustes."""
+    return d - timedelta(days=d.weekday())
+
+
+def _t(fecha, done=0):
+    return {"todo_date": fecha, "done": done, "text": fecha}
+
+
+def test_overdue_buckets_reparte_por_antiguedad():
+    hoy = date(2026, 6, 10)                      # miércoles; la semana arranca el 8
+    todos = [_t("2026-06-09"), _t("2026-06-03"), _t("2026-05-20")]
+    out = services.overdue_buckets(todos, hoy, _lunes)
+    assert [b["key"] for b in out] == ["esta_semana", "semana_pasada", "antes"]
+    assert [b["tareas"][0]["todo_date"] for b in out] == ["2026-06-09", "2026-06-03", "2026-05-20"]
+
+
+def test_overdue_buckets_omite_tramos_vacios():
+    out = services.overdue_buckets([_t("2026-05-20")], date(2026, 6, 10), _lunes)
+    assert [b["key"] for b in out] == ["antes"]
+
+
+def test_overdue_buckets_ignora_fechas_corruptas():
+    """todo_date no se valida al guardar: una fecha basura no puede tumbar la vista."""
+    out = services.overdue_buckets([_t("chau"), _t("2026-05-20")], date(2026, 6, 10), _lunes)
+    assert sum(len(b["tareas"]) for b in out) == 1
+
+
+def test_todos_overview_cuenta_por_estado():
+    hoy = date(2026, 6, 10)
+    todos = [_t("2026-06-10"), _t("2026-06-12"), _t("2026-06-01"), _t("2026-06-02", done=1)]
+    r = services.todos_overview(todos, hoy)
+    assert (r["total"], r["hechas"], r["pendientes"]) == (4, 1, 3)
+    assert (r["hoy"], r["proximas"], r["vencidas"]) == (1, 1, 1)
+
+
+def test_overdue_cutoff_segun_el_modo():
+    hoy = date(2026, 6, 10)
+    assert services.overdue_cutoff(hoy, "week", _lunes) == date(2026, 6, 8)
+    assert services.overdue_cutoff(hoy, "day", _lunes) == hoy

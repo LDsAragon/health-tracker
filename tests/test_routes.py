@@ -2,6 +2,8 @@
 Tests de rutas HTTP — verifica status codes, redirects y contenido clave.
 Usa el fixture `client` (Flask test client con DB aislada).
 """
+from datetime import date, timedelta
+
 import database as db
 
 DATE = "2026-06-09"
@@ -588,3 +590,145 @@ def test_calendario_inicio_domingo(client):
 def test_calendario_inicio_lunes(client):
     body = client.get("/calendar/2026/6").data.decode("utf-8")
     assert body.index("Lunes") < body.index("Domingo")
+
+
+# ── Visor de tareas (/tareas) ─────────────────────────────────────────────────
+# Las rutas usan date.today(), así que las fechas van relativas a hoy. "Atrasada" con el
+# default (todo_overdue_from=week) exige cruzar el inicio de semana: 10 días lo garantiza.
+
+HOY = date.today()
+VIEJA = (HOY - timedelta(days=10)).isoformat()
+MAS_VIEJA = (HOY - timedelta(days=40)).isoformat()
+
+
+def _tid(fecha, texto):
+    return [t for t in db.get_todos_for_date(fecha) if t["text"] == texto][0]["id"]
+
+
+def test_visor_tareas_carga(client):
+    db.add_todo(VIEJA, "pendiente vieja")
+    db.add_todo(HOY.isoformat(), "para hoy")
+    r = client.get("/tareas")
+    assert r.status_code == 200
+    assert b"pendiente vieja" in r.data
+    assert "Quedaron sin cerrar".encode() in r.data
+
+def test_visor_sin_atrasadas_no_muestra_el_bloque(client):
+    db.add_todo(HOY.isoformat(), "para hoy")
+    r = client.get("/tareas")
+    assert "Quedaron sin cerrar".encode() not in r.data
+
+def test_visor_filtros_basura_no_rompen(client):
+    db.add_todo(HOY.isoformat(), "x")
+    assert client.get("/tareas?estado=zzz&periodo=nada").status_code == 200
+
+def test_visor_busqueda_filtra(client):
+    db.add_todo(HOY.isoformat(), "comprar pan")
+    db.add_todo(HOY.isoformat(), "correr")
+    r = client.get("/tareas?estado=todas&q=comprar")
+    assert b"comprar pan" in r.data and b"correr" not in r.data
+
+def test_visor_periodo_acota_el_listado(client):
+    """Una tarea cerrada solo sale por el listado, que sí respeta el período."""
+    db.add_todo(MAS_VIEJA, "muy vieja")
+    db.toggle_todo(_tid(MAS_VIEJA, "muy vieja"))
+    assert b"muy vieja" not in client.get("/tareas?estado=hechas&periodo=30").data
+    assert b"muy vieja" in client.get("/tareas?estado=hechas&periodo=todo").data
+
+def test_visor_atrasadas_ignoran_el_periodo(client):
+    """Lo que quedó sin cerrar se avisa siempre, por viejo que sea."""
+    db.add_todo(MAS_VIEJA, "muy vieja")
+    assert b"muy vieja" in client.get("/tareas?periodo=30").data
+
+def test_tarea_a_hoy_desde_el_visor(client):
+    db.add_todo(VIEJA, "traeme")
+    client.post(f"/tareas/{_tid(VIEJA, 'traeme')}/hoy")
+    assert [t["text"] for t in db.get_todos_for_date(HOY.isoformat())] == ["traeme"]
+
+def test_posponer_no_mueve_la_fecha(client):
+    """El aviso se silencia, pero la tarea sigue en el día en que la anotaste."""
+    db.add_todo(VIEJA, "despues"); tid = _tid(VIEJA, "despues")
+    client.post(f"/tareas/{tid}/posponer", data={"dias": "7"})
+    t = db.get_todos_for_date(VIEJA)[0]
+    assert t["todo_date"] == VIEJA
+    assert t["snoozed_until"] == (HOY + timedelta(days=7)).isoformat()
+    assert db.count_overdue_todos(HOY.isoformat(), HOY.isoformat()) == 0
+
+def test_posponer_dias_invalidos_cae_a_uno(client):
+    db.add_todo(VIEJA, "x")
+    client.post(f"/tareas/{_tid(VIEJA, 'x')}/posponer", data={"dias": "999"})
+    assert db.get_todos_for_date(VIEJA)[0]["snoozed_until"] == (HOY + timedelta(days=1)).isoformat()
+
+def test_toggle_y_borrar_desde_el_visor(client):
+    db.add_todo(VIEJA, "a"); tid = _tid(VIEJA, "a")
+    client.post(f"/tareas/{tid}/toggle")
+    assert db.get_todos_for_date(VIEJA)[0]["done"] == 1
+    client.post(f"/tareas/{tid}/borrar")
+    assert db.get_todos_for_date(VIEJA) == []
+
+def test_traer_todas_a_hoy(client):
+    db.add_todo(VIEJA, "a")
+    db.add_todo(MAS_VIEJA, "b")
+    client.post("/tareas/traer-todas")
+    assert sorted(t["text"] for t in db.get_todos_for_date(HOY.isoformat())) == ["a", "b"]
+
+def test_traer_todas_no_toca_las_postergadas(client):
+    db.add_todo(VIEJA, "a")
+    db.add_todo(MAS_VIEJA, "dormida")
+    db.snooze_todo(_tid(MAS_VIEJA, "dormida"), (HOY + timedelta(days=3)).isoformat())
+    client.post("/tareas/traer-todas")
+    assert [t["text"] for t in db.get_todos_for_date(MAS_VIEJA)] == ["dormida"]
+
+def test_acciones_del_visor_preservan_filtros(client):
+    db.add_todo(VIEJA, "a")
+    r = client.post(f"/tareas/{_tid(VIEJA, 'a')}/toggle",
+                    data={"estado": "hechas", "periodo": "30", "q": "a"})
+    assert r.status_code == 302
+    assert "estado=hechas" in r.headers["Location"]
+    assert "periodo=30" in r.headers["Location"]
+    assert "q=a" in r.headers["Location"]
+
+
+# ── Aviso de tareas sin cerrar ────────────────────────────────────────────────
+
+def test_alerta_json(client):
+    db.add_todo(VIEJA, "sin cerrar")
+    a = client.get("/tareas/alerta").get_json()
+    assert a["count"] == 1 and a["should_alert"] is True
+    assert a["oldest"] == VIEJA
+    assert a["items"][0]["text"] == "sin cerrar"
+    assert a["week_changed"] is False        # primer aviso: no hay semana previa registrada
+
+def test_alerta_sin_atrasadas_no_avisa(client):
+    db.add_todo(HOY.isoformat(), "de hoy")
+    assert client.get("/tareas/alerta").get_json()["should_alert"] is False
+
+def test_alerta_respeta_el_ajuste(client):
+    db.add_todo(VIEJA, "x")
+    db.set_setting("todo_alert", "badge")
+    a = client.get("/tareas/alerta").get_json()
+    assert a["count"] == 1 and a["should_alert"] is False   # cuenta, pero no interrumpe
+
+def test_alerta_detecta_la_semana_nueva(client):
+    db.add_todo(VIEJA, "x")
+    client.post("/tareas/alerta/visto")
+    assert client.get("/tareas/alerta").get_json()["week_changed"] is False
+    db.set_setting("todos_last_week_seen", (HOY - timedelta(days=21)).isoformat())
+    assert client.get("/tareas/alerta").get_json()["week_changed"] is True
+
+def test_overdue_from_day_incluye_ayer(client):
+    ayer = (HOY - timedelta(days=1)).isoformat()
+    db.add_todo(ayer, "de ayer")
+    db.set_setting("todo_overdue_from", "day")
+    assert client.get("/tareas/alerta").get_json()["count"] == 1
+
+def test_badge_de_atrasadas_en_el_navbar(client):
+    db.add_todo(VIEJA, "x")
+    assert b"nav-badge" in client.get("/tareas").data
+    db.set_setting("todo_alert", "off")
+    assert b"nav-badge" not in client.get("/tareas").data
+
+def test_tab_tareas_se_puede_ocultar(client):
+    assert "📋 Tareas".encode() in client.get("/calendar/2026/6").data
+    db.set_setting("show_todos", "hide")
+    assert "📋 Tareas".encode() not in client.get("/calendar/2026/6").data

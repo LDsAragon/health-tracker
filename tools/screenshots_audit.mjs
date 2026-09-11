@@ -24,6 +24,7 @@ const pages = [
   { name: '04_rutinas',    path: '/recurring' },
   { name: '05_journal',    path: '/journal' },
   { name: '06_stats',      path: '/estadisticas' },
+  { name: '06b_tareas',    path: '/tareas' },
   { name: '07_export',     path: '/export' },
   { name: '08_ajustes',    path: '/ajustes' },
   { name: '09_buscar',     path: '/search?q=a' },

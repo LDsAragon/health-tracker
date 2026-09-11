@@ -74,6 +74,43 @@
     </div>
 
     <div class="field-group">
+      <label for="show_todos">Acceso a Tareas</label>
+      <p class="page-sub" style="margin:0 0 8px;">Mostrar u ocultar el tab 📋 <b>Tareas</b> (el visor con todas las listas juntas) en la barra de navegación.</p>
+      <select name="show_todos" id="show_todos" class="journal-type-select" style="max-width:280px;">
+        <option value="show" {% if settings.show_todos == 'show' %}selected{% endif %}>Mostrar en el navbar</option>
+        <option value="hide" {% if settings.show_todos == 'hide' %}selected{% endif %}>Ocultar del navbar</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label for="todo_alert">Aviso de tareas sin cerrar</label>
+      <p class="page-sub" style="margin:0 0 8px;">Qué tan insistente es el recordatorio de las tareas que quedaron abiertas. El aviso nunca mueve nada: solo te lo muestra.</p>
+      <select name="todo_alert" id="todo_alert" class="journal-type-select" style="max-width:280px;">
+        <option value="modal" {% if settings.todo_alert == 'modal' %}selected{% endif %}>Aviso al abrir la app + contador</option>
+        <option value="badge" {% if settings.todo_alert == 'badge' %}selected{% endif %}>Solo el contador en el navbar</option>
+        <option value="off" {% if settings.todo_alert == 'off' %}selected{% endif %}>Sin avisos</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label for="todo_overdue_from">Cuándo una tarea está "sin cerrar"</label>
+      <p class="page-sub" style="margin:0 0 8px;">Desde qué antigüedad cuenta como pendiente vieja. Con <b>semanas anteriores</b>, lo que dejaste a medias esta semana todavía no molesta.</p>
+      <select name="todo_overdue_from" id="todo_overdue_from" class="journal-type-select" style="max-width:280px;">
+        <option value="week" {% if settings.todo_overdue_from == 'week' %}selected{% endif %}>De semanas anteriores</option>
+        <option value="day" {% if settings.todo_overdue_from == 'day' %}selected{% endif %}>De cualquier día pasado</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label for="todo_notify">Notificación del sistema</label>
+      <p class="page-sub" style="margin:0 0 8px;">Además del aviso dentro de la app, mandar una notificación del escritorio al abrir Bitácora si hay tareas sin cerrar. Solo se dispara al arrancar: la app no queda corriendo en segundo plano.</p>
+      <select name="todo_notify" id="todo_notify" class="journal-type-select" style="max-width:280px;">
+        <option value="off" {% if settings.todo_notify == 'off' %}selected{% endif %}>No mandar</option>
+        <option value="on" {% if settings.todo_notify == 'on' %}selected{% endif %}>Mandar al arrancar</option>
+      </select>
+    </div>
+
+    <div class="field-group">
       <label for="show_stats">Acceso a Estadísticas</label>
       <p class="page-sub" style="margin:0 0 8px;">Mostrar u ocultar el enlace 📈 Estadísticas en la barra de navegación.</p>
       <select name="show_stats" id="show_stats" class="journal-type-select" style="max-width:280px;">

@@ -1,14 +1,26 @@
 import os
 import sys
+from datetime import date
 
 from flask import Flask, g
 import database as db
 import filters
+import services
 from fieldtypes import FIELD_TYPES
 from appconfig import PET_ART
+from helpers import _week_start
 # Re-export para tests que hacen `from app import dur_fmt_filter, ...`
 from filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
-from routes import main, day, recurring, journal, update
+from routes import main, day, recurring, journal, update, todos
+
+
+def _overdue_count(settings) -> int:
+    """Contador del badge del navbar. Con los avisos apagados no se paga la query."""
+    if settings.get("todo_alert") == "off":
+        return 0
+    today = date.today()
+    cutoff = services.overdue_cutoff(today, settings.get("todo_overdue_from", "week"), _week_start)
+    return db.count_overdue_todos(cutoff.isoformat(), today.isoformat())
 
 
 def create_app():
@@ -31,9 +43,11 @@ def create_app():
     @app.context_processor
     def _inject():
         """Expone ajustes y el catálogo de tipos de campo a todas las plantillas."""
-        return {"settings": db.get_all_settings(), "field_types": FIELD_TYPES, "pet_art": PET_ART}
+        settings = db.get_all_settings()
+        return {"settings": settings, "field_types": FIELD_TYPES, "pet_art": PET_ART,
+                "overdue_count": _overdue_count(settings)}
 
-    for module in (main, day, recurring, journal, update):
+    for module in (main, day, recurring, journal, update, todos):
         app.register_blueprint(module.bp)
 
     return app

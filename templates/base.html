@@ -30,6 +30,12 @@
          class="nav-link {% if request.endpoint == 'journal.journal_view' %}active{% endif %}">
         Notas especiales
       </a>
+      {% if settings.show_todos != 'hide' %}
+      <a href="{{ url_for('todos.todos_view') }}"
+         class="nav-link {% if request.endpoint and request.endpoint.startswith('todos.') %}active{% endif %}">
+        📋 Tareas{% if overdue_count %}<span class="nav-badge">{{ overdue_count }}</span>{% endif %}
+      </a>
+      {% endif %}
       {% if settings.show_stats != 'hide' %}
       <a href="{{ url_for('main.stats_view') }}"
          class="nav-link {% if request.endpoint == 'main.stats_view' %}active{% endif %}">
@@ -208,6 +214,76 @@
   })();
   </script>
 
+  <!-- Modal de tareas sin cerrar -->
+  <div id="todo-modal" class="update-modal-overlay" style="display:none;">
+    <div class="update-modal-box">
+      <p class="update-modal-title" id="todo-modal-title">Tareas sin cerrar</p>
+      <p id="todo-modal-text"></p>
+      <ul class="todo-alert-list" id="todo-modal-list"></ul>
+      <p class="update-note" id="todo-modal-more" style="display:none;"></p>
+      <div class="todo-modal-actions">
+        <a class="btn-primary" href="{{ url_for('todos.todos_view') }}">Ver todas</a>
+        <button class="upd-btn-alt" onclick="todoAlertBringToday()">Traer a hoy</button>
+        <button class="upd-btn-alt" onclick="todoAlertDismiss()">Ahora no</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    // Una sola vez por arranque: pywebview conserva localStorage entre sesiones pero
+    // sessionStorage muere al cerrar la ventana, que es justo la semántica que queremos.
+    var SEEN = 'todoAlertSeen';
+    var _modal = document.getElementById('todo-modal');
+
+    function _close() { _modal.style.display = 'none'; }
+
+    window.todoAlertDismiss = function() {
+      try { sessionStorage.setItem(SEEN, '1'); } catch (e) {}
+      fetch('/tareas/alerta/visto', { method: 'POST' }).catch(function(){});
+      _close();
+    };
+
+    window.todoAlertBringToday = function() {
+      var f = document.createElement('form');
+      f.method = 'POST';
+      f.action = '/tareas/traer-todas';
+      document.body.appendChild(f);
+      f.submit();
+    };
+
+    try { if (sessionStorage.getItem(SEEN)) return; } catch (e) {}
+
+    fetch('/tareas/alerta').then(function(r) { return r.json(); }).then(function(a) {
+      if (!a.should_alert) return;
+      document.getElementById('todo-modal-title').textContent =
+        a.week_changed ? 'Empezó una semana nueva' : 'Tareas sin cerrar';
+      document.getElementById('todo-modal-text').textContent =
+        a.week_changed
+          ? 'Te quedaron ' + a.count + (a.count === 1 ? ' tarea' : ' tareas') + ' sin cerrar de antes.'
+          : 'Tenés ' + a.count + (a.count === 1 ? ' tarea' : ' tareas') + ' sin cerrar de días pasados.';
+      var ul = document.getElementById('todo-modal-list');
+      ul.innerHTML = '';
+      a.items.forEach(function(t) {
+        var li = document.createElement('li');
+        var d = t.date.split('-');
+        li.textContent = t.text;
+        var sp = document.createElement('span');
+        sp.className = 'todo-alert-date';
+        sp.textContent = d[2] + '/' + d[1];
+        li.appendChild(sp);
+        ul.appendChild(li);
+      });
+      var more = document.getElementById('todo-modal-more');
+      if (a.count > a.items.length) {
+        more.textContent = 'y ' + (a.count - a.items.length) + ' más.';
+        more.style.display = 'block';
+      }
+      _modal.style.display = 'flex';
+    }).catch(function(){});
+  })();
+  </script>
+
   <script>
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
@@ -216,6 +292,8 @@
     if (ewModal  && ewModal.style.display  !== 'none') return;
     const updModal = document.getElementById('update-modal');
     if (updModal && updModal.style.display !== 'none') return;
+    const todoModal = document.getElementById('todo-modal');
+    if (todoModal && todoModal.style.display !== 'none') return;
     // 1) Cancelar panel/form inline abierto
     const cancel = Array.from(document.querySelectorAll('.btn-cancel, .btn-cancel-sm')).find(function (btn) {
       let el = btn;

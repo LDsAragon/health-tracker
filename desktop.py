@@ -11,6 +11,7 @@ exe/script, se copia (snapshot consistente via API de backup de SQLite, incluye 
 import os
 import sys
 import sqlite3
+import threading
 import traceback
 from datetime import date
 from pathlib import Path
@@ -134,6 +135,34 @@ def _unblock_dlls():
             pass   # no estaba marcada (lo normal)
 
 
+def _notify_overdue(flask_app):
+    """Toast del sistema si quedaron tareas sin cerrar. Solo al arrancar: no hay nada residente.
+
+    Necesita el app_context porque _week_start lee los ajustes de `g` (fuera de request
+    caería al default y un usuario con semana que empieza en domingo vería otro corte).
+    """
+    import database as db
+    import notify as notify_mod
+    import services
+    from datetime import date
+    from flask import g
+    from helpers import _week_start
+
+    with flask_app.app_context():
+        g.settings = db.get_all_settings()
+        if g.settings.get("todo_notify") != "on" or g.settings.get("todo_alert") == "off":
+            return
+        hoy = date.today()
+        cutoff = services.overdue_cutoff(hoy, g.settings.get("todo_overdue_from", "week"), _week_start)
+        n = db.count_overdue_todos(cutoff.isoformat(), hoy.isoformat())
+    if not n:
+        return
+    notify_mod.notify(
+        "Bitácora",
+        f"Tenés {n} tarea sin cerrar." if n == 1 else f"Tenés {n} tareas sin cerrar.",
+    )
+
+
 def main():
     _unblock_dlls()
     _migrate_from_old_appdata()
@@ -151,6 +180,11 @@ def main():
 
     import updater
     updater.check_in_background()
+
+    # Hilo daemon con delay: el toast no debe competir con el arranque de la ventana.
+    aviso = threading.Timer(4.0, _notify_overdue, args=(flask_app,))
+    aviso.daemon = True
+    aviso.start()
 
     import webview
     # Sin esto pywebview CANCELA las descargas (en todas las plataformas) y el

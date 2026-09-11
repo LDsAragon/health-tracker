@@ -360,3 +360,89 @@ def test_week_start_default(test_db):
 
 def test_start_view_default(test_db):
     assert db.get_setting("start_view") == "month"
+
+
+# ── Visor de tareas: done_at, postergación y filtros ────────────────────────────
+
+def test_done_at_se_setea_y_se_limpia(test_db):
+    db.add_todo(TDATE, "x")
+    tid = db.get_todos_for_date(TDATE)[0]["id"]
+    db.toggle_todo(tid)
+    assert db.get_todos_for_date(TDATE)[0]["done_at"]        # timestamp local al cerrar
+    db.toggle_todo(tid)
+    assert db.get_todos_for_date(TDATE)[0]["done_at"] == ""  # reabrir lo borra
+
+def test_get_overdue_todos_respeta_el_corte(test_db):
+    db.add_todo("2026-06-01", "vieja")
+    db.add_todo("2026-06-09", "del corte")
+    db.add_todo("2026-06-15", "nueva")
+    textos = [t["text"] for t in db.get_overdue_todos("2026-06-09", "2026-06-09")]
+    assert textos == ["vieja"]   # el corte es exclusivo
+
+def test_get_overdue_todos_ignora_las_hechas(test_db):
+    db.add_todo("2026-06-01", "vieja")
+    db.toggle_todo(db.get_todos_for_date("2026-06-01")[0]["id"])
+    assert db.get_overdue_todos("2026-06-09", "2026-06-09") == []
+
+def test_snooze_saca_de_atrasadas_sin_mover_la_fecha(test_db):
+    db.add_todo("2026-06-01", "vieja")
+    tid = db.get_todos_for_date("2026-06-01")[0]["id"]
+    db.snooze_todo(tid, "2026-06-20")
+    assert db.get_overdue_todos("2026-06-09", "2026-06-09") == []
+    t = db.get_todos_for_date("2026-06-01")[0]      # sigue en su día, intacta
+    assert t["todo_date"] == "2026-06-01" and t["snoozed_until"] == "2026-06-20"
+
+def test_snooze_vencido_vuelve_a_contar(test_db):
+    db.add_todo("2026-06-01", "vieja")
+    db.snooze_todo(db.get_todos_for_date("2026-06-01")[0]["id"], "2026-06-05")
+    assert len(db.get_overdue_todos("2026-06-09", "2026-06-09")) == 1
+
+def test_count_overdue_todos(test_db):
+    db.add_todo("2026-06-01", "a")
+    db.add_todo("2026-06-02", "b")
+    db.add_todo("2026-06-15", "c")
+    assert db.count_overdue_todos("2026-06-09", "2026-06-09") == 2
+
+def test_move_todos_bulk_deja_posiciones_densas(test_db):
+    db.add_todo(TDATE, "ya estaba")
+    db.add_todo("2026-06-01", "a")
+    db.add_todo("2026-06-02", "b")
+    ids = [db.get_todos_for_date("2026-06-01")[0]["id"], db.get_todos_for_date("2026-06-02")[0]["id"]]
+    db.move_todos(ids, TDATE)
+    assert [(t["text"], t["position"]) for t in db.get_todos_for_date(TDATE)] == [
+        ("ya estaba", 0), ("a", 1), ("b", 2)]
+
+def test_move_todos_lista_vacia_no_hace_nada(test_db):
+    db.add_todo(TDATE, "a")
+    db.move_todos([], TDATE)
+    assert len(db.get_todos_for_date(TDATE)) == 1
+
+def test_get_todos_filtered_por_estado(test_db):
+    db.add_todo(TDATE, "hecha")
+    db.add_todo(TDATE, "abierta")
+    db.toggle_todo(db.get_todos_for_date(TDATE)[0]["id"])
+    assert [t["text"] for t in db.get_todos_filtered(status="hechas")] == ["hecha"]
+    assert [t["text"] for t in db.get_todos_filtered(status="pendientes")] == ["abierta"]
+    assert len(db.get_todos_filtered(status="todas")) == 2
+
+def test_get_todos_filtered_por_texto_y_fechas(test_db):
+    db.add_todo("2026-06-01", "comprar pan")
+    db.add_todo("2026-06-09", "comprar leche")
+    db.add_todo("2026-07-01", "correr")
+    assert len(db.get_todos_filtered(q="comprar")) == 2
+    assert [t["text"] for t in db.get_todos_filtered(start="2026-06-05", end="2026-06-30")] == ["comprar leche"]
+    assert len(db.get_todos_filtered()) == 3   # sin cotas trae todo
+
+def test_migracion_agrega_columnas_sin_perder_filas(test_db):
+    """Camino real de las DBs ya instaladas: todos nació sin done_at ni snoozed_until."""
+    with db.get_db() as conn:
+        conn.execute("DROP TABLE todos")
+        conn.execute("CREATE TABLE todos (id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                     " todo_date TEXT NOT NULL, text TEXT NOT NULL, done INTEGER DEFAULT 0,"
+                     " position INTEGER DEFAULT 0, created_at TEXT)")
+        conn.execute("INSERT INTO todos (todo_date, text) VALUES (?,?)", (TDATE, "anterior"))
+    db.init_db()
+    t = db.get_todos_for_date(TDATE)[0]
+    assert t["text"] == "anterior"
+    assert t["done_at"] == "" and t["snoozed_until"] == ""
+    assert db.count_overdue_todos("2026-06-10", "2026-06-10") == 1

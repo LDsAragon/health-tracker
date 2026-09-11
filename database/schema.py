@@ -48,6 +48,7 @@ SCHEMA = """
         position    INTEGER DEFAULT 0,
         created_at  TEXT DEFAULT (datetime('now','localtime'))
     );
+    CREATE INDEX IF NOT EXISTS idx_todos_date ON todos(todo_date);
     CREATE TABLE IF NOT EXISTS settings (
         key   TEXT PRIMARY KEY,
         value TEXT
@@ -75,6 +76,9 @@ MIGRATIONS = [
     ("charts",           "group_field",      "ALTER TABLE charts ADD COLUMN group_field TEXT DEFAULT ''"),
     ("charts",           "bucket",           "ALTER TABLE charts ADD COLUMN bucket TEXT DEFAULT 'day'"),
     ("charts",           "tag_filter",       "ALTER TABLE charts ADD COLUMN tag_filter TEXT DEFAULT ''"),
+    # Visor de tareas (sep 2026): cierre fechado y postergacion del aviso sin mover la tarea de dia
+    ("todos",            "done_at",          "ALTER TABLE todos ADD COLUMN done_at TEXT DEFAULT ''"),
+    ("todos",            "snoozed_until",    "ALTER TABLE todos ADD COLUMN snoozed_until TEXT DEFAULT ''"),
 ]
 
 

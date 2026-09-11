@@ -1,5 +1,7 @@
 """Lógica de presentación reutilizable entre vistas (calendario/semana).
 Funciones puras y testeables sin HTTP."""
+from datetime import date, timedelta
+
 import database as db
 
 
@@ -35,3 +37,59 @@ def journal_badges(journal_raw):
         if badges:
             out[ds] = badges
     return out
+
+
+# --- Visor de tareas ---
+
+_BUCKET_LABELS = (
+    ("esta_semana",   "Esta semana"),
+    ("semana_pasada", "La semana pasada"),
+    ("antes",         "Más viejas"),
+)
+
+
+def _as_date(iso):
+    """None si el texto no es una fecha ISO: todo_date no se valida al guardar."""
+    try:
+        return date.fromisoformat(iso)
+    except (ValueError, TypeError):
+        return None
+
+
+def overdue_buckets(todos, today, week_start):
+    """Agrupa las tareas atrasadas por antigüedad: [{key, label, tareas}], sin tramos vacíos.
+    `week_start` es el callable de helpers, para no acoplar esto al ajuste week_start."""
+    this_week = week_start(today)
+    last_week = this_week - timedelta(days=7)
+    groups = {key: [] for key, _ in _BUCKET_LABELS}
+    for t in todos:
+        d = _as_date(t["todo_date"])
+        if d is None:
+            continue
+        key = "esta_semana" if d >= this_week else "semana_pasada" if d >= last_week else "antes"
+        groups[key].append(t)
+    # La clave no puede ser "items": en Jinja `b.items` resuelve al método del dict.
+    return [{"key": k, "label": lbl, "tareas": groups[k]} for k, lbl in _BUCKET_LABELS if groups[k]]
+
+
+def todos_overview(todos, today):
+    """Conteos por estado del conjunto recibido."""
+    out = {"total": len(todos), "hechas": 0, "pendientes": 0, "hoy": 0, "proximas": 0, "vencidas": 0}
+    for t in todos:
+        d = _as_date(t["todo_date"])
+        if t["done"]:
+            out["hechas"] += 1
+            continue
+        out["pendientes"] += 1
+        if d == today:
+            out["hoy"] += 1
+        elif d is not None and d > today:
+            out["proximas"] += 1
+        elif d is not None:
+            out["vencidas"] += 1
+    return out
+
+
+def overdue_cutoff(today, mode, week_start):
+    """Fecha exclusiva del corte: `week` deja pasar lo de la semana en curso, `day` solo hoy."""
+    return week_start(today) if mode == "week" else today

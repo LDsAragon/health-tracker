@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Tareas{% endblock %}
+
+{% macro filtros_hidden(f) %}
+<input type="hidden" name="estado" value="{{ f.estado }}">
+<input type="hidden" name="periodo" value="{{ f.periodo }}">
+<input type="hidden" name="q" value="{{ f.q }}">
+{% endmacro %}
+
+{% macro fila(t, f, today, con_fecha=True) %}
+<li class="todo-item {% if t.done %}todo-done{% endif %}">
+  <div class="todo-row">
+  <form method="POST" action="{{ url_for('todos.todo_toggle', todo_id=t.id) }}" class="todo-mini-form">
+    {{ filtros_hidden(f) }}
+    <button type="submit" class="todo-check"
+            title="{{ 'Reabrir' if t.done else 'Marcar como hecha' }}">{% if t.done %}✓{% endif %}</button>
+  </form>
+  <span class="todo-text">{{ t.text }}</span>
+  {% if t.snoozed_until and t.snoozed_until > today %}
+  <span class="todo-snoozed" title="Aviso pospuesto hasta el {{ t.snoozed_until | fechacorta }}">💤</span>
+  {% endif %}
+  {% if con_fecha %}
+  <a class="todo-date" href="{{ url_for('day.day_view', date_str=t.todo_date) }}"
+     title="Ir a ese día">{{ t.todo_date | fechacorta }}</a>
+  {% endif %}
+  <div class="todo-actions">
+    {% if not t.done and t.todo_date != today %}
+    <form method="POST" action="{{ url_for('todos.todo_hoy', todo_id=t.id) }}" class="todo-mini-form">
+      {{ filtros_hidden(f) }}
+      <button type="submit" class="todo-act" title="Mover a hoy">Hoy</button>
+    </form>
+    {% endif %}
+    {% if not t.done %}
+    <form method="POST" action="{{ url_for('todos.todo_posponer', todo_id=t.id) }}" class="todo-mini-form">
+      {{ filtros_hidden(f) }}
+      <button type="submit" name="dias" value="1" class="todo-act"
+              title="No avisar hasta mañana">+1d</button>
+      <button type="submit" name="dias" value="7" class="todo-act"
+              title="No avisar por una semana">+7d</button>
+    </form>
+    {% endif %}
+    <form method="POST" action="{{ url_for('todos.todo_borrar', todo_id=t.id) }}" class="todo-mini-form"
+          onsubmit="return confirm('¿Eliminar esta tarea?');">
+      {{ filtros_hidden(f) }}
+      <button type="submit" class="btn-delete-sm" title="Eliminar">×</button>
+    </form>
+  </div>
+  </div>
+</li>
+{% endmacro %}
+
+{% block content %}
+<div class="page-top">
+  <h1 class="page-title">📋 Tareas</h1>
+  <p class="page-sub">Todas las listas del día, juntas. Nada se mueve solo: lo que quedó sin cerrar
+    sigue en su fecha hasta que vos decidas traerlo a hoy, posponer el aviso o borrarlo.</p>
+</div>
+
+<div class="todos-kpis">
+  <div class="todos-kpi {% if overdue_total %}todos-kpi-alert{% endif %}">
+    <span class="todos-kpi-num">{{ overdue_total }}</span><span class="todos-kpi-lbl">Sin cerrar</span>
+  </div>
+  <div class="todos-kpi">
+    <span class="todos-kpi-num">{{ resumen.hoy }}</span><span class="todos-kpi-lbl">Para hoy</span>
+  </div>
+  <div class="todos-kpi">
+    <span class="todos-kpi-num">{{ resumen.proximas }}</span><span class="todos-kpi-lbl">Próximas</span>
+  </div>
+  <div class="todos-kpi">
+    <span class="todos-kpi-num">{{ resumen.hechas }}</span><span class="todos-kpi-lbl">Ya hechas</span>
+  </div>
+</div>
+
+{% if buckets %}
+<div class="todos-overdue">
+  <div class="todos-overdue-head">
+    <h2 class="stats-section">⚠️ Quedaron sin cerrar</h2>
+    <form method="POST" action="{{ url_for('todos.traer_todas') }}"
+          onsubmit="return confirm('¿Mover las {{ overdue_total }} tareas sin cerrar al día de hoy?');">
+      {{ filtros_hidden(f) }}
+      <button type="submit" class="btn-primary">Traer todas a hoy</button>
+    </form>
+  </div>
+  {% for b in buckets %}
+  <h3 class="todos-bucket">{{ b.label }} · {{ b.tareas | length }}</h3>
+  <ul class="todo-list">
+    {% for t in b.tareas %}{{ fila(t, f, today) }}{% endfor %}
+  </ul>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="todos-filtros">
+  <div class="stats-range">
+    {% for val, lbl in estados %}
+    <a href="{{ url_for('todos.todos_view', estado=val, periodo=f.periodo, q=f.q or None) }}"
+       class="stats-range-btn {% if f.estado == val %}active{% endif %}">{{ lbl }}</a>
+    {% endfor %}
+  </div>
+  <div class="stats-range">
+    {% for val, lbl, _titulo in periodos %}
+    <a href="{{ url_for('todos.todos_view', estado=f.estado, periodo=val, q=f.q or None) }}"
+       class="stats-range-btn {% if f.periodo == val %}active{% endif %}">{{ lbl }}</a>
+    {% endfor %}
+  </div>
+  <form method="GET" action="{{ url_for('todos.todos_view') }}" class="todos-buscar">
+    <input type="hidden" name="estado" value="{{ f.estado }}">
+    <input type="hidden" name="periodo" value="{{ f.periodo }}">
+    <input type="text" name="q" class="todos-buscar-input" placeholder="Buscar en tareas…"
+           value="{{ f.q }}">
+  </form>
+</div>
+
+<h2 class="stats-section">
+  {% if f.q %}Resultados para "{{ f.q }}"{% else %}{{ titulo_listado }}{% endif %}
+  · {{ listado_total }}
+</h2>
+{% if not por_dia %}
+<p class="empty-msg">
+  {% if f.q %}Ninguna tarea coincide con esa búsqueda.
+  {% else %}No hay tareas acá. Se anotan desde la lista de tareas de cada día.{% endif %}
+</p>
+{% endif %}
+{% for ds, items in por_dia %}
+<div class="todos-dia">
+  <h3 class="todos-dia-head">
+    <a href="{{ url_for('day.day_view', date_str=ds) }}">{{ ds | fechacorta }}</a>
+    {% if ds == today %}<span class="todos-hoy-tag">hoy</span>{% endif %}
+  </h3>
+  <ul class="todo-list">
+    {% for t in items %}{{ fila(t, f, today, con_fecha=False) }}{% endfor %}
+  </ul>
+</div>
+{% endfor %}
+{% endblock %}
