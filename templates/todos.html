@@ -7,36 +7,31 @@
 <input type="hidden" name="q" value="{{ f.q }}">
 {% endmacro %}
 
-{% macro fila(t, f, today, con_fecha=True) %}
+{% macro fila(t, f, today, manana, con_fecha=True) %}
 <li class="todo-item {% if t.done %}todo-done{% endif %}">
   <div class="todo-row">
   <form method="POST" action="{{ url_for('todos.todo_toggle', todo_id=t.id) }}" class="todo-mini-form">
     {{ filtros_hidden(f) }}
     <button type="submit" class="todo-check"
-            title="{{ 'Reabrir' if t.done else 'Marcar como hecha' }}">{% if t.done %}✓{% endif %}</button>
+            title="{% if t.done %}Hecha{% if t.done_at %} · cerrada {{ t.done_at | humantime }}{% endif %} — clic para reabrir{% else %}Marcar como hecha{% endif %}">{% if t.done %}✓{% endif %}</button>
   </form>
   <span class="todo-text">{{ t.text }}</span>
-  {% if t.snoozed_until and t.snoozed_until > today %}
-  <span class="todo-snoozed" title="Aviso pospuesto hasta el {{ t.snoozed_until | fechacorta }}">💤</span>
-  {% endif %}
   {% if con_fecha %}
   <a class="todo-date" href="{{ url_for('day.day_view', date_str=t.todo_date) }}"
      title="Ir a ese día">{{ t.todo_date | fechacorta }}</a>
   {% endif %}
   <div class="todo-actions">
-    {% if not t.done and t.todo_date != today %}
-    <form method="POST" action="{{ url_for('todos.todo_hoy', todo_id=t.id) }}" class="todo-mini-form">
-      {{ filtros_hidden(f) }}
-      <button type="submit" class="todo-act" title="Mover a hoy">Hoy</button>
-    </form>
-    {% endif %}
     {% if not t.done %}
-    <form method="POST" action="{{ url_for('todos.todo_posponer', todo_id=t.id) }}" class="todo-mini-form">
+    <form method="POST" action="{{ url_for('todos.todo_mover', todo_id=t.id) }}" class="todo-mini-form">
       {{ filtros_hidden(f) }}
-      <button type="submit" name="dias" value="1" class="todo-act"
-              title="No avisar hasta mañana">+1d</button>
+      {% if t.todo_date != today %}
+      <button type="submit" name="dias" value="0" class="todo-act" title="Mover a hoy">Hoy</button>
+      {% endif %}
+      {% if t.todo_date != manana %}
+      <button type="submit" name="dias" value="1" class="todo-act" title="Mover a mañana">Mañana</button>
+      {% endif %}
       <button type="submit" name="dias" value="7" class="todo-act"
-              title="No avisar por una semana">+7d</button>
+              title="Mover a la semana que viene">+1 sem</button>
     </form>
     {% endif %}
     <form method="POST" action="{{ url_for('todos.todo_borrar', todo_id=t.id) }}" class="todo-mini-form"
@@ -53,28 +48,31 @@
 <div class="page-top">
   <h1 class="page-title">📋 Tareas</h1>
   <p class="page-sub">Todas las listas del día, juntas. Nada se mueve solo: lo que quedó sin cerrar
-    sigue en su fecha hasta que vos decidas traerlo a hoy, posponer el aviso o borrarlo.</p>
+    sigue en su fecha hasta que vos lo pases a otro día o lo borres.</p>
 </div>
 
-<div class="todos-kpis">
-  <div class="todos-kpi {% if overdue_total %}todos-kpi-alert{% endif %}">
-    <span class="todos-kpi-num">{{ overdue_total }}</span><span class="todos-kpi-lbl">Sin cerrar</span>
+<details class="todos-resumen" id="todos-resumen">
+  <summary>Resumen</summary>
+  <div class="todos-kpis">
+    <div class="todos-kpi {% if overdue_total %}todos-kpi-alert{% endif %}">
+      <span class="todos-kpi-num">{{ overdue_total }}</span><span class="todos-kpi-lbl">Sin cerrar</span>
+    </div>
+    <div class="todos-kpi">
+      <span class="todos-kpi-num">{{ resumen.hoy }}</span><span class="todos-kpi-lbl">Para hoy</span>
+    </div>
+    <div class="todos-kpi">
+      <span class="todos-kpi-num">{{ resumen.proximas }}</span><span class="todos-kpi-lbl">Próximas</span>
+    </div>
+    <div class="todos-kpi">
+      <span class="todos-kpi-num">{{ resumen.hechas }}</span><span class="todos-kpi-lbl">Ya hechas</span>
+    </div>
   </div>
-  <div class="todos-kpi">
-    <span class="todos-kpi-num">{{ resumen.hoy }}</span><span class="todos-kpi-lbl">Para hoy</span>
-  </div>
-  <div class="todos-kpi">
-    <span class="todos-kpi-num">{{ resumen.proximas }}</span><span class="todos-kpi-lbl">Próximas</span>
-  </div>
-  <div class="todos-kpi">
-    <span class="todos-kpi-num">{{ resumen.hechas }}</span><span class="todos-kpi-lbl">Ya hechas</span>
-  </div>
-</div>
+</details>
 
 {% if buckets %}
 <div class="todos-overdue">
   <div class="todos-overdue-head">
-    <h2 class="stats-section">⚠️ Quedaron sin cerrar</h2>
+    <h2 class="stats-section">⚠️ Quedaron sin cerrar · {{ overdue_total }}</h2>
     <form method="POST" action="{{ url_for('todos.traer_todas') }}"
           onsubmit="return confirm('¿Mover las {{ overdue_total }} tareas sin cerrar al día de hoy?');">
       {{ filtros_hidden(f) }}
@@ -84,7 +82,7 @@
   {% for b in buckets %}
   <h3 class="todos-bucket">{{ b.label }} · {{ b.tareas | length }}</h3>
   <ul class="todo-list">
-    {% for t in b.tareas %}{{ fila(t, f, today) }}{% endfor %}
+    {% for t in b.tareas %}{{ fila(t, f, today, manana) }}{% endfor %}
   </ul>
   {% endfor %}
 </div>
@@ -128,8 +126,21 @@
     {% if ds == today %}<span class="todos-hoy-tag">hoy</span>{% endif %}
   </h3>
   <ul class="todo-list">
-    {% for t in items %}{{ fila(t, f, today, con_fecha=False) }}{% endfor %}
+    {% for t in items %}{{ fila(t, f, today, manana, con_fecha=False) }}{% endfor %}
   </ul>
 </div>
 {% endfor %}
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+(function () {
+  // Arranca cerrado: el resumen es opcional, no el punto de la pantalla.
+  const KEY = 'todosResumenOpen';
+  const d = document.getElementById('todos-resumen');
+  if (!d) return;
+  if (localStorage.getItem(KEY) === '1') d.open = true;
+  d.addEventListener('toggle', () => localStorage.setItem(KEY, d.open ? '1' : '0'));
+})();
+</script>
 {% endblock %}

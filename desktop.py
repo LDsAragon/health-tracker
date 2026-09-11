@@ -154,7 +154,7 @@ def _notify_overdue(flask_app):
             return
         hoy = date.today()
         cutoff = services.overdue_cutoff(hoy, g.settings.get("todo_overdue_from", "week"), _week_start)
-        n = db.count_overdue_todos(cutoff.isoformat(), hoy.isoformat())
+        n = db.count_overdue_todos(cutoff.isoformat())
     if not n:
         return
     notify_mod.notify(

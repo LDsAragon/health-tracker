@@ -640,24 +640,61 @@ def test_visor_atrasadas_ignoran_el_periodo(client):
     db.add_todo(MAS_VIEJA, "muy vieja")
     assert b"muy vieja" in client.get("/tareas?periodo=30").data
 
-def test_tarea_a_hoy_desde_el_visor(client):
+def test_contadores_no_dependen_del_periodo(client):
+    """"Para hoy" y "Próximas" son estados absolutos: con una ventana que termina hoy,
+    atarlos al período los dejaba siempre en 0."""
+    db.add_todo(HOY.isoformat(), "de hoy")
+    db.add_todo((HOY + timedelta(days=5)).isoformat(), "futura")
+    for periodo in ("hoy", "7", "30"):
+        html = client.get(f"/tareas?periodo={periodo}").data.decode()
+        # El bloque del resumen trae los cuatro números; buscamos el de Próximas
+        i = html.index("Próximas")
+        assert ">1<" in html[i - 120:i], f"Próximas quedó en 0 con periodo={periodo}"
+
+def test_periodo_hoy_es_una_ventana_exacta(client):
+    """Ni ayer ni mañana: el botón lista exactamente lo que dice."""
+    db.add_todo((HOY - timedelta(days=1)).isoformat(), "de ayer")
+    db.add_todo(HOY.isoformat(), "de hoy")
+    db.add_todo((HOY + timedelta(days=1)).isoformat(), "de manana")
+    r = client.get("/tareas?periodo=hoy&estado=todas")
+    assert b"de hoy" in r.data
+    assert b"de ayer" not in r.data and b"de manana" not in r.data
+
+def test_periodo_proximas_lista_solo_futuro(client):
+    db.add_todo(HOY.isoformat(), "de hoy")
+    db.add_todo((HOY + timedelta(days=3)).isoformat(), "en tres dias")
+    r = client.get("/tareas?periodo=proximas&estado=todas")
+    assert b"en tres dias" in r.data and b"de hoy" not in r.data
+
+def test_sin_cerrar_se_ve_con_cualquier_periodo(client):
+    """El bloque de atrasadas ignora el período: lo viejo se avisa siempre."""
+    db.add_todo(MAS_VIEJA, "muy vieja")
+    for periodo in ("hoy", "7", "proximas"):
+        assert b"muy vieja" in client.get(f"/tareas?periodo={periodo}").data
+
+def test_mover_a_hoy_desde_el_visor(client):
     db.add_todo(VIEJA, "traeme")
-    client.post(f"/tareas/{_tid(VIEJA, 'traeme')}/hoy")
+    client.post(f"/tareas/{_tid(VIEJA, 'traeme')}/mover", data={"dias": "0"})
     assert [t["text"] for t in db.get_todos_for_date(HOY.isoformat())] == ["traeme"]
 
-def test_posponer_no_mueve_la_fecha(client):
-    """El aviso se silencia, pero la tarea sigue en el día en que la anotaste."""
-    db.add_todo(VIEJA, "despues"); tid = _tid(VIEJA, "despues")
-    client.post(f"/tareas/{tid}/posponer", data={"dias": "7"})
-    t = db.get_todos_for_date(VIEJA)[0]
-    assert t["todo_date"] == VIEJA
-    assert t["snoozed_until"] == (HOY + timedelta(days=7)).isoformat()
-    assert db.count_overdue_todos(HOY.isoformat(), HOY.isoformat()) == 0
+def test_mover_a_manana(client):
+    db.add_todo(VIEJA, "manana")
+    client.post(f"/tareas/{_tid(VIEJA, 'manana')}/mover", data={"dias": "1"})
+    esperado = (HOY + timedelta(days=1)).isoformat()
+    assert [t["text"] for t in db.get_todos_for_date(esperado)] == ["manana"]
+    assert db.get_todos_for_date(VIEJA) == []
 
-def test_posponer_dias_invalidos_cae_a_uno(client):
-    db.add_todo(VIEJA, "x")
-    client.post(f"/tareas/{_tid(VIEJA, 'x')}/posponer", data={"dias": "999"})
-    assert db.get_todos_for_date(VIEJA)[0]["snoozed_until"] == (HOY + timedelta(days=1)).isoformat()
+def test_mover_una_semana_es_relativo_a_hoy(client):
+    """+1 sem sobre algo viejo tiene que caer la semana que viene, no seguir en el pasado."""
+    db.add_todo(MAS_VIEJA, "semana")
+    client.post(f"/tareas/{_tid(MAS_VIEJA, 'semana')}/mover", data={"dias": "7"})
+    esperado = (HOY + timedelta(days=7)).isoformat()
+    assert [t["text"] for t in db.get_todos_for_date(esperado)] == ["semana"]
+
+def test_mover_con_dias_invalido_no_mueve_nada(client):
+    db.add_todo(VIEJA, "quieta")
+    client.post(f"/tareas/{_tid(VIEJA, 'quieta')}/mover", data={"dias": "999"})
+    assert [t["text"] for t in db.get_todos_for_date(VIEJA)] == ["quieta"]
 
 def test_toggle_y_borrar_desde_el_visor(client):
     db.add_todo(VIEJA, "a"); tid = _tid(VIEJA, "a")
@@ -672,20 +709,13 @@ def test_traer_todas_a_hoy(client):
     client.post("/tareas/traer-todas")
     assert sorted(t["text"] for t in db.get_todos_for_date(HOY.isoformat())) == ["a", "b"]
 
-def test_traer_todas_no_toca_las_postergadas(client):
-    db.add_todo(VIEJA, "a")
-    db.add_todo(MAS_VIEJA, "dormida")
-    db.snooze_todo(_tid(MAS_VIEJA, "dormida"), (HOY + timedelta(days=3)).isoformat())
-    client.post("/tareas/traer-todas")
-    assert [t["text"] for t in db.get_todos_for_date(MAS_VIEJA)] == ["dormida"]
-
 def test_acciones_del_visor_preservan_filtros(client):
     db.add_todo(VIEJA, "a")
     r = client.post(f"/tareas/{_tid(VIEJA, 'a')}/toggle",
-                    data={"estado": "hechas", "periodo": "30", "q": "a"})
+                    data={"estado": "hechas", "periodo": "7", "q": "a"})
     assert r.status_code == 302
     assert "estado=hechas" in r.headers["Location"]
-    assert "periodo=30" in r.headers["Location"]
+    assert "periodo=7" in r.headers["Location"]
     assert "q=a" in r.headers["Location"]
 
 

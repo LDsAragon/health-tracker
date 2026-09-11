@@ -57,15 +57,21 @@ def test_overdue_buckets_ignora_fechas_corruptas():
     assert sum(len(b["tareas"]) for b in out) == 1
 
 
-def test_todos_overview_cuenta_por_estado():
-    hoy = date(2026, 6, 10)
-    todos = [_t("2026-06-10"), _t("2026-06-12"), _t("2026-06-01"), _t("2026-06-02", done=1)]
-    r = services.todos_overview(todos, hoy)
-    assert (r["total"], r["hechas"], r["pendientes"]) == (4, 1, 3)
-    assert (r["hoy"], r["proximas"], r["vencidas"]) == (1, 1, 1)
-
-
 def test_overdue_cutoff_segun_el_modo():
     hoy = date(2026, 6, 10)
     assert services.overdue_cutoff(hoy, "week", _lunes) == date(2026, 6, 8)
     assert services.overdue_cutoff(hoy, "day", _lunes) == hoy
+
+
+def test_periodo_ventana_es_exacta():
+    """El botón tiene que listar exactamente lo que dice: nada de futuro salvo donde corresponde."""
+    hoy = date(2026, 6, 10)
+    assert services.periodo_ventana("hoy", hoy) == ("2026-06-10", "2026-06-10")
+    assert services.periodo_ventana("7", hoy) == ("2026-06-04", "2026-06-10")
+    assert services.periodo_ventana("30", hoy) == ("2026-05-12", "2026-06-10")
+
+
+def test_periodo_ventana_proximas_y_todo():
+    hoy = date(2026, 6, 10)
+    assert services.periodo_ventana("proximas", hoy) == ("2026-06-11", None)
+    assert services.periodo_ventana("todo", hoy) == (None, None)

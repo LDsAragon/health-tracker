@@ -17,7 +17,7 @@ app.py                  # Flask app factory (create_app)
 desktop.py              # Entrada pywebview; auto-backup diario; APP_DIR por plataforma
 appconfig.py            # THEMES, SETTINGS y PET_ART (fuente única de defaults)
 services.py             # Presentación compartida: events_by_date, journal_badges y, para el
-                        #   visor de tareas, overdue_buckets / todos_overview / overdue_cutoff
+                        #   visor de tareas, overdue_buckets / overdue_cutoff / periodo_ventana
 helpers.py              # _setting, _week_start, _dow_names, MESES[], _fmt_clock, safe_back
 filters.py              # Filtros Jinja2 (humantime, fechacorta, dur_fmt, rango_fmt)
 fieldtypes.py           # Catálogo de tipos de campo de notas especiales
@@ -32,7 +32,7 @@ database/               # Paquete; __init__.py re-exporta todo (`import database
   journal.py            # Categorías + entradas de notas especiales; migrate_entry_values
   notes.py / events.py / charts.py / settings.py
   todos.py              # Tareas por día + el motor del visor: get_overdue_todos,
-                        #   count_overdue_todos, snooze_todo, move_todos, get_todos_filtered
+                        #   count_overdue_todos, move_todos, get_todos_filtered
 
 routes/
   main.py               # / (home según start_view), /calendar/<año>/<mes>, /week/<fecha>,
@@ -88,7 +88,7 @@ Prefijos de backup:
 ## Tests
 
 ```bash
-pytest tests/          # 278 tests, ~9s
+pytest tests/          # 282 tests, ~9s
 ```
 
 Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).
@@ -123,12 +123,20 @@ powershell -File tools\publish_release.ps1 -Tag v2026-06-12.1
 ## Tareas y tareas atrasadas
 
 Una tarea pertenece a **un** día (`todos.todo_date`) y **nunca se mueve sola**: si queda sin cerrar
-se queda en su fecha hasta que el usuario la traiga a hoy, posponga el aviso o la borre. Arrastrarlas
-automáticamente reescribiría datos históricos sobre una suposición (mismo criterio que los renombres).
+se queda en su fecha hasta que el usuario la mueva o la borre. Arrastrarlas automáticamente
+reescribiría datos históricos sobre una suposición (mismo criterio que los renombres). Mover **a
+mano** sí está bien y es la operación central del visor.
 
-- `done_at` — timestamp local del cierre; el toggle lo setea y lo borra al reabrir.
-- `snoozed_until` — fecha ISO hasta la que la tarea no cuenta como atrasada. Es el "posponer el
-  aviso" **sin** tocar `todo_date`.
+- **No existe "silenciar".** Hubo un `snoozed_until` que sacaba la tarea del aviso sin moverla, y se
+  quitó: creaba tareas abiertas e invisibles a la vez (el contador marcaba 0 con pendientes de hace
+  dos meses). Hoy posponer **mueve** la tarea. La columna quedó **vestigial** en las DBs de sep 2026;
+  no se borra porque `init_db()` corre en cada request (`app.py`) y un `DROP COLUMN` ahí sería un
+  camino destructivo por request. `test_atrasada_no_se_puede_silenciar` impide que la lógica vuelva.
+- `done_at` — timestamp local del cierre; el toggle lo setea y lo borra al reabrir. Se lee solo en el
+  `title` de una tarea hecha.
+- `POST /tareas/<id>/mover` con `dias` ∈ `{0,1,7}` (hoy / mañana / +1 sem), **siempre relativo a
+  hoy**: un `+1 sem` sobre algo de julio tiene que caer la semana que viene. Un `dias` fuera de la
+  whitelist no mueve nada — mover a una fecha equivocada es peor que no hacer nada.
 - Qué es "atrasada": `services.overdue_cutoff(hoy, modo, _week_start)` → con `todo_overdue_from=week`
   (default) el corte es el inicio de la semana en curso; con `day`, hoy. El corte es exclusivo.
 - Avisos, en escalera por el ajuste `todo_alert` (`off` → `badge` → `modal`): contador en el navbar
@@ -138,12 +146,16 @@ automáticamente reescribiría datos históricos sobre una suposición (mismo cr
   `appconfig.LAST_WEEK_SEEN_KEY` en la tabla `settings`. **Esa clave va fuera de `SETTINGS`** a
   propósito: `get_all_settings()` clampea contra `choices` solo lo que está en el esquema, así que
   una fecha ISO libre sobreviviría igual.
-- El bloque de atrasadas ignora el filtro de período (lo viejo se avisa siempre); período y estado
-  solo acotan el listado de abajo. Los contadores se calculan sobre todo el período **sin** filtrar
-  por estado — si no, con "Pendientes" el contador de hechas daría siempre 0.
 - El filtro de tiempo se llama `periodo` (en la URL y en el código), nunca "rango": la palabra suena
-  antinatural en la UI. El título del listado dice el período en palabras ("Tareas de los últimos
-  3 meses"), que sale de la tercera columna de `routes.todos.PERIODOS`.
+  antinatural en la UI. `services.periodo_ventana()` devuelve `(start, end)` y es una **ventana
+  exacta** — el botón lista exactamente lo que dice, sin futuro, salvo `proximas` y `todo`. El título
+  del listado sale de la tercera columna de `routes.todos.PERIODOS`.
+- El bloque de atrasadas ignora el período (lo viejo se avisa siempre). De los contadores del
+  resumen, **"para hoy" y "próximas" son absolutos**: atarlos a la ventana los dejaba siempre en 0,
+  porque la ventana termina hoy. Solo "ya hechas" es relativo al período.
+- El visor **no es un tablero**. Se rechazaron, en orden, las barras de progreso semanal y los
+  contadores siempre visibles (hoy viven en un `<details>` cerrado por default, con el estado en
+  `localStorage`). Antes de sumar métricas, rachas o gamificación acá: preguntar.
 
 ## Auto-actualización
 

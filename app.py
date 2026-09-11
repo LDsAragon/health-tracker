@@ -20,7 +20,7 @@ def _overdue_count(settings) -> int:
         return 0
     today = date.today()
     cutoff = services.overdue_cutoff(today, settings.get("todo_overdue_from", "week"), _week_start)
-    return db.count_overdue_todos(cutoff.isoformat(), today.isoformat())
+    return db.count_overdue_todos(cutoff.isoformat())
 
 
 def create_app():

@@ -11,22 +11,29 @@ bp = Blueprint("todos", __name__)
 ESTADOS = (("pendientes", "Pendientes"), ("hechas", "Hechas"), ("todas", "Todas"))
 # (valor, texto del botón, cómo se lee en el título del listado)
 PERIODOS = (
-    ("30",   "1 mes",   "Tareas del último mes"),
-    ("90",   "3 meses", "Tareas de los últimos 3 meses"),
-    ("365",  "1 año",   "Tareas del último año"),
-    ("todo", "Todo",    "Todas las tareas"),
+    ("hoy",      "Hoy",      "Tareas de hoy"),
+    ("7",        "1 sem",    "Tareas de la última semana"),
+    ("14",       "2 sem",    "Tareas de las últimas 2 semanas"),
+    ("21",       "3 sem",    "Tareas de las últimas 3 semanas"),
+    ("30",       "1 mes",    "Tareas del último mes"),
+    ("90",       "3 meses",  "Tareas de los últimos 3 meses"),
+    ("proximas", "Próximas", "Tareas que vienen"),
+    ("todo",     "Todo",     "Todas las tareas"),
 )
-PERIODO_DIAS = {"30": 30, "90": 90, "365": 365, "todo": None}
+PERIODO_DEFAULT = "30"
+# Mover a hoy / mañana / la semana que viene, siempre relativo a hoy: un "+1 sem" sobre algo
+# de julio tiene que caer la semana que viene, no seguir en el pasado.
+MOVER_DIAS = ("0", "1", "7")
 ALERTA_MAX = 8
 
 
 def _filtros():
     """Filtros del visor, saneados por whitelist. Lee args y form para sobrevivir a los POST."""
     estado = request.values.get("estado", "pendientes")
-    periodo = request.values.get("periodo", "90")
+    periodo = request.values.get("periodo", PERIODO_DEFAULT)
     return {
         "estado": estado if estado in dict(ESTADOS) else "pendientes",
-        "periodo": periodo if periodo in PERIODO_DIAS else "90",
+        "periodo": periodo if periodo in dict((v, t) for v, _, t in PERIODOS) else PERIODO_DEFAULT,
         "q": request.values.get("q", "").strip(),
     }
 
@@ -41,19 +48,18 @@ def _cutoff(today):
 
 
 def _overdue(today):
-    return db.get_overdue_todos(_cutoff(today).isoformat(), today.isoformat())
+    return db.get_overdue_todos(_cutoff(today).isoformat())
 
 
 @bp.route("/tareas")
 def todos_view():
     f = _filtros()
     today = date.today()
-    dias = PERIODO_DIAS[f["periodo"]]
-    # El período acota solo hacia atrás: lo que viene no se esconde nunca.
-    start = (today - timedelta(days=dias - 1)).isoformat() if dias else None
-    # Los contadores se calculan sobre todo el período: filtrados por "pendientes" darían
-    # siempre 0 hechas. El estado solo acota el listado de abajo.
-    del_periodo = db.get_todos_filtered(start=start, q=f["q"])
+    hoy_iso, manana_iso = today.isoformat(), (today + timedelta(days=1)).isoformat()
+    start, end = services.periodo_ventana(f["periodo"], today)
+    # El estado solo acota el listado de abajo: el conteo de hechas se saca del período entero
+    # porque filtrado por "pendientes" daría siempre 0.
+    del_periodo = db.get_todos_filtered(start=start, end=end, q=f["q"])
     if f["estado"] == "todas":
         listado = del_periodo
     else:
@@ -69,12 +75,19 @@ def todos_view():
         "todos.html",
         f=f,
         today=today.isoformat(),
+        manana=manana_iso,
         estados=ESTADOS,
         periodos=PERIODOS,
         titulo_listado=dict((v, t) for v, _, t in PERIODOS)[f["periodo"]],
         overdue_total=len(overdue),
         buckets=services.overdue_buckets(overdue, today, _week_start),
-        resumen=services.todos_overview(del_periodo, today),
+        # "Para hoy" y "Próximas" son estados absolutos: atarlos a la ventana del período los
+        # dejaba siempre en 0 (la ventana termina hoy). Solo "hechas" es relativo al período.
+        resumen={
+            "hoy": len(db.get_todos_filtered(start=hoy_iso, end=hoy_iso, status="pendientes")),
+            "proximas": len(db.get_todos_filtered(start=manana_iso, status="pendientes")),
+            "hechas": sum(1 for t in del_periodo if t["done"]),
+        },
         listado_total=len(listado),
         por_dia=sorted(por_dia.items(), reverse=True),
     )
@@ -86,17 +99,13 @@ def todo_toggle(todo_id):
     return _back_to_todos()
 
 
-@bp.route("/tareas/<int:todo_id>/hoy", methods=["POST"])
-def todo_hoy(todo_id):
-    db.move_todo(todo_id, date.today().isoformat())
-    return _back_to_todos()
-
-
-@bp.route("/tareas/<int:todo_id>/posponer", methods=["POST"])
-def todo_posponer(todo_id):
-    dias = request.form.get("dias", "1")
-    dias = int(dias) if dias in ("1", "7") else 1
-    db.snooze_todo(todo_id, (date.today() + timedelta(days=dias)).isoformat())
+@bp.route("/tareas/<int:todo_id>/mover", methods=["POST"])
+def todo_mover(todo_id):
+    """Hoy / mañana / la semana que viene. Un `dias` fuera de la whitelist no mueve nada:
+    mover la tarea a una fecha equivocada es peor que no hacer nada."""
+    dias = request.form.get("dias", "")
+    if dias in MOVER_DIAS:
+        db.move_todo(todo_id, (date.today() + timedelta(days=int(dias))).isoformat())
     return _back_to_todos()
 
 

@@ -919,7 +919,7 @@ select.journal-cat-select {
 
 .todos-dia { margin-bottom: 14px; }
 /* Sin tope, .todo-text estira la fila hasta el borde y las acciones quedan a un metro del texto. */
-.todos-overdue .todo-list, .todos-dia .todo-list { max-width: 760px; }
+.todos-overdue .todo-list, .todos-dia .todo-list { max-width: 880px; }
 .todos-dia-head { font-size: 13px; font-weight: 600; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
 .todos-dia-head a { color: var(--muted); }
 .todos-dia-head a:hover { color: var(--accent); }
@@ -928,17 +928,28 @@ select.journal-cat-select {
   color: var(--accent); background: rgba(99,102,241,.15); padding: 1px 6px; border-radius: 4px;
 }
 
-/* Los tres formularios de acción conviven en una fila: sin esto cada uno rompe línea. */
-.todo-mini-form { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+/* Los formularios de acción conviven en una fila: sin esto cada uno rompe línea. */
+.todo-mini-form { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .todo-act {
-  padding: 2px 7px; font-size: 11px; line-height: 1.6;
+  padding: 6px 12px; font-size: 13px; line-height: 1.4;
   background: transparent; border: 1px solid var(--border); border-radius: 6px;
-  color: var(--muted); cursor: pointer;
+  color: var(--muted); cursor: pointer; white-space: nowrap;
 }
 .todo-act:hover { color: var(--accent); border-color: var(--accent); }
-.todo-date { font-size: 11px; color: var(--muted); flex-shrink: 0; padding-top: 3px; font-variant-numeric: tabular-nums; }
+.todo-date { font-size: 12px; color: var(--muted); flex-shrink: 0; padding-top: 5px; font-variant-numeric: tabular-nums; }
 .todo-date:hover { color: var(--accent); }
-.todo-snoozed { font-size: 11px; flex-shrink: 0; padding-top: 3px; opacity: .7; }
+
+/* El panel del día atenúa las acciones hasta el hover porque la columna es angosta; acá la
+   pantalla es ancha y ese atenuado era la razón real de que los botones no se leyeran. */
+.todos-overdue .todo-actions, .todos-dia .todo-actions {
+  opacity: 1; gap: 6px; min-width: 268px; justify-content: flex-end;
+}
+.todos-overdue .todo-check, .todos-dia .todo-check { width: 22px; height: 22px; }
+
+.todos-resumen { margin-bottom: 18px; }
+.todos-resumen summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.todos-resumen summary:hover { color: var(--text); }
+.todos-resumen .todos-kpis { margin-top: 12px; }
 .todo-alert-list { list-style: none; margin: 10px 0; padding: 0; font-size: 13px; }
 .todo-alert-list li {
   display: flex; justify-content: space-between; gap: 10px;
@@ -952,5 +963,7 @@ select.journal-cat-select {
   .todos-overdue .todo-row,  .todos-dia .todo-row  { flex-wrap: wrap; }
   .todos-overdue .todo-text, .todos-dia .todo-text { flex: 1 1 calc(100% - 34px); }
   .todos-overdue .todo-date, .todos-dia .todo-date { margin-left: 30px; }
+  /* La columna fija de acciones provocaría scroll horizontal en la ventana mínima (420px). */
+  .todos-overdue .todo-actions, .todos-dia .todo-actions { min-width: 0; flex-wrap: wrap; }
   .todos-overdue { padding-left: 12px; padding-right: 12px; }
 }

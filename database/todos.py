@@ -97,37 +97,30 @@ def get_todo_counts_range(start: str, end: str) -> dict:
     return {r["todo_date"]: {"done": r["done"] or 0, "total": r["total"]} for r in rows}
 
 
-# --- Visor de tareas: atrasadas, postergación y filtros transversales ---
+# --- Visor de tareas: atrasadas y filtros transversales ---
 
-# Una tarea atrasada es la que sigue abierta, quedó antes del corte y no está postergada.
-_OVERDUE_WHERE = (
-    "done = 0 AND todo_date < ? AND (COALESCE(snoozed_until, '') = '' OR snoozed_until <= ?)"
-)
+# Una tarea atrasada es la que sigue abierta y quedó antes del corte. No hay forma de
+# silenciarla: posponer mueve la tarea, así que nada puede quedar abierto e invisible.
+_OVERDUE_WHERE = "done = 0 AND todo_date < ?"
 
 
-def get_overdue_todos(before: str, today: str) -> list:
-    """Tareas abiertas anteriores a `before` cuya postergación ya venció."""
+def get_overdue_todos(before: str) -> list:
+    """Tareas abiertas anteriores a `before`."""
     with get_db() as conn:
         rows = conn.execute(
             f"SELECT * FROM todos WHERE {_OVERDUE_WHERE} ORDER BY todo_date, position, id",
-            (before, today),
+            (before,),
         ).fetchall()
     return [dict(r) for r in rows]
 
 
-def count_overdue_todos(before: str, today: str) -> int:
+def count_overdue_todos(before: str) -> int:
     """Solo el conteo: la usa el badge del navbar en cada request."""
     with get_db() as conn:
         row = conn.execute(
-            f"SELECT COUNT(*) AS n FROM todos WHERE {_OVERDUE_WHERE}", (before, today)
+            f"SELECT COUNT(*) AS n FROM todos WHERE {_OVERDUE_WHERE}", (before,)
         ).fetchone()
     return row["n"]
-
-
-def snooze_todo(todo_id: int, until: str):
-    """Silencia el aviso hasta `until` sin mover la tarea de día."""
-    with get_db() as conn:
-        conn.execute("UPDATE todos SET snoozed_until = ? WHERE id = ?", (until, todo_id))
 
 
 def move_todos(ids: list, new_date: str):

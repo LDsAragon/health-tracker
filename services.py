@@ -72,24 +72,20 @@ def overdue_buckets(todos, today, week_start):
     return [{"key": k, "label": lbl, "tareas": groups[k]} for k, lbl in _BUCKET_LABELS if groups[k]]
 
 
-def todos_overview(todos, today):
-    """Conteos por estado del conjunto recibido."""
-    out = {"total": len(todos), "hechas": 0, "pendientes": 0, "hoy": 0, "proximas": 0, "vencidas": 0}
-    for t in todos:
-        d = _as_date(t["todo_date"])
-        if t["done"]:
-            out["hechas"] += 1
-            continue
-        out["pendientes"] += 1
-        if d == today:
-            out["hoy"] += 1
-        elif d is not None and d > today:
-            out["proximas"] += 1
-        elif d is not None:
-            out["vencidas"] += 1
-    return out
-
-
 def overdue_cutoff(today, mode, week_start):
     """Fecha exclusiva del corte: `week` deja pasar lo de la semana en curso, `day` solo hoy."""
     return week_start(today) if mode == "week" else today
+
+
+def periodo_ventana(periodo, today):
+    """(start, end) ISO inclusivos del período; None = sin cota.
+
+    La ventana es exacta a propósito: el botón tiene que listar exactamente lo que dice, así
+    que salvo "proximas" y "todo" ninguna incluye fechas futuras.
+    """
+    if periodo == "todo":
+        return None, None
+    if periodo == "proximas":
+        return (today + timedelta(days=1)).isoformat(), None
+    dias = 1 if periodo == "hoy" else int(periodo)
+    return (today - timedelta(days=dias - 1)).isoformat(), today.isoformat()
