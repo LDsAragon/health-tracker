@@ -968,3 +968,8 @@ select.journal-cat-select {
   .todos-overdue .todo-actions, .todos-dia .todo-actions { min-width: 0; flex-wrap: wrap; }
   .todos-overdue { padding-left: 12px; padding-right: 12px; }
 }
+
+/* El alta del visor: reusa .stats-builder, solo hay que domar el ancho de los campos. */
+.todos-nueva { margin-bottom: 18px; }
+.todos-nueva .todo-add-form { margin-top: 12px; align-items: center; }
+.todos-nueva .todo-add-form input[type="text"] { flex: 1 1 220px; padding: 7px 10px; font-size: 14px; }

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import date_field %}
 {% block title %}Tareas{% endblock %}
 
 {% macro filtros_hidden(f) %}
@@ -50,6 +51,23 @@
   <p class="page-sub">Todas las listas del día, juntas. Nada se mueve solo: lo que quedó sin cerrar
     sigue en su fecha hasta que vos lo pases a otro día o lo borres.</p>
 </div>
+
+{% if nueva %}
+<div class="datos-banner datos-ok">
+  ✓ Tarea agregada al {{ nueva | fechacorta }} ·
+  <a href="{{ url_for('day.day_view', date_str=nueva) }}">ver ese día</a>
+</div>
+{% endif %}
+
+<details class="stats-builder todos-nueva" id="todos-nueva">
+  <summary>➕ Nueva tarea</summary>
+  <form method="POST" action="{{ url_for('todos.todo_agregar') }}" class="todo-add-form">
+    {{ filtros_hidden(f) }}
+    <input type="text" name="text" placeholder="Agregar una tarea..." maxlength="200" required>
+    {{ date_field('fecha', today, required=True) }}
+    <button type="submit" class="btn-primary">Agregar</button>
+  </form>
+</details>
 
 <details class="todos-resumen" id="todos-resumen">
   <summary>Resumen</summary>
@@ -135,12 +153,17 @@
 {% block page_scripts %}
 <script>
 (function () {
-  // Arranca cerrado: el resumen es opcional, no el punto de la pantalla.
-  const KEY = 'todosResumenOpen';
-  const d = document.getElementById('todos-resumen');
-  if (!d) return;
-  if (localStorage.getItem(KEY) === '1') d.open = true;
-  d.addEventListener('toggle', () => localStorage.setItem(KEY, d.open ? '1' : '0'));
+  function recordar(id, key, abiertoPorDefecto) {
+    const d = document.getElementById(id);
+    if (!d) return;
+    const guardado = localStorage.getItem(key);
+    d.open = guardado === null ? abiertoPorDefecto : guardado === '1';
+    d.addEventListener('toggle', () => localStorage.setItem(key, d.open ? '1' : '0'));
+  }
+  // El alta es la acción principal de la pantalla, así que arranca abierta; el resumen son
+  // métricas y arranca cerrado. Los dos recuerdan cómo los dejó el usuario.
+  recordar('todos-nueva', 'todosNuevaOpen', true);
+  recordar('todos-resumen', 'todosResumenOpen', false);
 })();
 </script>
 {% endblock %}

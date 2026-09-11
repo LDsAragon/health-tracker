@@ -38,9 +38,20 @@ def _filtros():
     }
 
 
-def _back_to_todos():
+def _back_to_todos(**extra):
     """Las acciones postean y vuelven al visor: sin esto se pierden los filtros activos."""
-    return redirect(url_for("todos.todos_view", **{k: v for k, v in _filtros().items() if v}))
+    args = {k: v for k, v in _filtros().items() if v}
+    args.update({k: v for k, v in extra.items() if v})
+    return redirect(url_for("todos.todos_view", **args))
+
+
+def _fecha_valida(iso, fallback):
+    """`add_todo`/`move_todo` no validan el formato y una fecha basura deja la tarea
+    inaccesible desde toda vista: se filtra acá."""
+    try:
+        return date.fromisoformat(iso).isoformat()
+    except (ValueError, TypeError):
+        return fallback
 
 
 def _cutoff(today):
@@ -71,6 +82,11 @@ def todos_view():
     for t in listado:
         por_dia.setdefault(t["todo_date"], []).append(t)
 
+    # Avisar de una tarea recién creada solo si no se ve en el listado (fuera de la ventana del
+    # período, o filtrada por estado): si aparece abajo, el banner es ruido.
+    nueva = _fecha_valida(request.args.get("nueva", ""), "")
+    nueva_oculta = bool(nueva) and nueva not in por_dia
+
     return render_template(
         "todos.html",
         f=f,
@@ -89,8 +105,21 @@ def todos_view():
             "hechas": sum(1 for t in del_periodo if t["done"]),
         },
         listado_total=len(listado),
+        nueva=nueva if nueva_oculta else "",
         por_dia=sorted(por_dia.items(), reverse=True),
     )
+
+
+@bp.route("/tareas/agregar", methods=["POST"])
+def todo_agregar():
+    texto = request.form.get("text", "").strip()
+    if not texto:
+        return _back_to_todos()
+    hoy = date.today().isoformat()
+    fecha = _fecha_valida(request.form.get("fecha", ""), hoy)
+    db.add_todo(fecha, texto)
+    # `nueva` solo alimenta el aviso de "quedó fuera de la vista" (ver todos_view).
+    return _back_to_todos(nueva=fecha)
 
 
 @bp.route("/tareas/<int:todo_id>/toggle", methods=["POST"])

@@ -39,7 +39,8 @@ routes/
                         #   /search, /ajustes[/guardar], /version, /estadisticas[/grafico/...],
                         #   /export[/download], /backup, /restore, /reset
   day.py                # /day/<fecha> y todas las acciones del día; /todos/<id>/move (AJAX)
-  todos.py              # /tareas (visor) + acciones sobre atrasadas + /tareas/alerta (JSON)
+  todos.py              # /tareas (visor) + /tareas/agregar + acciones sobre atrasadas
+                        #   + /tareas/alerta (JSON)
   recurring.py          # /recurring/* (rutinas)
   journal.py            # /journal/* (notas especiales + categorías)
   update.py             # /update/* (auto-actualización: status/check/download/progress/apply/quit)
@@ -88,7 +89,7 @@ Prefijos de backup:
 ## Tests
 
 ```bash
-pytest tests/          # 282 tests, ~9s
+pytest tests/          # 291 tests, ~10s
 ```
 
 Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).

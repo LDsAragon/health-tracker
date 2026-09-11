@@ -651,6 +651,45 @@ def test_contadores_no_dependen_del_periodo(client):
         i = html.index("Próximas")
         assert ">1<" in html[i - 120:i], f"Próximas quedó en 0 con periodo={periodo}"
 
+def test_agregar_tarea_desde_el_visor(client):
+    fecha = (HOY + timedelta(days=4)).isoformat()
+    client.post("/tareas/agregar", data={"text": "comprar pan", "fecha": fecha})
+    assert [t["text"] for t in db.get_todos_for_date(fecha)] == ["comprar pan"]
+
+def test_agregar_sin_fecha_cae_a_hoy(client):
+    client.post("/tareas/agregar", data={"text": "para hoy", "fecha": ""})
+    assert [t["text"] for t in db.get_todos_for_date(HOY.isoformat())] == ["para hoy"]
+
+def test_agregar_con_fecha_basura_no_guarda_fecha_invalida(client):
+    """add_todo no valida el formato: una fecha basura dejaría la tarea inaccesible."""
+    client.post("/tareas/agregar", data={"text": "sana", "fecha": "chau"})
+    assert [t["todo_date"] for t in db.get_todos_filtered()] == [HOY.isoformat()]
+
+def test_agregar_texto_vacio_no_crea_nada(client):
+    client.post("/tareas/agregar", data={"text": "   ", "fecha": HOY.isoformat()})
+    assert db.get_todos_filtered() == []
+
+def test_agregar_preserva_los_filtros(client):
+    r = client.post("/tareas/agregar", data={
+        "text": "x", "fecha": HOY.isoformat(), "estado": "hechas", "periodo": "7", "q": "z"})
+    loc = r.headers["Location"]
+    assert "estado=hechas" in loc and "periodo=7" in loc and "q=z" in loc
+
+def test_avisa_cuando_la_tarea_nueva_cae_fuera_de_la_vista(client):
+    """Con período Hoy, algo agendado para dentro de 10 días no se vería: sin el aviso
+    parecería que no se guardó."""
+    lejos = (HOY + timedelta(days=10)).isoformat()
+    db.add_todo(lejos, "lejana")
+    assert "Tarea agregada".encode() in client.get(f"/tareas?periodo=hoy&nueva={lejos}").data
+
+def test_no_avisa_si_la_tarea_nueva_se_ve(client):
+    db.add_todo(HOY.isoformat(), "de hoy")
+    r = client.get(f"/tareas?periodo=hoy&nueva={HOY.isoformat()}")
+    assert "Tarea agregada".encode() not in r.data
+
+def test_aviso_con_fecha_basura_se_ignora(client):
+    assert client.get("/tareas?nueva=chau").status_code == 200
+
 def test_visor_abre_en_hoy(client):
     """El visor arranca en Hoy: es lo que se mira el 90% de las veces."""
     db.add_todo(HOY.isoformat(), "de hoy")
