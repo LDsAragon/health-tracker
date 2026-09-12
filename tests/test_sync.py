@@ -5,9 +5,9 @@ import os
 
 import pytest
 
-import database as db
-import database.conn as conn
-import sync
+from bitacora import database as db
+import bitacora.database.conn as conn
+from bitacora import sync
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def dos_equipos(tmp_path, monkeypatch):
     pc = str(tmp_path / "pc.db")
     lap = str(tmp_path / "lap.db")
     paq = str(tmp_path / "paquete.db")
-    monkeypatch.setattr("database.conn.DB_PATH", pc)
+    monkeypatch.setattr("bitacora.database.conn.DB_PATH", pc)
 
     def usar(p):
         conn.DB_PATH = p
@@ -302,7 +302,7 @@ def test_analizar_no_toca_nada(dos_equipos):
     assert db.table_counts(pc) == antes
 
 def test_rechaza_un_archivo_que_no_es_de_la_app(tmp_path, monkeypatch):
-    monkeypatch.setattr("database.conn.DB_PATH", str(tmp_path / "x.db"))
+    monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "x.db"))
     db.init_db()
     basura = tmp_path / "basura.db"
     basura.write_bytes(b"esto no es sqlite")
@@ -340,10 +340,10 @@ def test_aplicar_deja_backup_previo(dos_equipos):
 @pytest.fixture
 def equipo_web(tmp_path, monkeypatch):
     """Una instalación con perfiles, servida por el test client."""
-    import app as flask_app
-    import profiles
+    from bitacora import app as flask_app
+    from bitacora import profiles
     monkeypatch.setenv("HT_PERFILES", str(tmp_path))
-    monkeypatch.setattr("database.conn.DB_PATH", str(tmp_path / "x.db"))
+    monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "x.db"))
     p = profiles.crear("Principal")
     profiles.usar(p["slug"])
     db.init_db()
@@ -399,7 +399,7 @@ def test_un_paquete_ajeno_no_se_aplica_sin_confirmar(equipo_web, tmp_path):
 
 def test_confirmar_un_ajeno_lo_empareja(equipo_web, tmp_path):
     import io as _io
-    import profiles
+    from bitacora import profiles
     cliente, perfil = equipo_web
     paq = str(tmp_path / "ajeno.db")
     sync.exportar(paq, {"uid": "PERFIL-DE-OTRO", "nombre": "Otro", "slug": "otro"}, "d")

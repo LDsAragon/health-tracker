@@ -26,7 +26,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import GLib, Gtk, WebKit2
 
-from app import create_app
+from bitacora.app import create_app
 from werkzeug.serving import make_server
 
 application = create_app()
@@ -38,7 +38,7 @@ if seed:
     import json
     import random
     from datetime import date as _date, timedelta as _td
-    import database as dbm
+    from bitacora import database as dbm
     dbm.init_db()
     random.seed(42)
 

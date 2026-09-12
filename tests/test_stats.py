@@ -1,6 +1,6 @@
 """Capa de datos de Estadísticas (database/stats.py)."""
 import json
-import database as db
+from bitacora import database as db
 
 
 def _cat(test_db, fields):

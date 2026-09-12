@@ -5,10 +5,10 @@ import tempfile
 
 from flask import (Blueprint, render_template, request, redirect, url_for, send_file)
 
-import database as db
-import profiles
-import sync
-from helpers import safe_back
+from bitacora import database as db
+from bitacora import profiles
+from bitacora import sync
+from bitacora.helpers import safe_back
 
 bp = Blueprint("sync", __name__)
 

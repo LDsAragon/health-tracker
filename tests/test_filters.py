@@ -1,5 +1,5 @@
 """Filtros Jinja de formato (puros, sin DB): duración, rango horario, fecha corta."""
-from app import dur_fmt_filter, rango_fmt_filter, fechacorta_filter
+from bitacora.app import dur_fmt_filter, rango_fmt_filter, fechacorta_filter
 
 
 # ── Duración (minutos → texto) ─────────────────────────────────────────────────

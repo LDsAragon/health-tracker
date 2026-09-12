@@ -3,7 +3,7 @@ Lógica pura de event_applies — no necesita DB.
 Cubre los tres tipos de recurrencia + start_date + end_date.
 """
 from datetime import date, timedelta
-from database import event_applies
+from bitacora.database import event_applies
 
 # Fechas fijas: encontramos un lunes de referencia
 _base = date(2026, 6, 1)

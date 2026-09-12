@@ -3,16 +3,16 @@ import os
 
 import pytest
 
-import database as db
-import profiles
-import app as flask_app
+from bitacora import database as db
+from bitacora import profiles
+from bitacora import app as flask_app
 
 
 @pytest.fixture
 def perfiles(tmp_path, monkeypatch):
     """Raíz de perfiles aislada. monkeypatch restaura env y DB_PATH al terminar."""
     monkeypatch.setenv("HT_PERFILES", str(tmp_path))
-    monkeypatch.setattr("database.conn.DB_PATH", str(tmp_path / "sin-perfil.db"))
+    monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "sin-perfil.db"))
     p = profiles.crear("Principal")
     profiles.usar(p["slug"])
     return tmp_path
@@ -169,11 +169,11 @@ def test_cambiar_desde_la_ruta_redirige_al_inicio(cliente):
 @pytest.fixture
 def appdir_viejo(tmp_path, monkeypatch):
     """APP_DIR con una health.db suelta, como antes de los perfiles."""
-    import desktop
+    from bitacora.escritorio import main as desktop
     monkeypatch.setenv("HT_PERFILES", str(tmp_path))
     monkeypatch.setattr(desktop, "APP_DIR", tmp_path)
     monkeypatch.setattr(desktop, "DB_FILE", tmp_path / "health.db")
-    monkeypatch.setattr("database.conn.DB_PATH", str(tmp_path / "health.db"))
+    monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "health.db"))
     db.init_db()
     db.add_note("2026-06-09", "dato de antes")
     db.add_todo("2026-06-09", "tarea de antes")
@@ -181,7 +181,7 @@ def appdir_viejo(tmp_path, monkeypatch):
 
 
 def test_migracion_conserva_todo_y_borra_el_original(appdir_viejo):
-    import desktop
+    from bitacora.escritorio import main as desktop
     antes = db.table_counts(str(appdir_viejo / "health.db"))
     desktop._migrate_a_perfiles()
     profiles.aplicar()
@@ -192,14 +192,14 @@ def test_migracion_conserva_todo_y_borra_el_original(appdir_viejo):
     assert db.db_path() == profiles.db_de("principal")
 
 def test_migracion_deja_backup_previo(appdir_viejo):
-    import desktop
+    from bitacora.escritorio import main as desktop
     desktop._migrate_a_perfiles()
     previos = list((appdir_viejo / "backups").glob("health-preperfiles-*.db"))
     assert len(previos) == 1
     assert db.is_valid_db(str(previos[0]))
 
 def test_migracion_es_idempotente(appdir_viejo):
-    import desktop
+    from bitacora.escritorio import main as desktop
     desktop._migrate_a_perfiles()
     desktop._migrate_a_perfiles()
     desktop._migrate_a_perfiles()
@@ -207,18 +207,18 @@ def test_migracion_es_idempotente(appdir_viejo):
 
 def test_migracion_deja_el_leeme_del_downgrade(appdir_viejo):
     """Una versión vieja instalada encima buscaría APP_DIR/health.db y arrancaría en blanco."""
-    import desktop
+    from bitacora.escritorio import main as desktop
     desktop._migrate_a_perfiles()
     texto = (appdir_viejo / "LEEME-perfiles.txt").read_text(encoding="utf-8")
     assert "perfiles" in texto and "no perdiste" in texto.lower()
 
 def test_instalacion_nueva_sin_db_previa(tmp_path, monkeypatch):
     """Arranque limpio: crea el perfil y deja que init_db arme el esquema."""
-    import desktop
+    from bitacora.escritorio import main as desktop
     monkeypatch.setenv("HT_PERFILES", str(tmp_path))
     monkeypatch.setattr(desktop, "APP_DIR", tmp_path)
     monkeypatch.setattr(desktop, "DB_FILE", tmp_path / "health.db")
-    monkeypatch.setattr("database.conn.DB_PATH", str(tmp_path / "health.db"))
+    monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "health.db"))
     desktop._migrate_a_perfiles()
     profiles.aplicar()
     db.init_db()

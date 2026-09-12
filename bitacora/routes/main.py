@@ -2,12 +2,12 @@
 from datetime import date, timedelta
 import calendar as cal
 from flask import Blueprint, render_template, request, redirect, url_for, make_response, send_file
-import database as db
-import services
-import updater
-from appconfig import THEMES, SETTINGS
-from helpers import _setting, _first_weekday, _week_start, _dow_names, safe_back, MESES
-from filters import dur_fmt_filter
+from bitacora import database as db
+from bitacora import services
+from bitacora.escritorio import updater
+from bitacora.appconfig import THEMES, SETTINGS
+from bitacora.helpers import _setting, _first_weekday, _week_start, _dow_names, safe_back, MESES
+from bitacora.filters import dur_fmt_filter
 
 bp = Blueprint("main", __name__)
 

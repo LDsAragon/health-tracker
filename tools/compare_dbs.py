@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from database.conn import table_counts as counts
+from bitacora.database.conn import table_counts as counts
 
 
 # Tras __main__ para que counts() se pueda importar (lo usa la migración a perfiles).

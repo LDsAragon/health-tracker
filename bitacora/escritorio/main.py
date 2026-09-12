@@ -39,10 +39,16 @@ MIN_SIZE = (420, 480)
 
 
 def _base_dir():
-    """Carpeta del .exe (congelada) o del script (desarrollo)."""
+    """Carpeta del .exe (congelada) o la raíz del repo (desarrollo).
+
+    Se usa para encontrar una `health.db` vieja al lado del programa y migrarla. En desarrollo
+    tiene que ser la raíz del repo —dos niveles arriba de este archivo, que vive en
+    `bitacora/escritorio/`— o dejaría de encontrar las bases de antes de que el código se
+    mudara al paquete.
+    """
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent
-    return Path(__file__).parent
+    return Path(__file__).resolve().parent.parent.parent
 
 
 def _copy_db(src_path, dest_path):
@@ -69,7 +75,7 @@ def _migrate_first_run():
     old = _base_dir() / "health.db"
     if not old.exists():
         return  # arranque limpio: init_db crea la DB nueva en appdata
-    import database as db
+    from bitacora import database as db
     if db.is_valid_db(str(old)):
         _copy_db(old, DB_FILE)
 
@@ -95,10 +101,10 @@ def _migrate_a_perfiles():
 
     Idempotente: la existencia de perfiles.json es la guarda. Si algo falla no borra nada.
     """
-    import profiles
+    from bitacora import profiles
     if (APP_DIR / profiles.INDICE).exists():
         return
-    import database as db
+    from bitacora import database as db
 
     perfil = profiles.crear("Principal")
     destino = Path(profiles.db_de(perfil["slug"]))
@@ -168,7 +174,7 @@ def _auto_backup():
     no se acuerda). Uno por día, conserva los últimos AUTO_BACKUPS. Si falla
     (disco lleno, etc.) la app arranca igual: queda rastro en error.log.
     """
-    import database as db
+    from bitacora import database as db
     activa = Path(db.db_path())
     if not activa.exists():
         return
@@ -208,12 +214,12 @@ def _notify_overdue(flask_app):
     Necesita el app_context porque _week_start lee los ajustes de `g` (fuera de request
     caería al default y un usuario con semana que empieza en domingo vería otro corte).
     """
-    import database as db
-    import notify as notify_mod
-    import services
+    from bitacora import database as db
+    from bitacora.escritorio import notify as notify_mod
+    from bitacora import services
     from datetime import date
     from flask import g
-    from helpers import _week_start
+    from bitacora.helpers import _week_start
 
     with flask_app.app_context():
         g.settings = db.get_all_settings()
@@ -236,9 +242,9 @@ def _al_mostrarse(principal):
     El handler de `shown` corre en un hilo aparte (webview/event.py), que es justo lo que
     `create_window` necesita para crear una ventana en el acto.
     """
-    import database as db
-    import tray
-    import widget
+    from bitacora import database as db
+    from bitacora.escritorio import tray
+    from bitacora.escritorio import widget
 
     # La URL se captura ACÁ y una sola vez: después no se puede leer de webview.windows[0],
     # porque si la ventana grande se cierra deja de estar en la lista (el servidor sigue vivo).
@@ -246,7 +252,7 @@ def _al_mostrarse(principal):
 
     # El puerto lo elige pywebview, así que la URL para avisarle a una segunda instancia no se
     # puede saber antes de este punto.
-    import instancia
+    from bitacora.escritorio import instancia
     instancia.publicar_url(principal._url_prefix or "")
 
     with_bandeja = tray.iniciar(
@@ -284,7 +290,7 @@ def main():
     # Una sola Bitácora a la vez: si ya hay una, le pedimos que se muestre y nos vamos. Va
     # ANTES de las migraciones y el auto-backup — no hay por qué pagarlos para después salir,
     # y dos procesos migrando la misma base a la vez es justo lo que no queremos.
-    import instancia
+    from bitacora.escritorio import instancia
     if not instancia.tomar():
         # Dejar rastro SIEMPRE: si el lock fallara por algo que no es "ya hay otra" (permisos,
         # antivirus, la carpeta en una unidad de red), el doble clic no haría nada visible y
@@ -299,7 +305,7 @@ def main():
         return
 
     _migrate_first_run()
-    import profiles
+    from bitacora import profiles
     try:
         _migrate_a_perfiles()
     except Exception:
@@ -313,11 +319,11 @@ def main():
         with open(APP_DIR / "error.log", "a", encoding="utf-8") as f:
             f.write("auto-backup falló:\n" + traceback.format_exc())
 
-    from app import create_app
+    from bitacora.app import create_app
     flask_app = create_app()
 
-    import tray
-    import updater
+    from bitacora.escritorio import tray
+    from bitacora.escritorio import updater
     updater.check_in_background()
 
     # Hilo daemon con delay: el toast no debe competir con el arranque de la ventana.
@@ -345,7 +351,12 @@ def main():
     tray.quitar()   # sin esto queda el icono fantasma en la bandeja
 
 
-if __name__ == "__main__":
+def arrancar():
+    """`main()` envuelto en el reporte de errores. La llama el entry point de la raíz.
+
+    Está en una función y no en un `if __name__` para que el punto de entrada real —`main.py`
+    en la raíz, que es lo que empaqueta PyInstaller— no se quede sin el reporte.
+    """
     try:
         main()
     except Exception:
@@ -371,3 +382,7 @@ if __name__ == "__main__":
         else:
             print(msg, file=sys.stderr)
         raise
+
+
+if __name__ == "__main__":
+    arrancar()

@@ -1,8 +1,8 @@
 """Gestión de perfiles: crear, renombrar, cambiar y borrar. Todo local."""
 from flask import Blueprint, request, redirect, url_for
 
-import profiles
-from helpers import safe_back
+from bitacora import profiles
+from bitacora.helpers import safe_back
 
 bp = Blueprint("perfiles", __name__)
 

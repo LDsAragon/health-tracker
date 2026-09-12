@@ -21,7 +21,7 @@ _lock = threading.Lock()
 
 
 def configurar(ventana_principal, url_base: str):
-    """La llama desktop.py una vez, al arrancar."""
+    """La llama bitacora/escritorio/main.py una vez, al arrancar."""
     global _principal, _url_base
     _principal = ventana_principal
     _url_base = (url_base or "").rstrip("/")

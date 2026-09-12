@@ -1,5 +1,5 @@
 """Ajustes clave/valor (esquema en appconfig.SETTINGS)."""
-from appconfig import DEFAULT_SETTINGS, SETTINGS
+from bitacora.appconfig import DEFAULT_SETTINGS, SETTINGS
 from .conn import get_db
 
 

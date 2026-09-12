@@ -1,6 +1,6 @@
 """Capa de servicios — lógica pura de presentación (sin HTTP, sin DB fixture)."""
 from datetime import date, timedelta
-import services
+from bitacora import services
 
 
 def test_events_by_date_decora_y_filtra():

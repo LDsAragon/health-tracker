@@ -27,7 +27,7 @@ def _check(cond, msg):
 
 def _lanzar():
     entorno = dict(os.environ, LOCALAPPDATA=str(tmp), XDG_DATA_HOME=str(tmp))
-    return subprocess.Popen([sys.executable, "desktop.py"], cwd=str(RAIZ), env=entorno,
+    return subprocess.Popen([sys.executable, "main.py"], cwd=str(RAIZ), env=entorno,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 

@@ -18,10 +18,12 @@ $ver = if ($Version) { $Version } else { "v$fecha" }
 'VERSION = "{0}"' -f $ver | Set-Content -Path "$root\_version.py" -Encoding UTF8
 
 Write-Output "Compilando Bitacora.exe..."
+# Las plantillas y static viven en bitacora/ pero se bundlean en la RAIZ del bundle:
+# app.py las busca en sys._MEIPASS/templates, no en _MEIPASS/bitacora/templates.
 & "$root\venv\Scripts\pyinstaller.exe" --noconfirm --windowed --name Bitacora `
-    --icon static\icon.ico `
-    --add-data "templates;templates" --add-data "static;static" `
-    desktop.py 2>&1 | Out-Null
+    --icon bitacora\static\icon.ico `
+    --add-data "bitacora/templates;templates" --add-data "bitacora/static;static" `
+    main.py 2>&1 | Out-Null
 Remove-Item "$root\_version.py" -ErrorAction SilentlyContinue
 if (-not (Test-Path "$root\dist\Bitacora\Bitacora.exe")) {
     Write-Error "El build falló (no apareció dist\Bitacora\Bitacora.exe)."

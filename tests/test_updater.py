@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-import updater
+from bitacora.escritorio import updater
 
 
 # ── changelog() ──────────────────────────────────────────────────────────────

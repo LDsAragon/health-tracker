@@ -2,7 +2,7 @@
 Funciones puras y testeables sin HTTP."""
 from datetime import date, timedelta
 
-import database as db
+from bitacora import database as db
 
 
 def events_by_date(recurring, completions, dates):

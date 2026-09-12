@@ -19,21 +19,22 @@ root = Path(__file__).resolve().parent.parent
 os.chdir(root)
 sys.path.insert(0, str(root))
 
-import desktop  # noqa: E402
+from bitacora.escritorio import main as desktop  # noqa: E402
 
 desktop.APP_DIR.mkdir(parents=True, exist_ok=True)
 os.environ["HT_PERFILES"] = str(desktop.APP_DIR)
 os.environ["HT_DB"] = str(desktop.DB_FILE)
 desktop._migrate_a_perfiles()
 
-import database as db  # noqa: E402
-import profiles, tray, widget  # noqa: E402
+from bitacora import database as db  # noqa: E402
+from bitacora import profiles  # noqa: E402
+from bitacora.escritorio import tray, widget  # noqa: E402
 
 profiles.aplicar()
 db.init_db()
 db.add_todo(__import__("datetime").date.today().isoformat(), "tarea del smoke")
 
-from app import create_app  # noqa: E402
+from bitacora.app import create_app  # noqa: E402
 import webview  # noqa: E402
 
 flask_app = create_app()

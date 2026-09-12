@@ -32,7 +32,7 @@ jobs:
           tmp=$(mktemp -d)
           tar -xzf dist/Bitacora-linux-*.tar.gz -C "$tmp"
           cd "$tmp/Bitacora"
-          python -c "import app; app.create_app(); print('el tarball importa y crea la app')"
+          python -c "from bitacora.app import create_app; create_app(); print('el tarball importa y crea la app')"
       - uses: actions/upload-artifact@v4
         with:
           name: bitacora-linux

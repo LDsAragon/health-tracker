@@ -5,7 +5,7 @@ Verifica CRUD de notas, eventos recurrentes y completaciones.
 from datetime import date, timedelta
 from datetime import datetime, timezone
 
-import database as db
+from bitacora import database as db
 
 EV_BASE = {
     "title": "Caminadora",

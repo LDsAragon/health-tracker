@@ -1,8 +1,8 @@
 """Notas especiales: configurar categorías (tipos) y sus campos."""
 import json
 from flask import Blueprint, render_template, request, redirect, url_for
-import database as db
-from helpers import safe_back
+from bitacora import database as db
+from bitacora.helpers import safe_back
 
 bp = Blueprint("journal", __name__)
 

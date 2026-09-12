@@ -4,7 +4,7 @@ Usa el fixture `client` (Flask test client con DB aislada).
 """
 from datetime import date, timedelta
 
-import database as db
+from bitacora import database as db
 
 DATE = "2026-06-09"
 
@@ -26,8 +26,8 @@ def test_calendario_carga(client):
 
 def _dado(monkeypatch, sale):
     """Fija el dado de la mascotita: sale=True gana siempre, False pierde siempre."""
-    import routes.day
-    monkeypatch.setattr(routes.day.random, "random", lambda: 0.0 if sale else 0.99)
+    from bitacora.routes import day
+    monkeypatch.setattr(day.random, "random", lambda: 0.0 if sale else 0.99)
 
 
 def test_toggle_todo_preserva_ref_de_semana(client, monkeypatch):
@@ -59,7 +59,7 @@ def test_mascotita_no_sale_en_cada_completado(client, monkeypatch):
 
 def test_mascotita_prendida_por_defecto(client):
     """Una base nueva trae el gatito. Ojo: asoma solo a veces, no en cada completado."""
-    from appconfig import DEFAULT_SETTINGS
+    from bitacora.appconfig import DEFAULT_SETTINGS
     assert DEFAULT_SETTINGS["pet"] == "cat"
     assert db.get_all_settings()["pet"] == "cat"
 
@@ -453,7 +453,7 @@ def test_update_status_expone_notas_y_reinstalable(client):
 
 def test_update_check_responde(client, monkeypatch):
     """Sin red: _do_check traga la excepcion y deja checked=True."""
-    import updater
+    from bitacora.escritorio import updater
     previo = dict(updater._state)
     def _sin_red(*a, **k):
         raise OSError("sin red")
@@ -817,7 +817,7 @@ def test_tab_tareas_se_puede_ocultar(client):
 # ── Zona peligrosa: las tres acciones y sus frases ───────────────────────────
 
 def _con_perfiles(tmp_path, monkeypatch, cuantos=2):
-    import profiles
+    from bitacora import profiles
     monkeypatch.setenv("HT_PERFILES", str(tmp_path))
     p = profiles.crear("Principal")
     profiles.usar(p["slug"])

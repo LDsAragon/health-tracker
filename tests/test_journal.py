@@ -2,7 +2,7 @@
 Tests para el sistema de journal — categorías y entradas.
 """
 import json
-import database as db
+from bitacora import database as db
 
 DATE = "2026-06-09"
 DATE2 = "2026-06-10"

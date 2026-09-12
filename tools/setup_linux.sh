@@ -15,5 +15,5 @@ echo "== venv (con acceso a los paquetes GI del sistema) =="
 venv-linux/bin/pip install --quiet -r requirements-desktop.txt
 
 echo
-echo "Listo. Para abrir la ventana:  venv-linux/bin/python desktop.py"
+echo "Listo. Para abrir la ventana:  venv-linux/bin/python main.py"
 echo "(la DB vive en ~/.local/share/Bitacora/health.db)"

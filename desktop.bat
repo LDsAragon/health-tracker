@@ -1,5 +1,5 @@
 @echo off
-rem Modo ventana (pywebview) sin empaquetar. El .exe se genera con build_exe.bat.
+rem Modo ventana (pywebview) sin empaquetar. El .exe se genera con toolsmake_release.ps1.
 cd /d "%~dp0"
 
 if not exist venv (
@@ -16,4 +16,4 @@ if %errorlevel% neq 0 (
     pip install -r requirements-desktop.txt
 )
 
-python desktop.py
+python main.py

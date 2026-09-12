@@ -1,10 +1,10 @@
 """Visor de tareas: vista transversal, acciones sobre las atrasadas y el aviso de pendientes."""
 from datetime import date, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify
-import database as db
-import services
-from appconfig import LAST_WEEK_SEEN_KEY
-from helpers import _setting, _week_start
+from bitacora import database as db
+from bitacora import services
+from bitacora.appconfig import LAST_WEEK_SEEN_KEY
+from bitacora.helpers import _setting, _week_start
 
 bp = Blueprint("todos", __name__)
 

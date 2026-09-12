@@ -12,7 +12,7 @@ import textwrap
 
 import pytest
 
-import instancia
+from bitacora.escritorio import instancia
 
 
 @pytest.fixture
@@ -99,9 +99,9 @@ def test_avisar_le_pega_a_la_ruta_correcta(datos, monkeypatch):
 
 def test_la_ruta_mostrar_no_explota_sin_ventana(tmp_path, monkeypatch):
     """En el navegador y en los tests no hay ventana grande que traer."""
-    import database as db
-    import app as flask_app
-    monkeypatch.setattr("database.conn.DB_PATH", str(tmp_path / "t.db"))
+    from bitacora import database as db
+    from bitacora import app as flask_app
+    monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "t.db"))
     db.init_db()
     flask_app.app.config["TESTING"] = True
     with flask_app.app.test_client() as c:
@@ -109,10 +109,10 @@ def test_la_ruta_mostrar_no_explota_sin_ventana(tmp_path, monkeypatch):
 
 
 def test_la_ruta_mostrar_trae_la_ventana(tmp_path, monkeypatch):
-    import database as db
-    import widget
-    import app as flask_app
-    monkeypatch.setattr("database.conn.DB_PATH", str(tmp_path / "t.db"))
+    from bitacora import database as db
+    from bitacora.escritorio import widget
+    from bitacora import app as flask_app
+    monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "t.db"))
     db.init_db()
     llamadas = []
     monkeypatch.setattr(widget, "mostrar_principal", lambda: llamadas.append(1) or True)
@@ -128,7 +128,7 @@ _GUION = textwrap.dedent("""
     import os, sys
     os.environ["HT_PERFILES"] = sys.argv[1]
     sys.path.insert(0, sys.argv[2])
-    import instancia
+    from bitacora.escritorio import instancia
     print("SI" if instancia.tomar() else "NO", flush=True)
     if len(sys.argv) > 3 and sys.argv[3] == "esperar":
         sys.stdin.read(1)          # queda vivo con el lock tomado
@@ -138,7 +138,9 @@ _GUION = textwrap.dedent("""
 def _lanzar(datos, tmp_path, *extra):
     guion = tmp_path / "g.py"
     guion.write_text(_GUION, encoding="utf-8")
-    raiz = os.path.dirname(os.path.abspath(instancia.__file__))
+    # La raíz del repo: el subproceso importa `bitacora.escritorio.instancia`, así que necesita
+    # el padre del paquete en sys.path, no la carpeta del módulo.
+    raiz = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(instancia.__file__))))
     return subprocess.Popen([sys.executable, str(guion), str(datos), raiz, *extra],
                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
 
@@ -188,7 +190,7 @@ def test_volver_no_navega_si_la_ventana_sigue_viva(monkeypatch):
     """Lo que se pidió: que vuelva LA MISMA. Un load_url("/") te sacaría del día que estabas
     mirando. En Windows `show()` es Show() + Activate(), así que alcanza para traerla al frente."""
     import webview
-    import widget
+    from bitacora.escritorio import widget
     v = _VentanaViva()
     monkeypatch.setattr(widget, "_principal", v)
     monkeypatch.setattr(widget, "_minimizada", False)
@@ -203,7 +205,7 @@ def test_volver_no_desmaximiza_una_ventana_maximizada(monkeypatch):
     """`restore()` fuerza WindowState=Normal. Llamarlo a ciegas le sacaba el maximizado a una
     ventana que estaba maximizada y visible."""
     import webview
-    import widget
+    from bitacora.escritorio import widget
     v = _VentanaViva()
     monkeypatch.setattr(widget, "_principal", v)
     monkeypatch.setattr(widget, "_minimizada", False)
@@ -215,7 +217,7 @@ def test_volver_no_desmaximiza_una_ventana_maximizada(monkeypatch):
 
 def test_volver_desminimiza_solo_si_estaba_minimizada(monkeypatch):
     import webview
-    import widget
+    from bitacora.escritorio import widget
     v = _VentanaViva()
     monkeypatch.setattr(widget, "_principal", v)
     monkeypatch.setattr(widget, "_minimizada", True)
@@ -228,7 +230,7 @@ def test_volver_desminimiza_solo_si_estaba_minimizada(monkeypatch):
 def test_el_estado_de_minimizado_se_sigue_por_eventos(monkeypatch):
     """`window.minimized` de pywebview es el flag de creación y nunca se actualiza: el estado
     vivo solo llega por los eventos."""
-    import widget
+    from bitacora.escritorio import widget
 
     class _Ev:
         def __init__(self): self.handlers = []
@@ -262,7 +264,7 @@ def test_volver_crea_una_ventana_si_no_quedaba_ninguna(monkeypatch):
     """Cerraste la grande y seguiste con el widget: ahí sí hay que crear una, y empieza en el
     inicio porque no hay nada que preservar."""
     import webview
-    import widget
+    from bitacora.escritorio import widget
     creadas = []
     monkeypatch.setattr(widget, "_principal", None)
     monkeypatch.setattr(widget, "_url_base", "http://127.0.0.1:1")

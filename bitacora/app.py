@@ -3,16 +3,16 @@ import sys
 from datetime import date
 
 from flask import Flask, g
-import database as db
-import filters
-import services
-import profiles
-from fieldtypes import FIELD_TYPES
-from appconfig import PET_ART
-from helpers import _week_start
+from bitacora import database as db
+from bitacora import filters
+from bitacora import services
+from bitacora import profiles
+from bitacora.fieldtypes import FIELD_TYPES
+from bitacora.appconfig import PET_ART
+from bitacora.helpers import _week_start
 # Re-export para tests que hacen `from app import dur_fmt_filter, ...`
-from filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
-from routes import main, day, recurring, journal, update, todos, perfiles, sync, widget
+from bitacora.filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
+from bitacora.routes import main, day, recurring, journal, update, todos, perfiles, sync, widget
 
 
 def _overdue_count(settings) -> int:
@@ -56,10 +56,4 @@ def create_app():
 
 
 app = create_app()
-
-
-if __name__ == "__main__":
-    import webbrowser, threading
-    db.init_db()
-    threading.Timer(1.0, lambda: webbrowser.open("http://127.0.0.1:5000")).start()
-    app.run(debug=False, port=5000)
+# El arranque del modo navegador vive en main.py (la raíz), que es el único entry point.

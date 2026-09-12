@@ -9,9 +9,9 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 
-import database as db
-import database.conn as conn
-from database.schema import SCHEMA_VERSION
+from bitacora import database as db
+import bitacora.database.conn as conn
+from bitacora.database.schema import SCHEMA_VERSION
 
 PENDIENTE = "sync-pendiente.db"
 

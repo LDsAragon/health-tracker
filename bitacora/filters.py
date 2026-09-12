@@ -1,6 +1,6 @@
 """Filtros Jinja de formato (fecha/hora/duración/rango). Registrados por register(app)."""
 from datetime import date, datetime
-from helpers import _fmt_clock
+from bitacora.helpers import _fmt_clock
 
 
 def humantime_filter(ts):

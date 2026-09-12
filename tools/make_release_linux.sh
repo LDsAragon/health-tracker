@@ -19,11 +19,11 @@ mkdir -p "$APP"
 
 # Solo lo que la app necesita en runtime: sin tests, scripts de build,
 # ni la health.db personal (cada usuario arranca con su DB limpia).
-# Todos los modulos de la raiz, sin lista explicita: la lista se desactualiza sola
+# El paquete entero, sin lista de modulos: una lista explicita se desactualiza sola
 # (updater.py falto desde v2026-06-25 y la app de Linux ni arrancaba).
-cp *.py "$APP/"
+cp main.py "$APP/"
 cp requirements.txt requirements-desktop.txt "$APP/"
-cp -r database routes static templates "$APP/"
+cp -r bitacora "$APP/"
 find "$APP" -type d -name __pycache__ -prune -exec rm -rf {} +
 
 cp tools/linux/instalar.sh tools/linux/bitacora.sh "$APP/"

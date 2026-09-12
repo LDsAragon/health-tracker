@@ -8,16 +8,16 @@ from datetime import date, timedelta
 
 import pytest
 
-import database as db
-import tray
-import widget
-import app as flask_app
-from appconfig import SETTINGS
+from bitacora import database as db
+from bitacora.escritorio import tray
+from bitacora.escritorio import widget
+from bitacora import app as flask_app
+from bitacora.appconfig import SETTINGS
 
 
 @pytest.fixture
 def cliente(tmp_path, monkeypatch):
-    monkeypatch.setattr("database.conn.DB_PATH", str(tmp_path / "t.db"))
+    monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "t.db"))
     monkeypatch.setenv("HT_PERFILES", str(tmp_path))
     db.init_db()
     flask_app.app.config["TESTING"] = True
@@ -104,7 +104,7 @@ def test_abrir_sin_escritorio_devuelve_false():
 def test_la_geometria_va_a_un_archivo_y_no_a_settings(tmp_path, monkeypatch):
     """Desde el sync los ajustes viajan entre máquinas: si la posición del widget fuera un
     ajuste, en la otra computadora aparecería corrido o fuera de pantalla."""
-    monkeypatch.setattr("database.conn.DB_PATH", str(tmp_path / "t.db"))
+    monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "t.db"))
     monkeypatch.setenv("HT_PERFILES", str(tmp_path))
     monkeypatch.setattr(widget, "_url_base", "http://127.0.0.1:1")   # simular escritorio
     db.init_db()
@@ -158,7 +158,7 @@ def test_sin_bandeja_no_se_engancha_el_cierre(cliente, monkeypatch):
     """LA regla de seguridad: esconder la ventana al cerrar SIN icono en la bandeja dejaría el
     programa corriendo sin forma de mostrarlo ni de cerrarlo, salvo el administrador de tareas.
     Es el caso de Linux y el de un NotifyIcon que falla."""
-    import desktop
+    from bitacora.escritorio import main as desktop
     monkeypatch.setattr(tray, "iniciar", lambda **kw: False)
     monkeypatch.setattr(widget, "abrir", lambda: False)
     db.set_setting("cerrar_a_bandeja", "on")     # aun prendido, no debe engancharse
@@ -168,7 +168,7 @@ def test_sin_bandeja_no_se_engancha_el_cierre(cliente, monkeypatch):
 
 
 def test_con_bandeja_si_se_engancha_el_cierre(cliente, monkeypatch):
-    import desktop
+    from bitacora.escritorio import main as desktop
     monkeypatch.setattr(tray, "iniciar", lambda **kw: True)
     monkeypatch.setattr(widget, "abrir", lambda: False)
     db.set_setting("cerrar_a_bandeja", "on")
@@ -178,7 +178,7 @@ def test_con_bandeja_si_se_engancha_el_cierre(cliente, monkeypatch):
 
 
 def test_con_bandeja_pero_el_ajuste_apagado_no_engancha(cliente, monkeypatch):
-    import desktop
+    from bitacora.escritorio import main as desktop
     monkeypatch.setattr(tray, "iniciar", lambda **kw: True)
     monkeypatch.setattr(widget, "abrir", lambda: False)
     db.set_setting("cerrar_a_bandeja", "off")
@@ -190,7 +190,7 @@ def test_con_bandeja_pero_el_ajuste_apagado_no_engancha(cliente, monkeypatch):
 def test_el_widget_se_abre_solo_con_el_autostart_prendido(cliente, monkeypatch):
     """Default desde sep 2026: el widget arranca con la app. Lo abre _al_mostrarse, que corre
     en el hilo del evento `shown` — el único desde el que create_window crea en el acto."""
-    import desktop
+    from bitacora.escritorio import main as desktop
     abiertos = []
     monkeypatch.setattr(tray, "iniciar", lambda **kw: False)
     monkeypatch.setattr(widget, "abrir", lambda: abiertos.append(1) or True)
@@ -205,7 +205,7 @@ def test_el_widget_se_abre_solo_con_el_autostart_prendido(cliente, monkeypatch):
 
 
 def test_a_la_bandeja_cancela_el_cierre_y_esconde():
-    import desktop
+    from bitacora.escritorio import main as desktop
 
     class V:
         escondida = False
@@ -217,7 +217,7 @@ def test_a_la_bandeja_cancela_el_cierre_y_esconde():
 
 def test_si_no_se_puede_esconder_deja_cerrar():
     """Preferible cerrar de verdad antes que quedar con una ventana que no se va ni se ve."""
-    import desktop
+    from bitacora.escritorio import main as desktop
 
     class V:
         def hide(self):

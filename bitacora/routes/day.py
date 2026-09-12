@@ -3,8 +3,8 @@ import random
 from datetime import date, timedelta
 from urllib.parse import urlsplit
 from flask import Blueprint, render_template, request, redirect, url_for
-import database as db
-from appconfig import PET_CHANCE
+from bitacora import database as db
+from bitacora.appconfig import PET_CHANCE
 
 bp = Blueprint("day", __name__)
 

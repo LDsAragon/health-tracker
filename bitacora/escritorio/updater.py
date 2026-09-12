@@ -242,7 +242,7 @@ def apply_update():
 
 
 def _pre_update_backup():
-    from database.conn import DB_PATH, backup_path, snapshot_to
+    from bitacora.database.conn import DB_PATH, backup_path, snapshot_to
     if not Path(DB_PATH).exists():
         return
     snapshot_to(backup_path("health-preupdate"))

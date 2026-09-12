@@ -14,4 +14,4 @@ venv/bin/python -c '' 2>/dev/null || {
     echo "Corré ./instalar.sh y se regenera solo." >&2
     exit 1
 }
-exec venv/bin/python desktop.py "$@"
+exec venv/bin/python main.py "$@"

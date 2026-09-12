@@ -28,7 +28,13 @@ def disponible() -> bool:
 
 
 def _ruta_icono() -> str:
-    base = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(__file__))
+    """`static/` vive en la raíz del paquete, dos niveles arriba de este archivo.
+
+    Congelada, PyInstaller la deja en la raíz del bundle (`--add-data`), así que ahí el
+    `_MEIPASS` pelado alcanza.
+    """
+    base = getattr(sys, "_MEIPASS", None) or os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, "static", "icon.ico")
 
 

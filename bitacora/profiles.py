@@ -12,7 +12,7 @@ import re
 import unicodedata
 import uuid
 
-import database.conn as conn
+import bitacora.database.conn as conn
 
 INDICE = "perfiles.json"
 CARPETA = "perfiles"
@@ -203,7 +203,7 @@ def borrar_todos() -> tuple[int, list]:
     Devuelve (cuántos había, backups que quedaron). El `dispositivo` se conserva: identifica la
     instalación, no los datos.
     """
-    import database as db
+    from bitacora import database as db
 
     ind = leer()
     previos = list(ind["perfiles"])

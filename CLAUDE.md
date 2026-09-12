@@ -4,84 +4,105 @@ Diario personal de hábitos y salud. App de escritorio cross-platform (Windows +
 
 ## Stack
 
-- **Python**: Flask (app factory en `app.py`), pywebview para la ventana nativa
+- **Python**: Flask (app factory en `bitacora/app.py`), pywebview para la ventana nativa
 - **Renderer**: Edge WebView2 (Windows) / WebKitGTK vía PyGObject (Linux)
-- **Frontend**: Jinja2 + vanilla JS + Chart.js (vendorizado en `static/js/vendor/`); sin bundler, sin framework JS
-- **DB**: SQLite (`database/conn.py`); `get_db()` lee `DB_PATH` dinámicamente (los tests lo parchean)
-- **Tema**: CSS variables en `static/css/base.css`; `data-theme` en `<html>`; 8 temas en `appconfig.py`
+- **Frontend**: Jinja2 + vanilla JS + Chart.js (vendorizado en `bitacora/static/js/vendor/`); sin bundler, sin framework JS
+- **DB**: SQLite (`bitacora/database/conn.py`); `get_db()` lee `DB_PATH` dinámicamente (los tests lo parchean)
+- **Tema**: CSS variables en `bitacora/static/css/base.css`; `data-theme` en `<html>`; 8 temas en `bitacora/appconfig.py`
 
 ## Estructura
 
+Todo el código de la app vive en el paquete `bitacora/`; la raíz solo tiene el punto de entrada,
+configuración y docs. El paquete de arriba (Flask + SQLite) **no importa nada de
+`bitacora/escritorio/`** — es lo que permite correr en el navegador y testear sin display.
+
 ```
-app.py                  # Flask app factory (create_app)
-desktop.py              # Entrada pywebview; auto-backup diario; APP_DIR por plataforma
-appconfig.py            # THEMES, SETTINGS y PET_ART (fuente única de defaults)
-profiles.py             # Perfiles locales: índice perfiles.json, crear/usar/borrar, cambio
-                        #   en caliente. Sin HT_PERFILES se desactiva solo (tests, navegador)
-sync.py                 # Merge entre dos dispositivos: exportar/analizar/aplicar. El paquete
-                        #   es un .db y el merge se resuelve en SQL con ATTACH
-widget.py               # Ventana del widget de escritorio (segunda ventana pywebview)
-tray.py                 # Icono en el área de notificación (NotifyIcon vía pythonnet, solo Win)
-instancia.py            # Una sola Bitácora a la vez: lock del SO + aviso por HTTP
-services.py             # Presentación compartida: events_by_date, journal_badges y, para el
+main.py                 # ÚNICO entry point: ventana, o --navegador para el modo browser.
+                        #   Es lo que empaqueta PyInstaller y lo que corren start.bat y el
+                        #   launcher de Linux
+bitacora/
+  app.py                # Flask app factory (create_app) + el context processor global
+  appconfig.py          # THEMES, SETTINGS y PET_ART (fuente única de defaults)
+  services.py           # Presentación compartida: events_by_date, journal_badges y, para el
                         #   visor de tareas, overdue_buckets / overdue_cutoff / periodo_ventana
-helpers.py              # _setting, _week_start, _dow_names, MESES[], _fmt_clock, safe_back
-filters.py              # Filtros Jinja2 (humantime, fechacorta, dur_fmt, rango_fmt)
-fieldtypes.py           # Catálogo de tipos de campo de notas especiales
-updater.py              # Auto-actualización via GitHub Releases (check/download/apply)
-notify.py               # Notificación del escritorio (toast WinRT vía PowerShell / notify-send)
-
-database/               # Paquete; __init__.py re-exporta todo (`import database as db`)
-  conn.py               # get_db, snapshot_to, backup_path, is_valid_db, reset_db, restore_from
-  schema.py             # SCHEMA + MIGRATIONS declarativas (idempotente)
-  stats.py              # Motor de series de Estadísticas: build_series, grouped_series,
+  helpers.py            # _setting, _week_start, _dow_names, MESES[], _fmt_clock, safe_back
+  filters.py            # Filtros Jinja2 (humantime, fechacorta, dur_fmt, rango_fmt)
+  fieldtypes.py         # Catálogo de tipos de campo de notas especiales
+  profiles.py           # Perfiles locales: índice perfiles.json, crear/usar/borrar, cambio
+                        #   en caliente. Sin HT_PERFILES se desactiva solo (tests, navegador)
+  sync.py               # Merge entre dos dispositivos: exportar/analizar/aplicar. El paquete
+                        #   es un .db y el merge se resuelve en SQL con ATTACH
+  database/             # Paquete; __init__.py re-exporta todo (`from bitacora import database as db`)
+    conn.py             # get_db, snapshot_to, backup_path, is_valid_db, reset_db, restore_from
+    schema.py           # SCHEMA + MIGRATIONS declarativas (idempotente)
+    stats.py            # Motor de series de Estadísticas: build_series, grouped_series,
                         #   chartable_fields, y time_summary() para "Tiempo por actividad"
-  journal.py            # Categorías + entradas de notas especiales; migrate_entry_values
-  notes.py / events.py / charts.py / settings.py
-  todos.py              # Tareas por día + el motor del visor: get_overdue_todos,
+    journal.py          # Categorías + entradas de notas especiales; migrate_entry_values
+    todos.py            # Tareas por día + el motor del visor: get_overdue_todos,
                         #   count_overdue_todos, move_todos, get_todos_filtered
-
-routes/
-  main.py               # / (home según start_view), /calendar/<año>/<mes>, /week/<fecha>,
-                        #   /search, /ajustes[/guardar], /version, /estadisticas[/grafico/...],
+    notes.py / events.py / charts.py / settings.py
+  routes/
+    main.py             # / (home según start_view), /calendar/<año>/<mes>, /week/<fecha>,
+                        #   /search, /ajustes[/guardar|/set], /version, /estadisticas[/grafico/...],
                         #   /export[/download], /backup, /restore, /reset
-  day.py                # /day/<fecha> y todas las acciones del día; /todos/<id>/move (AJAX)
-  todos.py              # /tareas (visor) + /tareas/agregar + acciones sobre atrasadas
+    day.py              # /day/<fecha> y todas las acciones del día; /todos/<id>/move (AJAX)
+    todos.py            # /tareas (visor) + /tareas/agregar + acciones sobre atrasadas
                         #   + /tareas/alerta (JSON)
-  perfiles.py           # /perfiles/* (crear, usar, renombrar, borrar)
-  sync.py               # /sync/* (exportar, importar, previa, aplicar, descartar)
-  widget.py             # /widget (panel chico) + sus acciones, el control de la ventana
+    perfiles.py         # /perfiles/* (crear, usar, renombrar, borrar)
+    sync.py             # /sync/* (exportar, importar, previa, aplicar, descartar)
+    widget.py           # /widget (panel chico) + sus acciones, el control de la ventana
                         #   y /instancia/mostrar (la llama una segunda instancia)
-  recurring.py          # /recurring/* (rutinas)
-  journal.py            # /journal/* (notas especiales + categorías)
-  update.py             # /update/* (auto-actualización: status/check/download/progress/apply/quit)
-
-templates/              # base.html → herencia; _macros.html para date_field
+    recurring.py        # /recurring/* (rutinas)
+    journal.py          # /journal/* (notas especiales + categorías)
+    update.py           # /update/* (auto-actualización: status/check/download/progress/apply/quit)
+  templates/            # base.html → herencia; _macros.html para date_field
                         # calendar.html, week.html, day.html, journal.html, recurring.html,
                         # stats.html, search.html, export.html ("Datos"), settings.html,
-                        # todos.html (visor de tareas),
+                        # todos.html (visor de tareas), widget.html,
                         # version.html (tab 🔄 Versión: chequeo manual + changelog)
-static/css/             # base.css, calendar.css, day.css, pages.css, wheel.css, widget.css
-static/js/
-  zoom.js               # Zoom Ctrl+rueda / Ctrl±, persistido en localStorage
-  colapsables.js        # recordarColapsable(): estado de un <details> en localStorage
-  ajustes.js            # Guardado al instante de Ajustes; esconde el botón Guardar
-  date-es.js            # Campo de fecha con formato configurable (hidden ISO para el backend)
-  day.js / stats.js     # JS de la vista del día y del constructor de gráficos
-  field-registry.js     # window.FIELD_BUILDERS: tipo → builder (despacho único)
-  field-blocks.js       # Builders escala / sino / opciones / numero
-  time-fields.js        # Builders duracion / rango
-  emotion-wheel*.js     # Rueda Willcox (3 niveles) + su contenido psicológico
-  ekman-wheel*.js       # Rueda Ekman (Atlas of Emotions, 2 niveles) + contenido
-  emotion-wheel-visual.js  # Render SVG data-driven, común a ambas ruedas
-  emotion-guided.js     # Exploración guiada (árbol de decisión, tercer tab del modal)
-  vendor/               # chart.umd.min.js
+  static/
+    css/                # base.css, calendar.css, day.css, pages.css, wheel.css, widget.css
+    js/
+      zoom.js           # Zoom Ctrl+rueda / Ctrl±, persistido en localStorage
+      colapsables.js    # recordarColapsable(): estado de un <details> en localStorage
+      ajustes.js        # Guardado al instante de Ajustes; esconde el botón Guardar
+      date-es.js        # Campo de fecha con formato configurable (hidden ISO para el backend)
+      day.js / stats.js # JS de la vista del día y del constructor de gráficos
+      field-registry.js # window.FIELD_BUILDERS: tipo → builder (despacho único)
+      field-blocks.js   # Builders escala / sino / opciones / numero
+      time-fields.js    # Builders duracion / rango
+      emotion-wheel*.js # Rueda Willcox (3 niveles) + su contenido psicológico
+      ekman-wheel*.js   # Rueda Ekman (Atlas of Emotions, 2 niveles) + contenido
+      emotion-wheel-visual.js  # Render SVG data-driven, común a ambas ruedas
+      emotion-guided.js # Exploración guiada (árbol de decisión, tercer tab del modal)
+      vendor/           # chart.umd.min.js
+  escritorio/           # Solo la app de ventana. Nada del resto del paquete importa de acá.
+    main.py             # Arranque pywebview; auto-backup diario; APP_DIR por plataforma;
+                        #   arrancar() = main() envuelto en el reporte de errores
+    widget.py           # Ventana del widget de escritorio (segunda ventana pywebview)
+    tray.py             # Icono en el área de notificación (NotifyIcon vía pythonnet, solo Win)
+    instancia.py        # Una sola Bitácora a la vez: lock del SO + aviso por HTTP
+    notify.py           # Notificación del escritorio (toast WinRT vía PowerShell / notify-send)
+    updater.py          # Auto-actualización via GitHub Releases (check/download/apply)
+
+tests/                  # pytest; conftest.py trae los fixtures test_db y client
 docs/                   # manual.html → Bitacora-Manual.pdf (tools/make_manual.ps1,
                         #   shipeado en zip/tar.gz); LEEME.txt y LEEME-Linux.txt
 tools/                  # Builds (make_release*.ps1|sh, publish_release.ps1), instalador y
                         #   launcher Linux (linux/), smoke tests, make_icon.py, compare_dbs.py,
                         #   screenshots_audit.mjs (Playwright, auditoría visual de todas las pantallas)
 ```
+
+**Cómo leer las rutas en este documento**: de acá para abajo, una ruta sin prefijo es **relativa a
+`bitacora/`** (`app.py` = `bitacora/app.py`, `routes/day.py` = `bitacora/routes/day.py`). Las de
+`tests/`, `tools/`, `docs/` y `main.py` se escriben completas. Hay tres nombres repetidos a los que
+conviene prestar atención: `main.py` (el de la raíz vs. `escritorio/main.py`), `sync.py` (`sync.py`
+vs. `routes/sync.py`) y `widget.py` (`escritorio/widget.py` vs. `routes/widget.py`).
+
+⚠️ **`templates/` y `static/` tienen que estar dentro del paquete**, al lado de `app.py`:
+`Flask(__name__)` las resuelve relativo al módulo. Congelada es al revés — `app.py` pasa rutas
+explícitas bajo `sys._MEIPASS`, y por eso `--add-data` las deja en la **raíz** del bundle
+(`bitacora/templates;templates`), no en `_MEIPASS/bitacora/`.
 
 ## Datos de usuario
 
@@ -99,7 +120,7 @@ Todos los backups (diarios + pre-operación) van a `<dir DB>/backups/` via `back
 sin código extra**.
 
 Prefijos de backup:
-- `health-auto-<date>` — diario automático (rotación a 7, gestionado en `desktop.py`)
+- `health-auto-<date>` — diario automático (rotación a 7, gestionado en `bitacora/escritorio/main.py`)
 - `health-preupdate-<ts>` — antes de aplicar una auto-actualización
 - `health-prereset-<ts>` — antes de borrar todo
 - `health-prerestore-<ts>` — antes de restaurar un backup externo
@@ -350,7 +371,7 @@ Cero `<select>` entre los 16 ajustes, seis secciones colapsables y **guardado al
 
 ## Auto-actualización
 
-`updater.py` + `routes/update.py` — chequea GitHub Releases (`LDsAragon/health-tracker`) en un hilo daemon al arrancar (`check_in_background()` desde `desktop.py`). Flujo: `/update/status` → `/update/download` → `/update/progress` → `/update/apply` (backup DB → extrae asset → lanza script externo) → `/update/quit`. UI en `base.html` + `static/css/pages.css`.
+`bitacora/escritorio/updater.py` + `bitacora/routes/update.py` — chequea GitHub Releases (`LDsAragon/health-tracker`) en un hilo daemon al arrancar (`check_in_background()` desde `bitacora/escritorio/main.py`). Flujo: `/update/status` → `/update/download` → `/update/progress` → `/update/apply` (backup DB → extrae asset → lanza script externo) → `/update/quit`. UI en `base.html` + `static/css/pages.css`.
 
 - La versión sale de `_version.py`, **generado por el build** e incluido en el bundle (no está en el repo). En modo dev no existe → `current_version()` devuelve `None` y el updater no corre.
 - Comparación de versiones por tupla: `v2026-06-12.1` → `(2026, 6, 12, 1)` (`_version_tuple`).
@@ -376,8 +397,8 @@ Cero `<select>` entre los 16 ajustes, seis secciones colapsables y **guardado al
 
 - **Linux / WebKitGTK**: exportar `PYWEBVIEW_GUI=gtk` y `WEBKIT_DISABLE_DMABUF_RENDERER=1` (lo hace `bitacora.sh`).
 - **Linux / WebKitGTK**: `color-scheme: dark/light` en CSS controla el rendering de `<select>` nativos (sin esto salen con tema GTK del sistema, blanco sobre blanco en tema oscuro).
-- **Linux / descargas**: `webview.settings["ALLOW_DOWNLOADS"] = True` es necesario (está en `desktop.py`); por defecto pywebview cancela descargas silenciosamente.
+- **Linux / descargas**: `webview.settings["ALLOW_DOWNLOADS"] = True` es necesario (está en `bitacora/escritorio/main.py`); por defecto pywebview cancela descargas silenciosamente.
 - **Arch / keyring**: `instalar.sh` detecta keyring sin inicializar chequeando `/etc/pacman.d/gnupg/trustdb.gpg` (no solo el directorio — el dir puede existir vacío).
-- **Windows / Mark of the Web**: si el zip viajó por internet, .NET se niega a cargar `Python.Runtime.dll`. `desktop.py::_unblock_dlls()` borra el stream `Zone.Identifier` de las DLLs de `_internal/` en cada arranque; el updater hace lo mismo tras copiar los archivos nuevos.
+- **Windows / Mark of the Web**: si el zip viajó por internet, .NET se niega a cargar `Python.Runtime.dll`. `escritorio/main.py::_unblock_dlls()` borra el stream `Zone.Identifier` de las DLLs de `_internal/` en cada arranque; el updater hace lo mismo tras copiar los archivos nuevos.
 - **pywebview / localStorage**: `webview.start(private_mode=False, storage_path=...)` — sin eso pywebview borra el zoom y el tamaño de celdas al cerrar.
-- **DB path en tests**: `database.conn.DB_PATH` se parchea directamente; `get_db()` lo lee en cada call.
+- **DB path en tests**: `bitacora.database.conn.DB_PATH` se parchea directamente (por string, así que un cambio de layout lo rompe ruidoso); `get_db()` lo lee en cada call.

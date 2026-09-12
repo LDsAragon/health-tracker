@@ -8,10 +8,10 @@ from datetime import date
 
 from flask import Blueprint, render_template, request, redirect, url_for
 
-import database as db
-import services
-import widget
-from helpers import _first_weekday, _dow_names, _setting, _week_start, MESES
+from bitacora import database as db
+from bitacora import services
+from bitacora.escritorio import widget
+from bitacora.helpers import _first_weekday, _dow_names, _setting, _week_start, MESES
 
 bp = Blueprint("widget", __name__)
 

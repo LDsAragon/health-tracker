@@ -1,7 +1,7 @@
 """Rutinas y recordatorios (eventos recurrentes)."""
 from datetime import date, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for
-import database as db
+from bitacora import database as db
 
 bp = Blueprint("recurring", __name__)
 

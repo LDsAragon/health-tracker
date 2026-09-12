@@ -23,5 +23,5 @@ if %errorlevel% neq 0 (
 )
 
 echo Abriendo en el navegador en http://127.0.0.1:5000
-python app.py
+python main.py --navegador
 pause

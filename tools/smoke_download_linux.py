@@ -26,13 +26,13 @@ root = Path(__file__).resolve().parent.parent
 os.chdir(root)
 sys.path.insert(0, str(root))
 
-import desktop
+from bitacora.escritorio import main as desktop
 
 assert str(desktop.APP_DIR).startswith(str(tmp)), desktop.APP_DIR
 desktop.APP_DIR.mkdir(parents=True, exist_ok=True)
 os.environ["HT_DB"] = str(desktop.DB_FILE)
 
-from app import create_app
+from bitacora.app import create_app
 
 flask_app = create_app()
 

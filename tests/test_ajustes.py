@@ -8,8 +8,8 @@ import re
 
 import pytest
 
-import database as db
-from appconfig import SETTINGS
+from bitacora import database as db
+from bitacora.appconfig import SETTINGS
 
 # Los 16 ajustes por tipo de control. La lista está a mano a propósito: si alguien agrega un
 # ajuste a appconfig y no le da un control, `test_los_16_ajustes_tienen_un_control` lo grita.
@@ -95,7 +95,7 @@ def test_ningun_ajuste_quedo_como_dropdown(client):
 def test_el_select_de_borrar_perfil_no_se_toco(client, monkeypatch, tmp_path):
     """El rediseño saca los <select> de *ajustes*; el de elegir perfil es una lista de datos."""
     monkeypatch.setenv("HT_PERFILES", str(tmp_path))
-    import profiles
+    from bitacora import profiles
     profiles.usar(profiles.crear("Principal")["slug"])
     profiles.crear("Segundo")                      # el bloque de borrado pide dos
     html = client.get("/ajustes").data.decode()

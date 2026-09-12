@@ -1,4 +1,4 @@
-"""Smoke test headless de desktop.py: migración de primer arranque + app servida.
+"""Smoke test headless del arranque de escritorio: migración de primer arranque + app servida.
 
 Usa un LOCALAPPDATA temporal para no tocar el real. No abre la ventana.
 Correr: venv/Scripts/python tools/smoke_desktop.py
@@ -15,7 +15,7 @@ root = Path(__file__).resolve().parent.parent
 os.chdir(root)
 sys.path.insert(0, str(root))
 
-import desktop
+from bitacora.escritorio import main as desktop
 
 assert str(desktop.APP_DIR).startswith(str(tmp)), desktop.APP_DIR
 
@@ -32,8 +32,8 @@ else:
     print("(no hay health.db local; arranque limpio)")
 
 # Migración al layout de perfiles: el camino que corre en la máquina de cada usuario
-import database as db
-import profiles
+from bitacora import database as db
+from bitacora import profiles
 
 antes = db.table_counts(str(desktop.DB_FILE)) if desktop.DB_FILE.exists() else {}
 desktop._migrate_a_perfiles()
@@ -64,7 +64,7 @@ desktop._auto_backup()   # segunda corrida el mismo día: no duplica
 assert len(sorted(backups.glob("health-auto-*.db"))) == len(restantes)
 print(f"OK auto-backup del perfil: {hoy.name}, rotación a {desktop.AUTO_BACKUPS}")
 
-from app import create_app
+from bitacora.app import create_app
 app = create_app()
 client = app.test_client()
 

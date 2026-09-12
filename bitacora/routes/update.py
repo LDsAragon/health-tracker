@@ -1,7 +1,7 @@
 """Rutas de auto-actualización."""
 import os
 import threading
-import updater
+from bitacora.escritorio import updater
 from flask import Blueprint, jsonify
 
 bp = Blueprint("update", __name__)

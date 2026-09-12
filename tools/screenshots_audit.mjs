@@ -1,5 +1,5 @@
 // Screenshots de todas las pantallas para auditar visualmente un cambio de UI.
-// Corre contra la app en modo navegador (start.bat / python app.py), no contra la ventana.
+// Corre contra la app en modo navegador (start.bat / python main.py --navegador), no contra la ventana.
 // Uso:  node tools/screenshots_audit.mjs [fecha-iso]
 // Salida: screenshots/ en la raíz del repo (gitignoreada).
 import { chromium } from 'playwright';
