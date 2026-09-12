@@ -286,7 +286,16 @@ def main():
     # y dos procesos migrando la misma base a la vez es justo lo que no queremos.
     import instancia
     if not instancia.tomar():
-        instancia.avisar_a_la_otra()
+        # Dejar rastro SIEMPRE: si el lock fallara por algo que no es "ya hay otra" (permisos,
+        # antivirus, la carpeta en una unidad de red), el doble clic no haría nada visible y
+        # sin esta línea no habría por dónde empezar a mirar.
+        aviso = instancia.avisar_a_la_otra()
+        try:
+            with open(APP_DIR / "error.log", "a", encoding="utf-8") as f:
+                f.write("instancia: ya habia otra Bitacora corriendo, salgo"
+                        f" (le pude avisar: {aviso})\n")
+        except OSError:
+            pass
         return
 
     _migrate_first_run()
