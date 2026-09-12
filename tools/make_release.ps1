@@ -6,8 +6,14 @@ param([string]$Version = "")
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
-if (Get-Process Bitacora -ErrorAction SilentlyContinue) {
-    Write-Error "Cerrá Bitácora antes de generar el release."
+# Solo importa el .exe que este build va a sobreescribir: uno corriendo desde otra carpeta
+# (una copia vieja en el Escritorio, la version instalada) no tiene ningun lock sobre dist\ y
+# abortar por eso obligaba a cerrar la app del dia a dia para poder publicar.
+$propio = Join-Path $root "dist\Bitacora\Bitacora.exe"
+$corriendo = @(Get-CimInstance Win32_Process -Filter "Name='Bitacora.exe'" |
+               Where-Object { $_.ExecutablePath -eq $propio })
+if ($corriendo.Count) {
+    Write-Error "Cerrá la Bitácora de dist\Bitacora (PID $($corriendo[0].ProcessId)) antes de generar el release."
     exit 1
 }
 
