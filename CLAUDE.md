@@ -16,6 +16,8 @@ Diario personal de hábitos y salud. App de escritorio cross-platform (Windows +
 app.py                  # Flask app factory (create_app)
 desktop.py              # Entrada pywebview; auto-backup diario; APP_DIR por plataforma
 appconfig.py            # THEMES, SETTINGS y PET_ART (fuente única de defaults)
+profiles.py             # Perfiles locales: índice perfiles.json, crear/usar/borrar, cambio
+                        #   en caliente. Sin HT_PERFILES se desactiva solo (tests, navegador)
 services.py             # Presentación compartida: events_by_date, journal_badges y, para el
                         #   visor de tareas, overdue_buckets / overdue_cutoff / periodo_ventana
 helpers.py              # _setting, _week_start, _dow_names, MESES[], _fmt_clock, safe_back
@@ -41,6 +43,7 @@ routes/
   day.py                # /day/<fecha> y todas las acciones del día; /todos/<id>/move (AJAX)
   todos.py              # /tareas (visor) + /tareas/agregar + acciones sobre atrasadas
                         #   + /tareas/alerta (JSON)
+  perfiles.py           # /perfiles/* (crear, usar, renombrar, borrar)
   recurring.py          # /recurring/* (rutinas)
   journal.py            # /journal/* (notas especiales + categorías)
   update.py             # /update/* (auto-actualización: status/check/download/progress/apply/quit)
@@ -72,12 +75,18 @@ tools/                  # Builds (make_release*.ps1|sh, publish_release.ps1), in
 
 ## Datos de usuario
 
-| Plataforma | Ruta de la DB |
-|------------|---------------|
-| Windows    | `%LOCALAPPDATA%\Bitacora\health.db` |
-| Linux      | `~/.local/share/Bitacora/health.db` |
+| Plataforma | Carpeta de datos (`APP_DIR`) |
+|------------|------------------------------|
+| Windows    | `%LOCALAPPDATA%\Bitacora\` |
+| Linux      | `~/.local/share/Bitacora/` |
 
-Todos los backups (diarios + pre-operación) van a `<dir DB>/backups/` via `backup_path(prefix)` en `conn.py`.
+Desde sep 2026 hay **perfiles**: la DB no está en la raíz de `APP_DIR` sino en
+`perfiles/<slug>/health.db`, y el índice (`perfiles.json`) dice cuál está activo. `webview/` y
+`error.log` siguen siendo del dispositivo, no del perfil.
+
+Todos los backups (diarios + pre-operación) van a `<dir DB>/backups/` via `backup_path(prefix)` en
+`conn.py`. Como esa ruta se deriva de `DB_PATH`, **cada perfil obtiene su propia carpeta de backups
+sin código extra**.
 
 Prefijos de backup:
 - `health-auto-<date>` — diario automático (rotación a 7, gestionado en `desktop.py`)
@@ -85,11 +94,12 @@ Prefijos de backup:
 - `health-prereset-<ts>` — antes de borrar todo
 - `health-prerestore-<ts>` — antes de restaurar un backup externo
 - `health-prerename-<ts>` — antes de migrar renombres de campos/opciones
+- `health-preperfiles-<ts>` — antes de mudar la DB al layout de perfiles
 
 ## Tests
 
 ```bash
-pytest tests/          # 291 tests, ~10s
+pytest tests/          # 324 tests, ~15s
 ```
 
 Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).
@@ -157,6 +167,45 @@ mano** sí está bien y es la operación central del visor.
 - El visor **no es un tablero**. Se rechazaron, en orden, las barras de progreso semanal y los
   contadores siempre visibles (hoy viven en un `<details>` cerrado por default, con el estado en
   `localStorage`). Antes de sumar métricas, rachas o gamificación acá: preguntar.
+
+## Perfiles y sincronización
+
+Varias bitácoras en la misma instalación, **un archivo de DB por perfil**. Todo local: no hay
+cuentas ni nada remoto, y los perfiles no protegen nada (cualquiera cambia de perfil) — son para
+ordenar, no para esconder.
+
+- El índice va en `APP_DIR/perfiles.json` y no en una tabla, porque hay que saber qué perfil abrir
+  **antes** de abrir ninguna base. Guarda también un `uid` por perfil y un `dispositivo` por
+  instalación, que son la identidad que va a usar el sync.
+- **Cambio en caliente**: `profiles.aplicar()` rebindea `database.conn.DB_PATH`. Funciona porque
+  `conn.py` lee el env `HT_DB` una sola vez al importar pero todo lo demás lee el global del módulo
+  en cada llamada, y nada cachea la conexión. Es la misma técnica que usan los tests.
+  Por eso `DB_PATH` **no se re-exporta** desde `database/__init__.py`: sería una copia congelada.
+- Sin `HT_PERFILES` (modo navegador, tests) los perfiles se apagan solos y la app funciona como
+  antes. Eso es lo que mantiene los tests viejos intactos.
+- El switcher del navbar aparece **solo con más de un perfil**.
+- Borrar un perfil: nunca el activo ni el último, y pide escribir `BORRAR PERFIL`.
+  ⚠️ En Windows hay que `gc.collect()` antes del `rmtree`: los callers hacen `with get_db()`, que
+  commitea pero **no cierra**, así que el archivo sigue lockeado hasta que el GC recoja la conexión.
+  Mismo motivo en la migración, donde además borrar el original es *best-effort* y nunca aborta.
+
+### Cimientos del sync (ya están; el merge no)
+Las 7 tablas de `SYNCABLE` tienen `uid` (las PK autoincrementales colisionan entre dispositivos) y
+`updated_at`, más la tabla `deletions` para tombstones. Todo se llena con **triggers**, así que
+ninguno de los 33 puntos de escritura de `database/*.py` los conoce.
+
+- ⚠️ `updated_at` y `deleted_at` van en **UTC** (`datetime('now')`), al revés que el resto de la app:
+  son para comparar entre máquinas y el caso de uso es viajar a otro huso. Hay un test que lo fija.
+  Y **no usar `created_at` para ordenar entre dispositivos**: en las DBs viejas quedó en UTC y en
+  las nuevas en localtime, porque `CREATE TABLE IF NOT EXISTS` nunca reescribe una tabla existente.
+- ⚠️ **El orden de `init_db()` no se puede cambiar**: triggers *después* de las migraciones. SQLite
+  no resuelve columnas al crear un trigger, así que al revés el `CREATE TRIGGER` sale bien y después
+  explota **cada INSERT** con `no such column: uid`.
+- `PRAGMA user_version` (= `SCHEMA_VERSION`) hace de guarda de `init_db()`, que corre en cada
+  request: sin eso costaba 5,5 ms por página en vez de 1. **Al agregar una migración hay que subir
+  `SCHEMA_VERSION`** o las DBs instaladas se saltean el paso. `reset_db()` la baja a 0.
+- `updated_at` vacío significa "original, nunca modificada" y ordena antes que cualquier fecha. El
+  backfill no lo rellena a propósito: haría ganar al dispositivo que migró último.
 
 ## Auto-actualización
 

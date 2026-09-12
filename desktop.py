@@ -74,6 +74,69 @@ def _migrate_first_run():
         _copy_db(old, DB_FILE)
 
 
+LEEME_PERFILES = """Bitácora — dónde están tus datos
+=====================================
+
+Desde la versión de septiembre de 2026 la app maneja PERFILES, y por eso tus
+datos ya no están en health.db al lado de este archivo sino en:
+
+    perfiles\\<nombre del perfil>\\health.db
+
+Si instalaste una versión VIEJA de Bitácora encima y la ves vacía: no perdiste
+nada. Esa versión busca health.db en esta carpeta y no lo encuentra. Volvé a
+instalar la versión nueva y vas a ver todo de nuevo.
+
+Los backups de cada perfil están dentro de su propia carpeta, en backups\\.
+"""
+
+
+def _migrate_a_perfiles():
+    """Layout viejo (APP_DIR/health.db) → perfiles/principal/health.db.
+
+    Idempotente: la existencia de perfiles.json es la guarda. Si algo falla no borra nada.
+    """
+    import profiles
+    if (APP_DIR / profiles.INDICE).exists():
+        return
+    import database as db
+
+    perfil = profiles.crear("Principal")
+    destino = Path(profiles.db_de(perfil["slug"]))
+
+    if DB_FILE.exists():
+        # snapshot_to y no copia de archivo: la app corre en WAL y copiar solo el .db puede
+        # perder lo que esté en el sidecar. Además deja el destino sin -wal/-shm.
+        db.snapshot_to(db.backup_path("health-preperfiles"))
+        db.snapshot_to(str(destino))
+        # Verificar ANTES de borrar el original: si los conteos no coinciden, se deja todo
+        # como estaba y el usuario sigue con el layout viejo hasta que alguien mire el log.
+        antes, despues = db.table_counts(str(DB_FILE)), db.table_counts(str(destino))
+        if not db.is_valid_db(str(destino)) or antes != despues:
+            raise RuntimeError(f"migración a perfiles: {antes} != {despues}")
+
+    # Dejar el índice consistente ANTES de borrar nada: si el borrado falla, el perfil ya
+    # quedó activo y con los datos, y lo peor que pasa es que sobre una copia vieja.
+    ind = profiles.leer()
+    ind["activo"] = perfil["slug"]
+    profiles.guardar(ind)
+    profiles.dispositivo()   # sellar el id de esta instalación desde el arranque
+    # Una versión vieja instalada encima buscaría APP_DIR/health.db y arrancaría en blanco.
+    (APP_DIR / "LEEME-perfiles.txt").write_text(LEEME_PERFILES, encoding="utf-8")
+
+    if DB_FILE.exists():
+        # Borrar el original es limpieza, no parte de la migración: nunca debe abortarla.
+        # En Windows el archivo puede seguir lockeado porque `with get_db()` commitea pero
+        # no cierra, y el handle vive hasta que lo recoja el GC.
+        import gc
+        gc.collect()
+        for p in (DB_FILE, Path(str(DB_FILE) + "-wal"), Path(str(DB_FILE) + "-shm")):
+            try:
+                if p.exists():
+                    p.unlink()
+            except OSError:
+                pass
+
+
 def _migrate_from_old_appdata():
     """Migración del rename (jun 2026): la carpeta de appdata era HealthTracker.
 
@@ -105,14 +168,18 @@ def _auto_backup():
     no se acuerda). Uno por día, conserva los últimos AUTO_BACKUPS. Si falla
     (disco lleno, etc.) la app arranca igual: queda rastro en error.log.
     """
-    if not DB_FILE.exists():
+    import database as db
+    activa = Path(db.db_path())
+    if not activa.exists():
         return
-    backups = APP_DIR / "backups"
+    # La carpeta sale de la ruta de la DB activa, así cada perfil rota SUS backups. Con
+    # APP_DIR/backups fijo, el segundo perfil veía el archivo del primero y no se respaldaba.
+    backups = activa.parent / "backups"
     backups.mkdir(parents=True, exist_ok=True)
     dest = backups / f"health-auto-{date.today().isoformat()}.db"
     if dest.exists():
         return
-    _copy_db(DB_FILE, dest)
+    db.snapshot_to(str(dest))
     for viejo in sorted(backups.glob("health-auto-*.db"))[:-AUTO_BACKUPS]:
         viejo.unlink()
 
@@ -167,8 +234,17 @@ def main():
     _unblock_dlls()
     _migrate_from_old_appdata()
     APP_DIR.mkdir(parents=True, exist_ok=True)
+    os.environ["HT_PERFILES"] = str(APP_DIR)
     os.environ["HT_DB"] = str(DB_FILE)
     _migrate_first_run()
+    import profiles
+    try:
+        _migrate_a_perfiles()
+    except Exception:
+        with open(APP_DIR / "error.log", "a", encoding="utf-8") as f:
+            f.write("migración a perfiles falló (se sigue con el layout viejo):\n"
+                    + traceback.format_exc())
+    profiles.aplicar()
     try:
         _auto_backup()
     except Exception:

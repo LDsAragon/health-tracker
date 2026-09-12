@@ -15,6 +15,17 @@
   <nav class="navbar">
     <a href="{{ url_for('main.home') }}" class="nav-brand">Bitácora</a>
 
+    {# Solo con más de un perfil: con uno solo la app se ve igual que siempre. #}
+    {% if perfiles | length > 1 %}
+    <form method="POST" action="{{ url_for('perfiles.usar') }}" class="nav-perfil">
+      <select name="slug" onchange="this.form.submit()" title="Cambiar de perfil">
+        {% for p in perfiles %}
+        <option value="{{ p.slug }}" {% if perfil_activo and p.slug == perfil_activo.slug %}selected{% endif %}>{{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% endif %}
+
     <form class="nav-search" action="{{ url_for('main.search_view') }}" method="GET">
       <input type="text" name="q" class="nav-search-input"
              placeholder="Buscar notas..."

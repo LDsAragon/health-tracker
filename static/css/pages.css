@@ -973,3 +973,25 @@ select.journal-cat-select {
 .todos-nueva { margin-bottom: 18px; }
 .todos-nueva .todo-add-form { margin-top: 12px; align-items: center; }
 .todos-nueva .todo-add-form input[type="text"] { flex: 1 1 220px; padding: 7px 10px; font-size: 14px; }
+
+/* ── PERFILES ─────────────────────────────────────────────────────────── */
+
+.nav-perfil { flex-shrink: 0; margin-left: 10px; }
+.nav-perfil select {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: var(--r); padding: 4px 8px; font-size: 13px; max-width: 160px; cursor: pointer;
+}
+.nav-perfil select:hover { border-color: var(--accent); }
+
+.perfil-list { display: flex; flex-direction: column; gap: 8px; }
+.perfil-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r);
+  background: var(--surface2);
+}
+.perfil-activo { border-color: var(--accent); }
+.perfil-form { display: flex; align-items: center; gap: 6px; }
+.perfil-form input[type="text"] {
+  padding: 5px 9px; font-size: 13px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 6px; color: var(--text); max-width: 220px;
+}

@@ -6,12 +6,13 @@ from flask import Flask, g
 import database as db
 import filters
 import services
+import profiles
 from fieldtypes import FIELD_TYPES
 from appconfig import PET_ART
 from helpers import _week_start
 # Re-export para tests que hacen `from app import dur_fmt_filter, ...`
 from filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
-from routes import main, day, recurring, journal, update, todos
+from routes import main, day, recurring, journal, update, todos, perfiles
 
 
 def _overdue_count(settings) -> int:
@@ -45,9 +46,10 @@ def create_app():
         """Expone ajustes y el catálogo de tipos de campo a todas las plantillas."""
         settings = db.get_all_settings()
         return {"settings": settings, "field_types": FIELD_TYPES, "pet_art": PET_ART,
-                "overdue_count": _overdue_count(settings)}
+                "overdue_count": _overdue_count(settings),
+                "perfiles": profiles.listar(), "perfil_activo": profiles.activo()}
 
-    for module in (main, day, recurring, journal, update, todos):
+    for module in (main, day, recurring, journal, update, todos, perfiles):
         app.register_blueprint(module.bp)
 
     return app

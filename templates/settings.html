@@ -190,6 +190,71 @@
 </div>
 
 
+{% if perfil_activo %}
+<div class="rec-form-wrap" style="margin-top:26px;">
+  <h2 class="stats-section" style="margin-top:0;">👤 Perfiles</h2>
+  <p class="page-sub" style="margin:0 0 14px;">Bitácoras separadas en esta misma computadora: cada
+    una con sus notas, rutinas y tareas. Son <b>locales</b>, no hay cuentas ni nada que salga a
+    internet. Estás usando <b>{{ perfil_activo.nombre }}</b>.</p>
+
+  {% if perfiles_msg == 'creado' %}<div class="datos-banner datos-ok">✓ Perfil creado.</div>
+  {% elif perfiles_msg == 'renombrado' %}<div class="datos-banner datos-ok">✓ Perfil renombrado.</div>
+  {% elif perfiles_msg == 'borrado' %}<div class="datos-banner datos-ok">✓ Perfil eliminado.</div>
+  {% elif perfiles_msg == 'err-nombre' %}<div class="datos-banner datos-err">✗ Poné un nombre.</div>
+  {% elif perfiles_msg == 'err-frase' %}<div class="datos-banner datos-err">✗ La frase no coincide: no se borró nada.</div>
+  {% elif perfiles_msg == 'err-borrar' %}<div class="datos-banner datos-err">✗ No se puede borrar el perfil activo ni el único que queda.</div>
+  {% endif %}
+
+  <div class="perfil-list">
+    {% for p in perfiles %}
+    <div class="perfil-row {% if p.slug == perfil_activo.slug %}perfil-activo{% endif %}">
+      <form method="POST" action="{{ url_for('perfiles.renombrar') }}" class="perfil-form">
+        <input type="hidden" name="slug" value="{{ p.slug }}">
+        <input type="hidden" name="back" value="{{ back or '' }}">
+        <input type="text" name="nombre" value="{{ p.nombre }}" maxlength="40" required>
+        <button type="submit" class="todo-act">Renombrar</button>
+      </form>
+      {% if p.slug == perfil_activo.slug %}
+      <span class="todos-hoy-tag">en uso</span>
+      {% else %}
+      <form method="POST" action="{{ url_for('perfiles.usar') }}" class="perfil-form">
+        <input type="hidden" name="slug" value="{{ p.slug }}">
+        <button type="submit" class="todo-act">Usar este</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <form method="POST" action="{{ url_for('perfiles.crear') }}" class="todo-add-form" style="margin-top:14px;">
+    <input type="hidden" name="back" value="{{ back or '' }}">
+    <input type="text" name="nombre" placeholder="Nombre del perfil nuevo..." maxlength="40" required>
+    <button type="submit" class="btn-primary">Crear perfil</button>
+  </form>
+
+  {% if perfiles | length > 1 %}
+  <div class="danger-zone" style="margin-top:20px; padding:14px; border-radius:var(--r);">
+    <label style="color:var(--red);">Eliminar un perfil</label>
+    <p class="page-sub" style="margin:6px 0 10px;">Borra ese diario entero: sus notas, rutinas,
+      tareas y backups. No se puede deshacer y no se puede borrar el que estás usando.</p>
+    <form method="POST" action="{{ url_for('perfiles.borrar') }}"
+          onsubmit="return confirm('¿Eliminar ese perfil y todos sus datos?');"
+          style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <input type="hidden" name="back" value="{{ back or '' }}">
+      <select name="slug" class="journal-type-select" style="max-width:200px;">
+        {% for p in perfiles if p.slug != perfil_activo.slug %}
+        <option value="{{ p.slug }}">{{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+      <input type="text" name="confirm_text" placeholder="Escribí BORRAR PERFIL" autocomplete="off">
+      <button type="submit" class="btn-danger">Eliminar</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+
 <script>
 // Preview en vivo del tema: al elegir un swatch, aplica data-theme sin guardar.
 // Si no guardás, al navegar vuelve al tema guardado (la página recarga con settings.theme).

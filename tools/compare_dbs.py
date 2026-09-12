@@ -1,16 +1,9 @@
 """Compara conteos de filas por tabla entre dos DBs (chequeo post-migración)."""
 import os
-import sqlite3
 import sys
 
-
-def counts(path):
-    c = sqlite3.connect(path)
-    tabs = [r[0] for r in c.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
-    out = {t: c.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] for t in sorted(tabs)}
-    c.close()
-    return out
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from database.conn import table_counts as counts
 
 
 # Tras __main__ para que counts() se pueda importar (lo usa la migración a perfiles).

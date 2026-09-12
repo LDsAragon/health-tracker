@@ -60,6 +60,17 @@ def is_valid_db(path):
     return bool(integrity) and integrity[0] == "ok" and CORE_TABLES.issubset(tables)
 
 
+def table_counts(path) -> dict:
+    """{tabla: filas} de una DB. Chequeo post-migración; también lo usa tools/compare_dbs.py."""
+    conn = sqlite3.connect(path)
+    try:
+        tablas = [r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+        return {t: conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] for t in sorted(tablas)}
+    finally:
+        conn.close()
+
+
 def backup_path(prefix: str) -> str:
     """Ruta para un backup automático: <dir de la DB>/backups/<prefix>-<ts>.db.
 

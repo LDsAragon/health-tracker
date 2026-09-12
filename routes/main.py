@@ -118,6 +118,7 @@ def week_view(date_str):
 @bp.route("/ajustes")
 def settings_view():
     return render_template("settings.html", themes=THEMES,
+                           perfiles_msg=request.args.get("perfiles"),
                            back=safe_back(request.args.get("back")))
 
 
