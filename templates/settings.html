@@ -1,6 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Ajustes{% endblock %}
 
+{#- Un switch deslizable. El checkbox va ANTES del hidden y el orden no es cosmético: sin
+    marcar solo viaja el hidden, marcado viajan los dos y request.form.get() devuelve el
+    primero. Así el camino sin JS manda el valor "apagado" en vez de dejarlo en blanco. -#}
+{% macro switch(key, on, off) %}
+<label class="switch">
+  <input type="checkbox" name="{{ key }}" id="{{ key }}" value="{{ on }}"
+         data-on="{{ on }}" data-off="{{ off }}"
+         {% if settings[key] == on %}checked{% endif %}>
+  <input type="hidden" name="{{ key }}" value="{{ off }}">
+  <span class="switch-track"><span class="switch-knob"></span></span>
+</label>
+{% endmacro %}
+
+{#- Segmentado: para los ajustes que son "esto o aquello" y no "prendido o apagado". Un
+    switch en 24h/12h haría preguntarse "¿12h está prendido?". -#}
+{% macro seg(key, opciones) %}
+<div class="seg" role="radiogroup" aria-label="{{ key }}">
+  {% for val, etiqueta in opciones %}
+  <label class="seg-opt">
+    <input type="radio" name="{{ key }}" value="{{ val }}"
+           {% if settings[key] == val %}checked{% endif %}>
+    <span>{{ etiqueta }}</span>
+  </label>
+  {% endfor %}
+</div>
+{% endmacro %}
+
 {% block content %}
 <div class="page-back" style="margin-bottom:14px;">
   <a href="{{ back or url_for('main.home') }}" class="back-link">&#8592; {{ 'Volver' if back else 'Calendario' }}</a>
@@ -8,210 +35,263 @@
 
 <div class="page-top">
   <h1 class="page-title">Ajustes</h1>
-  <p class="page-sub">Preferencias de la app.</p>
+  <p class="page-sub">Preferencias de la app. Cada cambio se guarda solo.</p>
 </div>
 
-<div class="rec-form-wrap">
-  <form class="rec-form" method="POST" action="{{ url_for('main.settings_save') }}">
-    <input type="hidden" name="back" value="{{ back or '' }}">
+<form id="ajustes-form" method="POST" action="{{ url_for('main.settings_save') }}">
+  <input type="hidden" name="back" value="{{ back or '' }}">
+
+  <details class="set-seccion" id="set-apariencia">
+    <summary>🎨 Apariencia</summary>
+    <div class="set-seccion-cuerpo">
+
+      <div class="set-row set-ancho">
+        <div class="set-texto">
+          <label>Tema</label>
+          <p class="set-desc">Elegí la paleta. Se aplica al instante y queda guardada.</p>
+        </div>
+        <div class="set-control">
+          <div class="theme-grid">
+            {% for t in themes %}
+            <label class="theme-swatch {% if settings.theme == t.slug %}active{% endif %}">
+              <input type="radio" name="theme" value="{{ t.slug }}" {% if settings.theme == t.slug %}checked{% endif %}>
+              <span class="theme-swatch-colors">
+                <span style="background:{{ t.bg }};"></span>
+                <span style="background:{{ t.surface }};"></span>
+                <span style="background:{{ t.text }};"></span>
+                <span style="background:{{ t.accent }};"></span>
+              </span>
+              <span class="theme-swatch-name">{{ t.name }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="set-row set-ancho">
+        <div class="set-texto">
+          <label for="date_format">Formato de fecha</label>
+          <p class="set-desc">Cómo se muestran y se escriben los campos de fecha (en Rutinas, mover objetivos, exportar).</p>
+        </div>
+        <div class="set-control">
+          {{ seg('date_format', [('dmy', 'dd/mm/aaaa'), ('mdy', 'mm/dd/aaaa'), ('ymd', 'aaaa-mm-dd')]) }}
+        </div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-texto">
+          <label for="time_format">Formato de hora</label>
+          <p class="set-desc">Cómo se muestran y se escriben las horas (rangos horarios, sello de las notas).</p>
+        </div>
+        <div class="set-control">
+          {{ seg('time_format', [('24h', '23:00'), ('12h', '11:00 PM')]) }}
+        </div>
+      </div>
+
+    </div>
+  </details>
+
+  <details class="set-seccion" id="set-calendario">
+    <summary>📅 Calendario y días</summary>
+    <div class="set-seccion-cuerpo">
+
+      <div class="set-row">
+        <div class="set-texto">
+          <label for="week_start">Inicio de semana</label>
+          <p class="set-desc">Con qué día empieza el calendario y la vista semanal.</p>
+        </div>
+        <div class="set-control">
+          {{ seg('week_start', [('mon', 'Lunes'), ('sun', 'Domingo')]) }}
+        </div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-texto">
+          <label for="start_view">Vista de inicio</label>
+          <p class="set-desc">Qué se abre al entrar o al tocar "Calendario".</p>
+        </div>
+        <div class="set-control">
+          {{ seg('start_view', [('month', 'Mes'), ('week', 'Semana'), ('today', 'Hoy')]) }}
+        </div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-texto">
+          <label for="note_form_default">Notas rápidas abiertas</label>
+          <p class="set-desc">Al abrir un día, si el campo para escribir una nota rápida aparece
+            abierto o como un botón para abrirlo.</p>
+        </div>
+        <div class="set-control">{{ switch('note_form_default', 'open', 'collapsed') }}</div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-texto">
+          <label for="journal_form_default">Notas especiales abiertas</label>
+          <p class="set-desc">Al abrir un día, si el formulario para agregar una nota especial
+            aparece abierto o como un botón para abrirlo.</p>
+        </div>
+        <div class="set-control">{{ switch('journal_form_default', 'open', 'collapsed') }}</div>
+      </div>
+
+    </div>
+  </details>
+
+  <details class="set-seccion" id="set-tareas">
+    <summary>📋 Tareas y avisos</summary>
+    <div class="set-seccion-cuerpo">
+
+      <div class="set-row set-ancho" data-recargar>
+        <div class="set-texto">
+          <label for="todo_alert">Aviso de tareas sin cerrar</label>
+          <p class="set-desc">Qué tan insistente es el recordatorio de las tareas que quedaron
+            abiertas. El aviso nunca mueve nada: solo te lo muestra.</p>
+        </div>
+        <div class="set-control">
+          {{ seg('todo_alert', [('modal', 'Aviso al abrir + contador'), ('badge', 'Solo el contador'), ('off', 'Sin avisos')]) }}
+        </div>
+      </div>
+
+      <div class="set-row set-ancho">
+        <div class="set-texto">
+          <label for="todo_overdue_from">Cuándo una tarea está "sin cerrar"</label>
+          <p class="set-desc">Desde qué antigüedad cuenta como pendiente vieja. Con
+            <b>semanas anteriores</b>, lo que dejaste a medias esta semana todavía no molesta.</p>
+        </div>
+        <div class="set-control">
+          {{ seg('todo_overdue_from', [('week', 'De semanas anteriores'), ('day', 'De cualquier día pasado')]) }}
+        </div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-texto">
+          <label for="todo_notify">Notificación del sistema</label>
+          <p class="set-desc">Además del aviso dentro de la app, mandar una notificación del
+            escritorio al abrir Bitácora si hay tareas sin cerrar. Solo se dispara al arrancar:
+            la app no queda corriendo en segundo plano.</p>
+        </div>
+        <div class="set-control">{{ switch('todo_notify', 'on', 'off') }}</div>
+      </div>
+
+    </div>
+  </details>
+
+  <details class="set-seccion" id="set-escritorio">
+    <summary>🖥️ Escritorio</summary>
+    <div class="set-seccion-cuerpo">
+
+      <div class="set-row">
+        <div class="set-texto">
+          <label for="widget_autostart">Abrir el widget al iniciar</label>
+          <p class="set-desc">Un panel chico que vive en el escritorio con las tareas de hoy, el
+            mes y un campo para anotar. Podés cerrar la ventana grande y dejarlo solo.</p>
+          {# form= apunta a un <form> de afuera: anidar formularios es HTML inválido y el
+             navegador se come el de adentro. #}
+          <button type="submit" form="abrir-widget-form" class="todo-act" style="margin-top:9px;">Abrirlo ahora</button>
+        </div>
+        <div class="set-control">{{ switch('widget_autostart', 'on', 'off') }}</div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-texto">
+          <label for="cerrar_a_bandeja">Seguir corriendo al cerrar</label>
+          <p class="set-desc">Con el área de notificación disponible, cerrar esconde la ventana y
+            el programa sigue con su icono ahí (botón derecho → Salir para terminarlo). En Linux
+            no hay área de notificación, así que cerrar cierra igual.</p>
+        </div>
+        <div class="set-control">{{ switch('cerrar_a_bandeja', 'on', 'off') }}</div>
+      </div>
+
+    </div>
+  </details>
+
+  <details class="set-seccion" id="set-menu">
+    <summary>🧭 Qué aparece en el menú</summary>
+    <div class="set-seccion-cuerpo">
+
+      <div class="set-row" data-recargar>
+        <div class="set-texto">
+          <label for="show_todos">📋 Tareas</label>
+          <p class="set-desc">El visor con todas las listas juntas.</p>
+        </div>
+        <div class="set-control">{{ switch('show_todos', 'show', 'hide') }}</div>
+      </div>
+
+      <div class="set-row" data-recargar>
+        <div class="set-texto">
+          <label for="show_stats">📈 Estadísticas</label>
+          <p class="set-desc">Los gráficos de lo que vas anotando.</p>
+        </div>
+        <div class="set-control">{{ switch('show_stats', 'show', 'hide') }}</div>
+      </div>
+
+      <div class="set-row" data-recargar>
+        <div class="set-texto">
+          <label for="show_export">💾 Datos</label>
+          <p class="set-desc">Exportar CSV, backup y restaurar la base de datos.</p>
+        </div>
+        <div class="set-control">{{ switch('show_export', 'show', 'hide') }}</div>
+      </div>
+
+    </div>
+  </details>
+
+  <details class="set-seccion" id="set-detalles">
+    <summary>✨ Detalles</summary>
+    <div class="set-seccion-cuerpo">
+
+      <div class="set-row">
+        <div class="set-texto">
+          <label for="pet">Mascotita al completar</label>
+          <p class="set-desc">Un dibujito ASCII que asoma de vez en cuando al marcar una rutina o
+            una tarea como hecha — no en cada una, para que no canse.</p>
+        </div>
+        <div class="set-control">
+          {{ seg('pet', [('cat', '🐱 Gatito'), ('dog', '🐶 Perrito'), ('none', 'Sin mascota')]) }}
+        </div>
+      </div>
+
+    </div>
+  </details>
+
+  {# Lo esconde ajustes.js. Si el JS se rompe, este es el único camino que queda para cambiar
+     un ajuste, así que la plantilla no puede dejar de mandarlo. #}
+  <p class="set-guardar-fallback" style="margin:16px 0 0;">
+    <button type="submit" class="btn-primary">Guardar</button>
+  </p>
+</form>
+
+<form id="abrir-widget-form" method="POST" action="{{ url_for('widget.abrir') }}"></form>
+
+<div class="set-guardado" id="set-guardado" role="status" aria-live="polite">&#10003; Guardado</div>
+
+<details class="set-seccion" id="set-atajos" style="margin-top:26px;">
+  <summary>⌨️ Atajos de teclado</summary>
+  <div class="set-seccion-cuerpo">
+    <p class="set-desc" style="margin:12px 0;">Funcionan en toda la app, tanto en el navegador
+      como en la ventana de escritorio.</p>
     <div class="field-group">
-      <label>Tema</label>
-      <p class="page-sub" style="margin:0 0 8px;">Elegí la paleta — se previsualiza al instante; guardá para fijarla.</p>
-      <div class="theme-grid">
-        {% for t in themes %}
-        <label class="theme-swatch {% if settings.theme == t.slug %}active{% endif %}">
-          <input type="radio" name="theme" value="{{ t.slug }}" {% if settings.theme == t.slug %}checked{% endif %}>
-          <span class="theme-swatch-colors">
-            <span style="background:{{ t.bg }};"></span>
-            <span style="background:{{ t.surface }};"></span>
-            <span style="background:{{ t.text }};"></span>
-            <span style="background:{{ t.accent }};"></span>
-          </span>
-          <span class="theme-swatch-name">{{ t.name }}</span>
-        </label>
-        {% endfor %}
+      <label>Generales</label>
+      <div class="shortcut-list">
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + rueda del mouse</span><span>acercar / alejar (zoom)</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>&minus;</kbd></span><span>acercar / alejar (zoom)</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>0</kbd></span><span>restablecer el zoom (también <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>)</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>R</kbd></span><span>recargar la página / ventana</span></div>
       </div>
     </div>
-
-    <button type="submit" class="btn-primary">Guardar</button>
-
-    <div class="field-group">
-      <label for="date_format">Formato de fecha</label>
-      <p class="page-sub" style="margin:0 0 8px;">Cómo se muestran y se escriben los campos de fecha (en Rutinas, mover objetivos, exportar).</p>
-      <select name="date_format" id="date_format" class="journal-type-select" style="max-width:280px;">
-        <option value="dmy" {% if settings.date_format == 'dmy' %}selected{% endif %}>dd/mm/aaaa — español</option>
-        <option value="mdy" {% if settings.date_format == 'mdy' %}selected{% endif %}>mm/dd/aaaa — inglés</option>
-        <option value="ymd" {% if settings.date_format == 'ymd' %}selected{% endif %}>aaaa-mm-dd — ISO</option>
-      </select>
+    <div class="field-group" style="margin-top:22px;">
+      <label>Rueda de emociones (con la rueda abierta)</label>
+      <div class="shortcut-list">
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Q</kbd> / <kbd>E</kbd> &nbsp;o&nbsp; <kbd>&larr;</kbd> / <kbd>&rarr;</kbd></span><span>girar la rueda</span></div>
+      </div>
     </div>
-
-    <div class="field-group">
-      <label for="time_format">Formato de hora</label>
-      <p class="page-sub" style="margin:0 0 8px;">Cómo se muestran y se escriben las horas (rangos horarios, sello de las notas).</p>
-      <select name="time_format" id="time_format" class="journal-type-select" style="max-width:280px;">
-        <option value="24h" {% if settings.time_format == '24h' %}selected{% endif %}>24 horas (23:00)</option>
-        <option value="12h" {% if settings.time_format == '12h' %}selected{% endif %}>12 horas — AM/PM (11:00 PM)</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="week_start">Inicio de semana</label>
-      <p class="page-sub" style="margin:0 0 8px;">Con qué día empieza el calendario y la vista semanal.</p>
-      <select name="week_start" id="week_start" class="journal-type-select" style="max-width:280px;">
-        <option value="mon" {% if settings.week_start == 'mon' %}selected{% endif %}>Lunes</option>
-        <option value="sun" {% if settings.week_start == 'sun' %}selected{% endif %}>Domingo</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="start_view">Vista de inicio</label>
-      <p class="page-sub" style="margin:0 0 8px;">Qué se abre al entrar o al tocar "Calendario".</p>
-      <select name="start_view" id="start_view" class="journal-type-select" style="max-width:280px;">
-        <option value="month" {% if settings.start_view == 'month' %}selected{% endif %}>Mes</option>
-        <option value="week" {% if settings.start_view == 'week' %}selected{% endif %}>Semana</option>
-        <option value="today" {% if settings.start_view == 'today' %}selected{% endif %}>Hoy</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="widget_autostart">Widget de escritorio</label>
-      <p class="page-sub" style="margin:0 0 8px;">Un panel chico que vive en el escritorio con las
-        tareas de hoy, el mes y un campo para anotar. Podés cerrar la ventana grande y dejarlo solo.</p>
-      <select name="widget_autostart" id="widget_autostart" class="journal-type-select" style="max-width:280px;">
-        <option value="off" {% if settings.widget_autostart == 'off' %}selected{% endif %}>Abrirlo a mano</option>
-        <option value="on" {% if settings.widget_autostart == 'on' %}selected{% endif %}>Abrirlo al iniciar la app</option>
-      </select>
-      <form method="POST" action="{{ url_for('widget.abrir') }}" style="margin-top:10px;">
-        <button type="submit" class="btn-primary">Abrir el widget ahora</button>
-      </form>
-    </div>
-
-    <div class="field-group">
-      <label for="cerrar_a_bandeja">Al cerrar la ventana</label>
-      <p class="page-sub" style="margin:0 0 8px;">Con el área de notificación disponible, cerrar
-        esconde la ventana y el programa sigue corriendo con su icono ahí (botón derecho → Salir para
-        terminarlo). En Linux no hay área de notificación, así que cerrar cierra igual.</p>
-      <select name="cerrar_a_bandeja" id="cerrar_a_bandeja" class="journal-type-select" style="max-width:280px;">
-        <option value="on" {% if settings.cerrar_a_bandeja == 'on' %}selected{% endif %}>Seguir en el área de notificación</option>
-        <option value="off" {% if settings.cerrar_a_bandeja == 'off' %}selected{% endif %}>Cerrar del todo</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="show_todos">Acceso a Tareas</label>
-      <p class="page-sub" style="margin:0 0 8px;">Mostrar u ocultar el tab 📋 <b>Tareas</b> (el visor con todas las listas juntas) en la barra de navegación.</p>
-      <select name="show_todos" id="show_todos" class="journal-type-select" style="max-width:280px;">
-        <option value="show" {% if settings.show_todos == 'show' %}selected{% endif %}>Mostrar en el navbar</option>
-        <option value="hide" {% if settings.show_todos == 'hide' %}selected{% endif %}>Ocultar del navbar</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="todo_alert">Aviso de tareas sin cerrar</label>
-      <p class="page-sub" style="margin:0 0 8px;">Qué tan insistente es el recordatorio de las tareas que quedaron abiertas. El aviso nunca mueve nada: solo te lo muestra.</p>
-      <select name="todo_alert" id="todo_alert" class="journal-type-select" style="max-width:280px;">
-        <option value="modal" {% if settings.todo_alert == 'modal' %}selected{% endif %}>Aviso al abrir la app + contador</option>
-        <option value="badge" {% if settings.todo_alert == 'badge' %}selected{% endif %}>Solo el contador en el navbar</option>
-        <option value="off" {% if settings.todo_alert == 'off' %}selected{% endif %}>Sin avisos</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="todo_overdue_from">Cuándo una tarea está "sin cerrar"</label>
-      <p class="page-sub" style="margin:0 0 8px;">Desde qué antigüedad cuenta como pendiente vieja. Con <b>semanas anteriores</b>, lo que dejaste a medias esta semana todavía no molesta.</p>
-      <select name="todo_overdue_from" id="todo_overdue_from" class="journal-type-select" style="max-width:280px;">
-        <option value="week" {% if settings.todo_overdue_from == 'week' %}selected{% endif %}>De semanas anteriores</option>
-        <option value="day" {% if settings.todo_overdue_from == 'day' %}selected{% endif %}>De cualquier día pasado</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="todo_notify">Notificación del sistema</label>
-      <p class="page-sub" style="margin:0 0 8px;">Además del aviso dentro de la app, mandar una notificación del escritorio al abrir Bitácora si hay tareas sin cerrar. Solo se dispara al arrancar: la app no queda corriendo en segundo plano.</p>
-      <select name="todo_notify" id="todo_notify" class="journal-type-select" style="max-width:280px;">
-        <option value="off" {% if settings.todo_notify == 'off' %}selected{% endif %}>No mandar</option>
-        <option value="on" {% if settings.todo_notify == 'on' %}selected{% endif %}>Mandar al arrancar</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="show_stats">Acceso a Estadísticas</label>
-      <p class="page-sub" style="margin:0 0 8px;">Mostrar u ocultar el enlace 📈 Estadísticas en la barra de navegación.</p>
-      <select name="show_stats" id="show_stats" class="journal-type-select" style="max-width:280px;">
-        <option value="show" {% if settings.show_stats == 'show' %}selected{% endif %}>Mostrar en el navbar</option>
-        <option value="hide" {% if settings.show_stats == 'hide' %}selected{% endif %}>Ocultar del navbar</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="show_export">Acceso a Datos</label>
-      <p class="page-sub" style="margin:0 0 8px;">Mostrar u ocultar el tab <b>Datos</b> (exportar CSV, backup y restaurar la base de datos) en la barra de navegación.</p>
-      <select name="show_export" id="show_export" class="journal-type-select" style="max-width:280px;">
-        <option value="show" {% if settings.show_export == 'show' %}selected{% endif %}>Mostrar en el navbar</option>
-        <option value="hide" {% if settings.show_export == 'hide' %}selected{% endif %}>Ocultar del navbar</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="note_form_default">Notas rápidas al abrir un día</label>
-      <p class="page-sub" style="margin:0 0 8px;">Si el campo para escribir una nota rápida aparece abierto o como un botón para abrirlo.</p>
-      <select name="note_form_default" id="note_form_default" class="journal-type-select" style="max-width:280px;">
-        <option value="open" {% if settings.note_form_default == 'open' %}selected{% endif %}>Mostrar el campo abierto</option>
-        <option value="collapsed" {% if settings.note_form_default == 'collapsed' %}selected{% endif %}>Mostrar botón para abrirlo</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="journal_form_default">Notas especiales al abrir un día</label>
-      <p class="page-sub" style="margin:0 0 8px;">Si el formulario para agregar una nota especial aparece abierto o como un botón para abrirlo.</p>
-      <select name="journal_form_default" id="journal_form_default" class="journal-type-select" style="max-width:280px;">
-        <option value="open" {% if settings.journal_form_default == 'open' %}selected{% endif %}>Mostrar el formulario abierto</option>
-        <option value="collapsed" {% if settings.journal_form_default == 'collapsed' %}selected{% endif %}>Mostrar botón para abrirlo</option>
-      </select>
-    </div>
-
-    <div class="field-group">
-      <label for="pet">Mascotita al completar</label>
-      <p class="page-sub" style="margin:0 0 8px;">Un dibujito ASCII que asoma de vez en cuando al marcar una rutina o to-do como hecho — no en cada uno, para que no canse.</p>
-      <select name="pet" id="pet" class="journal-type-select" style="max-width:280px;">
-        <option value="cat" {% if settings.pet == 'cat' %}selected{% endif %}>🐱 Gatito</option>
-        <option value="dog" {% if settings.pet == 'dog' %}selected{% endif %}>🐶 Perrito</option>
-        <option value="none" {% if settings.pet == 'none' %}selected{% endif %}>Sin mascota</option>
-      </select>
-    </div>
-
-    <button type="submit" class="btn-primary">Guardar</button>
-  </form>
-</div>
-
-<!-- Atajos de teclado (solo informativo) -->
-<div class="page-top" style="margin-top:36px;margin-bottom:12px;">
-  <h2 class="page-title" style="font-size:20px;">Atajos de teclado</h2>
-  <p class="page-sub">Funcionan en toda la app, tanto en el navegador como en la ventana de escritorio.</p>
-</div>
-<div class="rec-form-wrap">
-  <div class="field-group">
-    <label>Generales</label>
-    <div class="shortcut-list">
-      <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + rueda del mouse</span><span>acercar / alejar (zoom)</span></div>
-      <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>−</kbd></span><span>acercar / alejar (zoom)</span></div>
-      <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>0</kbd></span><span>restablecer el zoom (también <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>)</span></div>
-      <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>R</kbd></span><span>recargar la página / ventana</span></div>
+    <div class="field-group" style="margin-top:22px;">
+      <label>En cualquier pantalla</label>
+      <div class="shortcut-list">
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Esc</kbd></span><span>&#9312; cierra la rueda de emociones si está abierta &rarr; &#9313; cancela el panel o formulario inline abierto &rarr; &#9314; navega atrás si hay un enlace Volver</span></div>
+      </div>
     </div>
   </div>
-  <div class="field-group" style="margin-top:22px;">
-    <label>Rueda de emociones (con la rueda abierta)</label>
-    <div class="shortcut-list">
-      <div class="shortcut-row"><span class="shortcut-keys"><kbd>Q</kbd> / <kbd>E</kbd> &nbsp;o&nbsp; <kbd>←</kbd> / <kbd>→</kbd></span><span>girar la rueda</span></div>
-    </div>
-  </div>
-  <div class="field-group" style="margin-top:22px;">
-    <label>En cualquier pantalla</label>
-    <div class="shortcut-list">
-      <div class="shortcut-row"><span class="shortcut-keys"><kbd>Esc</kbd></span><span>① cierra la rueda de emociones si está abierta → ② cancela el panel o formulario inline abierto → ③ navega atrás si hay un enlace Volver</span></div>
-    </div>
-  </div>
-</div>
+</details>
 
 
 {% if perfil_activo %}
@@ -279,15 +359,16 @@
   {% endif %}
 </div>
 {% endif %}
+{% endblock %}
 
-
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/colapsables.js') }}"></script>
 <script>
-// Preview en vivo del tema: al elegir un swatch, aplica data-theme sin guardar.
-// Si no guardás, al navegar vuelve al tema guardado (la página recarga con settings.theme).
-document.querySelectorAll('input[name="theme"]').forEach(radio => {
-  radio.addEventListener('change', () => {
-    document.documentElement.setAttribute('data-theme', radio.value);
-  });
-});
+  const SET_URL = "{{ url_for('main.settings_set') }}";
+  // Todo abierto menos los atajos, que son una referencia y no algo que se toque.
+  ['apariencia', 'calendario', 'tareas', 'escritorio', 'menu', 'detalles'].forEach(n =>
+    recordarColapsable('set-' + n, 'setOpen-' + n, true));
+  recordarColapsable('set-atajos', 'setOpen-atajos', false);
 </script>
+<script src="{{ url_for('static', filename='js/ajustes.js') }}"></script>
 {% endblock %}

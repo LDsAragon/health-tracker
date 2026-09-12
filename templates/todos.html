@@ -151,19 +151,11 @@
 {% endblock %}
 
 {% block page_scripts %}
+<script src="{{ url_for('static', filename='js/colapsables.js') }}"></script>
 <script>
-(function () {
-  function recordar(id, key, abiertoPorDefecto) {
-    const d = document.getElementById(id);
-    if (!d) return;
-    const guardado = localStorage.getItem(key);
-    d.open = guardado === null ? abiertoPorDefecto : guardado === '1';
-    d.addEventListener('toggle', () => localStorage.setItem(key, d.open ? '1' : '0'));
-  }
-  // El alta es la acción principal de la pantalla, así que arranca abierta; el resumen son
-  // métricas y arranca cerrado. Los dos recuerdan cómo los dejó el usuario.
-  recordar('todos-nueva', 'todosNuevaOpen', true);
-  recordar('todos-resumen', 'todosResumenOpen', false);
-})();
+// El alta es la acción principal de la pantalla, así que arranca abierta; el resumen son
+// métricas y arranca cerrado. Los dos recuerdan cómo los dejó el usuario.
+recordarColapsable('todos-nueva', 'todosNuevaOpen', true);
+recordarColapsable('todos-resumen', 'todosResumenOpen', false);
 </script>
 {% endblock %}

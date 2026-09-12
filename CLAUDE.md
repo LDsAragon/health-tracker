@@ -62,6 +62,8 @@ templates/              # base.html → herencia; _macros.html para date_field
 static/css/             # base.css, calendar.css, day.css, pages.css, wheel.css, widget.css
 static/js/
   zoom.js               # Zoom Ctrl+rueda / Ctrl±, persistido en localStorage
+  colapsables.js        # recordarColapsable(): estado de un <details> en localStorage
+  ajustes.js            # Guardado al instante de Ajustes; esconde el botón Guardar
   date-es.js            # Campo de fecha con formato configurable (hidden ISO para el backend)
   day.js / stats.js     # JS de la vista del día y del constructor de gráficos
   field-registry.js     # window.FIELD_BUILDERS: tipo → builder (despacho único)
@@ -107,7 +109,7 @@ Prefijos de backup:
 ## Tests
 
 ```bash
-pytest tests/          # 388 tests, ~21s
+pytest tests/          # 456 tests, ~25s
 ```
 
 Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).
@@ -291,6 +293,35 @@ sin una extensión, así que ahí cerrar cierra. El `NotifyIcon` corre en su **p
 propio `Application.Run()`** — válido en WinForms (un bucle por hilo) y evita tocar los internals de
 pywebview para marshalear a su hilo de interfaz.
 
+## La pantalla de Ajustes
+
+Cero `<select>` entre los 16 ajustes, seis secciones colapsables y **guardado al instante**.
+
+- **Tres controles, y cuál va dónde no es estético**: switch deslizable para los 8 que se leen como
+  prendido/apagado (aunque el vocabulario cambie: `on/off`, `show/hide`, `open/collapsed`);
+  segmentado para los que son **esto o aquello** (`24h/12h`, `mon/sun`, `week/day`) y para los de 3
+  opciones; swatches para el tema. Un switch en "24 h" haría preguntar *"¿12 h está prendido?"*.
+- ⚠️ **El switch es un `<input type="checkbox">` escondido + un `<input type="hidden">` DESPUÉS**.
+  Un checkbox sin marcar no manda nada: sin el hidden, apagar un switch desde el formulario dejaría
+  el ajuste en blanco en vez de apagado. El orden no es cosmético — marcado viajan los dos y
+  `request.form.get()` devuelve el primero. Hay un test por switch para las dos cosas.
+- ⚠️ **El botón Guardar sigue en la plantilla; lo esconde `ajustes.js`.** Si el JS se rompiera y el
+  guardado al instante fuera el único camino, los ajustes quedarían **imposibles de cambiar**.
+  `POST /ajustes/guardar` (todo el formulario) y `POST /ajustes/set` (uno solo, 204) comparten la
+  validación en `_guardar_ajuste()` para que no puedan divergir en qué aceptan.
+- ⚠️ **`show_todos`, `show_stats`, `show_export` y `todo_alert` llevan `data-recargar`**: cambian el
+  navbar, que se renderiza en el servidor. Guardarlos sin recargar los persiste pero el tab no
+  aparece, y se lee como que no pasó nada.
+- **El tema ya no se previsualiza y confirma**: se aplica y queda. Es la consecuencia de sacar el
+  botón Guardar, y el texto de la pantalla lo dice.
+- El botón "Abrir el widget ahora" usa `form="abrir-widget-form"` apuntando a un `<form>` de afuera:
+  anidar formularios es HTML inválido y el navegador se come el de adentro (antes estaba anidado).
+- Los colores salen todos de `var()`, y el texto sobre `var(--accent)` es `#fff` **por convención
+  del repo** (`.btn-primary`, `.weekday-btn`, `.todo-check`), no por contraste medido: el
+  segmentado tiene que parecerse al de los días de la semana en Rutinas.
+- El colapsable es `recordarColapsable()` en `static/js/colapsables.js`, compartido con el visor de
+  tareas. Dos usos se toleran copiados, tres se comparten.
+
 ## Auto-actualización
 
 `updater.py` + `routes/update.py` — chequea GitHub Releases (`LDsAragon/health-tracker`) en un hilo daemon al arrancar (`check_in_background()` desde `desktop.py`). Flujo: `/update/status` → `/update/download` → `/update/progress` → `/update/apply` (backup DB → extrae asset → lanza script externo) → `/update/quit`. UI en `base.html` + `static/css/pages.css`.
@@ -308,7 +339,10 @@ pywebview para marshalear a su hilo de interfaz.
 - Sin comentarios que expliquen el *qué* — solo el *por qué* cuando no es obvio.
 - `MESES[]` hardcodeado en `helpers.py` (no `calendar.month_name` — depende del locale del sistema).
 - Renames de datos de usuario: solo con señal explícita (hidden `field_oldlabel[]` o control de UI); nunca por heurística.
-- **Agregar un ajuste**: una entrada en `appconfig.SETTINGS` (default + choices). `settings_save()` itera el esquema y valida contra `choices`; no hay que tocar la ruta.
+- **Agregar un ajuste**: una entrada en `appconfig.SETTINGS` (default + choices) **y un control en
+  `templates/settings.html`** — la copia en español vive en la plantilla, no en el esquema. Las dos
+  rutas de guardado validan contra `choices`, así que no hay que tocarlas. `test_ajustes.py` falla
+  si el ajuste nuevo se queda sin control.
 - **Agregar un tipo de campo**: entrada en `fieldtypes.FIELD_TYPES` + builder registrado en `static/js/field-registry.js` + su display en `day.html`.
 - Los valores de las entradas se guardan como `{etiqueta: valor}` en `values_json` — por eso renombrar un campo obliga a `migrate_entry_values()` (que además re-clava las etiquetas en la tabla `charts`).
 

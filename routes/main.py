@@ -128,15 +128,34 @@ def version_view():
                            back=safe_back(request.args.get("back")))
 
 
+def _guardar_ajuste(key, val) -> bool:
+    """Valida contra el esquema único (appconfig.SETTINGS) y guarda. False si no es válido.
+
+    La usan los DOS caminos de guardado —el formulario y el guardado al instante— para que no
+    puedan divergir en qué aceptan.
+    """
+    spec = SETTINGS.get(key)
+    if spec is None or val is None or val not in spec["choices"]:
+        return False
+    db.set_setting(key, val)
+    return True
+
+
 @bp.route("/ajustes/guardar", methods=["POST"])
 def settings_save():
-    # Valida e itera el esquema único (appconfig.SETTINGS): agregar un ajuste = 1 entrada allá.
-    for key, spec in SETTINGS.items():
-        val = request.form.get(key)
-        if val is not None and val in spec["choices"]:
-            db.set_setting(key, val)
+    """Camino sin JS. El botón que postea acá lo esconde ajustes.js: si el JS se rompe, queda
+    visible y los ajustes se siguen pudiendo cambiar."""
+    for key in SETTINGS:
+        _guardar_ajuste(key, request.form.get(key))
     # Se queda en /ajustes tras guardar; preserva el destino del botón "Volver".
     return redirect(url_for("main.settings_view", back=safe_back(request.form.get("back"))))
+
+
+@bp.route("/ajustes/set", methods=["POST"])
+def settings_set():
+    """Guardado al instante de un ajuste suelto. 204 como el resto del AJAX del repo."""
+    ok = _guardar_ajuste(request.form.get("key"), request.form.get("value"))
+    return ("", 204) if ok else ("", 400)
 
 
 # ── Estadísticas ─────────────────────────────────────────────────────────────────

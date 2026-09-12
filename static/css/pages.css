@@ -995,3 +995,57 @@ select.journal-cat-select {
   padding: 5px 9px; font-size: 13px; background: var(--surface);
   border: 1px solid var(--border); border-radius: 6px; color: var(--text); max-width: 220px;
 }
+
+/* ── Ajustes: secciones, switches y segmentados ───────────────────────────── */
+/* Todo con var(): el tag HOY ya dio el problema de un color hardcodeado que en los temas
+   claros quedaba ilegible. Nada de #fff ni rgba blancos acá. */
+
+.set-seccion { border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); margin-bottom: 12px; }
+.set-seccion > summary { cursor: pointer; padding: 13px 16px; font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 9px; list-style: none; border-radius: var(--r); }
+.set-seccion > summary::-webkit-details-marker { display: none; }
+.set-seccion > summary::after { content: '▾'; margin-left: auto; color: var(--muted); font-size: 12px; transition: transform .18s ease; }
+.set-seccion[open] > summary::after { transform: rotate(180deg); }
+.set-seccion > summary:hover { background: var(--hover); }
+.set-seccion-cuerpo { padding: 2px 16px 6px; }
+
+/* Una fila = texto a la izquierda, control a la derecha; apilado en pantallas angostas. */
+.set-row { display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line); }
+.set-row:first-child { border-top: none; }
+.set-texto { flex: 1 1 auto; min-width: 0; }
+.set-texto label { display: block; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; cursor: pointer; }
+.set-desc { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.set-control { flex: 0 0 auto; padding-top: 2px; }
+/* Los de 3 opciones y el tema necesitan todo el ancho: van debajo del texto. */
+.set-row.set-ancho { display: block; }
+.set-row.set-ancho .set-control { margin-top: 10px; padding-top: 0; }
+
+/* El switch deslizable. Por dentro es un checkbox, que es lo que da teclado y foco gratis;
+   lo que no se quería era *ver* un checkbox. */
+.switch { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.switch-track { width: 46px; height: 26px; border-radius: 13px; background: var(--surface2); border: 1px solid var(--border); transition: background .2s ease, border-color .2s ease; display: block; }
+.switch-knob { position: absolute; top: 4px; left: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--muted); transition: transform .2s cubic-bezier(.4,.1,.2,1.2), background .2s ease; display: block; }
+.switch:has(input:checked) .switch-track { background: var(--accent); border-color: var(--accent); }
+.switch:has(input:checked) .switch-knob { transform: translateX(20px); background: #fff; }
+.switch:has(input:focus-visible) .switch-track { box-shadow: 0 0 0 2px var(--accent); }
+.switch:hover .switch-track { border-color: var(--accent); }
+
+/* Segmentado: para los "esto o aquello" (24h/12h, Lunes/Domingo), donde un switch haría
+   preguntarse "¿12h está prendido?". */
+.seg { display: inline-flex; flex-wrap: wrap; gap: 3px; padding: 3px; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; }
+.seg-opt { position: relative; }
+.seg-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.seg-opt > span { display: block; padding: 6px 13px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; transition: background .15s ease, color .15s ease; }
+.seg-opt:hover > span { color: var(--text); }
+.seg-opt:has(input:checked) > span { background: var(--accent); color: #fff; }
+.seg-opt:has(input:focus-visible) > span { box-shadow: 0 0 0 2px var(--accent); }
+
+/* El ✓ fugaz: sin él, guardar sin botón se siente como que no hizo nada. */
+.set-guardado { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(12px); background: var(--surface); color: var(--green); border: 1px solid rgba(34,197,94,.35); box-shadow: 0 4px 14px rgba(0,0,0,.25); padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; z-index: 60; }
+.set-guardado.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 620px) {
+  .set-row { display: block; }
+  .set-row .set-control { margin-top: 10px; padding-top: 0; }
+  .set-seccion-cuerpo { padding: 2px 13px 6px; }
+}
