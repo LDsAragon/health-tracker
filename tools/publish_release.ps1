@@ -34,7 +34,29 @@ if ($LASTEXITCODE) { Write-Error "git push falló"; exit 1 }
 git fetch --tags --quiet
 
 $fecha = Get-Date -Format yyyy-MM-dd
-$tag = if ($Tag) { $Tag } else { "v$fecha" }
+
+function Test-ReleaseExiste($t) {
+    gh release view $t *> $null
+    return ($LASTEXITCODE -eq 0)
+}
+
+# Sin -Tag NUNCA se pisa un release existente: se busca el primer sufijo libre.
+# El default era "v<fecha>" a secas, asi que en un dia con un release ya publicado caia en
+# la rama de "ya existe" de abajo y le reemplazaba los archivos y las notas sin avisar. Y
+# encima el tag repetido compara MENOR que el del dia con sufijo (updater._version_tuple:
+# (2026,9,12) < (2026,9,12,2)), asi que el release nuevo no se le ofrecia a nadie.
+if ($Tag) {
+    $tag = $Tag
+} else {
+    $tag = "v$fecha"
+    $n = 0
+    while (Test-ReleaseExiste $tag) {
+        $n++
+        if ($n -gt 50) { Write-Error "mas de 50 releases hoy: pasa -Tag a mano"; exit 1 }
+        $tag = "v$fecha.$n"
+    }
+    if ($n) { Write-Output "Ya habia releases de hoy: publico como $tag" }
+}
 $zip = "dist\Bitacora-Windows-$fecha.zip"
 
 # Fecha en español para el título y el cuerpo del release
@@ -86,7 +108,8 @@ gh release view $tag *> $null
 if ($LASTEXITCODE) {
     gh release create $tag $zip $tgz --title $titulo --notes-file $notesFile --latest
 } else {
-    # ya existe el release de hoy: reemplazar archivos y actualizar notas
+    # Solo se llega aca con -Tag explicito (el default ya eligio un tag libre):
+    # re-publicar a proposito un tag que existe, reemplazando archivos y notas.
     gh release upload $tag $zip $tgz --clobber
     gh release edit $tag --title $titulo --notes-file $notesFile
 }
