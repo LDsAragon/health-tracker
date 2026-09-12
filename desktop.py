@@ -230,6 +230,45 @@ def _notify_overdue(flask_app):
     )
 
 
+def _al_mostrarse(principal):
+    """Corre cuando la ventana grande ya está en pantalla.
+
+    El handler de `shown` corre en un hilo aparte (webview/event.py), que es justo lo que
+    `create_window` necesita para crear una ventana en el acto.
+    """
+    import database as db
+    import tray
+    import widget
+
+    # La URL se captura ACÁ y una sola vez: después no se puede leer de webview.windows[0],
+    # porque si la ventana grande se cierra deja de estar en la lista (el servidor sigue vivo).
+    widget.configurar(principal, principal._url_prefix or "")
+
+    with_bandeja = tray.iniciar(
+        abrir_app=widget.mostrar_principal,
+        mostrar_widget=widget.abrir,
+        salir=lambda: os._exit(0),
+    )
+
+    # ⚠️ Solo se intercepta el cierre si HAY icono en la bandeja. Esconder la ventana sin
+    # icono dejaría el programa corriendo sin forma de mostrarlo ni de cerrarlo.
+    if with_bandeja and db.get_setting("cerrar_a_bandeja", "on") == "on":
+        principal.events.closing += lambda: _a_la_bandeja(principal)
+
+    if db.get_setting("widget_autostart", "off") == "on":
+        widget.abrir()
+
+
+def _a_la_bandeja(ventana):
+    """Devolver False cancela el cierre (webview/event.py: un handler que devuelve False hace
+    que `closing.set()` dé True y el backend aborte)."""
+    try:
+        ventana.hide()
+    except Exception:
+        return True    # si no se pudo esconder, mejor dejar que cierre de verdad
+    return False
+
+
 def main():
     _unblock_dlls()
     _migrate_from_old_appdata()
@@ -254,6 +293,7 @@ def main():
     from app import create_app
     flask_app = create_app()
 
+    import tray
     import updater
     updater.check_in_background()
 
@@ -267,7 +307,7 @@ def main():
     # botón "Descargar backup" no hace nada. Con esto: diálogo de guardado en
     # Windows, carpeta de descargas en Linux.
     webview.settings["ALLOW_DOWNLOADS"] = True
-    webview.create_window(
+    principal = webview.create_window(
         WINDOW_TITLE,
         flask_app,
         width=WINDOW_SIZE[0],
@@ -275,9 +315,11 @@ def main():
         min_size=MIN_SIZE,
         text_select=True,   # permitir seleccionar/copiar texto (notas, etc.)
     )
+    principal.events.shown += lambda: _al_mostrarse(principal)
     # private_mode=False + storage_path: persistir localStorage (zoom, tamaño de
     # celdas) entre sesiones — en modo privado pywebview lo borra al cerrar.
     webview.start(private_mode=False, storage_path=str(APP_DIR / "webview"))
+    tray.quitar()   # sin esto queda el icono fantasma en la bandeja
 
 
 if __name__ == "__main__":

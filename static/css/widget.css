@@ -1,0 +1,102 @@
+/* Widget de escritorio. Ventana real ~340px de ancho: todo pensado para esa medida. */
+
+.widget-body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  overflow-x: hidden;
+}
+
+/* La ventana es frameless, así que esta es la única barra de título que hay. */
+.w-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 8px 6px 12px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 5;
+}
+.w-marca { font-weight: 600; color: var(--accent); font-size: 13px; letter-spacing: .2px; }
+.w-bar-acciones { display: flex; gap: 2px; }
+.w-bar-acciones form { display: flex; }
+
+.w-icono {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; line-height: 1; padding: 4px 7px; border-radius: 6px;
+  text-decoration: none; display: inline-flex; align-items: center;
+}
+.w-icono:hover { background: var(--surface2); color: var(--text); }
+.w-on { color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.w-cerrar:hover { background: var(--red); color: #fff; }
+
+.w-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); }
+.w-tab {
+  flex: 1; text-align: center; padding: 7px 4px; font-size: 12px;
+  color: var(--muted); border-bottom: 2px solid transparent;
+}
+.w-tab:hover { color: var(--text); }
+.w-tab-on { color: var(--accent); border-bottom-color: var(--accent); }
+
+.w-main { padding: 10px 12px 14px; }
+
+.w-titulo {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--muted); margin: 8px 0 5px;
+}
+.w-alerta { color: var(--accent); }
+.w-vacio { color: var(--muted); font-size: 12px; margin: 4px 0 10px; }
+
+.w-lista { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.w-item { display: flex; align-items: flex-start; gap: 8px; }
+.w-item form { display: flex; flex-shrink: 0; }
+.w-check {
+  width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px;
+  border: 1.5px solid var(--border); border-radius: 5px; background: var(--surface2);
+  color: #fff; font-size: 11px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.w-check:hover { border-color: var(--accent); }
+.w-check-on { background: var(--accent); border-color: var(--accent); }
+.w-txt { flex: 1; line-height: 1.35; word-break: break-word; }
+.w-hecha .w-txt { text-decoration: line-through; color: var(--muted); }
+.w-fecha { font-size: 10px; color: var(--muted); flex-shrink: 0; padding-top: 2px; font-variant-numeric: tabular-nums; }
+
+.w-form { display: flex; gap: 6px; margin-top: 8px; }
+.w-form input[type="text"] {
+  flex: 1; min-width: 0; padding: 6px 9px; font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text);
+}
+.w-form input:focus, .w-form-nota textarea:focus { outline: none; border-color: var(--accent); }
+.w-btn {
+  padding: 6px 12px; background: var(--accent); color: #fff; border: none;
+  border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+}
+.w-btn:hover { filter: brightness(1.1); }
+.w-btn-ancho { width: 100%; margin-top: 8px; padding: 8px; }
+
+.w-form-nota textarea {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  padding: 8px 9px; font-size: 12px; font-family: inherit; line-height: 1.4;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text);
+}
+
+/* ── Calendario compacto ── */
+.w-mes { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-weight: 600; }
+.w-cal { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.w-cal th { font-size: 10px; color: var(--muted); font-weight: 500; padding-bottom: 3px; }
+.w-cal td { padding: 1px; text-align: center; }
+.w-cal form { display: block; }
+.w-dia {
+  width: 100%; aspect-ratio: 1; min-height: 30px;
+  background: var(--surface2); border: 1px solid transparent; border-radius: 6px;
+  color: var(--text); font-size: 12px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
+.w-dia:hover { border-color: var(--accent); }
+.w-dia-hoy { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.w-puntos { display: flex; gap: 2px; height: 4px; }
+.w-p { width: 4px; height: 4px; border-radius: 50%; display: block; }
+.w-p-nota  { background: var(--accent); }
+.w-p-rut   { background: var(--green, #6fbf73); }
+.w-p-tarea { background: var(--red, #ef4444); }

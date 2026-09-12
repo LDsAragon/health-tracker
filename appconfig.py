@@ -29,6 +29,8 @@ SETTINGS = {
     "todo_alert":        {"default": "modal", "choices": ("off", "badge", "modal")},
     "todo_overdue_from": {"default": "week",  "choices": ("week", "day")},
     "todo_notify":       {"default": "off",   "choices": ("on", "off")},
+    "widget_autostart":  {"default": "off",   "choices": ("on", "off")},
+    "cerrar_a_bandeja":  {"default": "on",    "choices": ("on", "off")},
 }
 
 # Clave de la tabla settings que NO va en SETTINGS: guarda una fecha ISO libre (el lunes de

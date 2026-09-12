@@ -74,6 +74,30 @@
     </div>
 
     <div class="field-group">
+      <label for="widget_autostart">Widget de escritorio</label>
+      <p class="page-sub" style="margin:0 0 8px;">Un panel chico que vive en el escritorio con las
+        tareas de hoy, el mes y un campo para anotar. Podés cerrar la ventana grande y dejarlo solo.</p>
+      <select name="widget_autostart" id="widget_autostart" class="journal-type-select" style="max-width:280px;">
+        <option value="off" {% if settings.widget_autostart == 'off' %}selected{% endif %}>Abrirlo a mano</option>
+        <option value="on" {% if settings.widget_autostart == 'on' %}selected{% endif %}>Abrirlo al iniciar la app</option>
+      </select>
+      <form method="POST" action="{{ url_for('widget.abrir') }}" style="margin-top:10px;">
+        <button type="submit" class="btn-primary">Abrir el widget ahora</button>
+      </form>
+    </div>
+
+    <div class="field-group">
+      <label for="cerrar_a_bandeja">Al cerrar la ventana</label>
+      <p class="page-sub" style="margin:0 0 8px;">Con el área de notificación disponible, cerrar
+        esconde la ventana y el programa sigue corriendo con su icono ahí (botón derecho → Salir para
+        terminarlo). En Linux no hay área de notificación, así que cerrar cierra igual.</p>
+      <select name="cerrar_a_bandeja" id="cerrar_a_bandeja" class="journal-type-select" style="max-width:280px;">
+        <option value="on" {% if settings.cerrar_a_bandeja == 'on' %}selected{% endif %}>Seguir en el área de notificación</option>
+        <option value="off" {% if settings.cerrar_a_bandeja == 'off' %}selected{% endif %}>Cerrar del todo</option>
+      </select>
+    </div>
+
+    <div class="field-group">
       <label for="show_todos">Acceso a Tareas</label>
       <p class="page-sub" style="margin:0 0 8px;">Mostrar u ocultar el tab 📋 <b>Tareas</b> (el visor con todas las listas juntas) en la barra de navegación.</p>
       <select name="show_todos" id="show_todos" class="journal-type-select" style="max-width:280px;">

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="{{ settings.theme }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitácora</title>
+  {# Plantilla propia y no base.html: acá no van navbar, buscador, rueda de emociones ni zoom. #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/widget.css') }}">
+</head>
+<body class="widget-body">
+
+{# Sin barra de título del sistema (la ventana es frameless): esta fila es la nuestra.
+   El resto de la ventana arrastra solo, por easy_drag. #}
+<header class="w-bar">
+  <span class="w-marca">Bitácora</span>
+  <div class="w-bar-acciones">
+    <form method="POST" action="{{ url_for('widget.fijar') }}">
+      <input type="hidden" name="p" value="{{ pestana }}">
+      <button class="w-icono {% if fijado %}w-on{% endif %}"
+              title="{% if fijado %}Soltar: dejar que otras ventanas lo tapen{% else %}Fijar siempre encima{% endif %}">📌</button>
+    </form>
+    <form method="POST" action="{{ url_for('widget.minimizar') }}">
+      <input type="hidden" name="p" value="{{ pestana }}">
+      <button class="w-icono" title="Minimizar">—</button>
+    </form>
+    <form method="POST" action="{{ url_for('widget.cerrar') }}">
+      <button class="w-icono w-cerrar" title="Cerrar el widget">×</button>
+    </form>
+  </div>
+</header>
+
+<nav class="w-tabs">
+  {% for val, txt in [('tareas','📋 Tareas'), ('calendario','📅 Mes'), ('nota','✏️ Nota')] %}
+  <a href="{{ url_for('widget.vista', p=val) }}"
+     class="w-tab {% if pestana == val %}w-tab-on{% endif %}">{{ txt }}</a>
+  {% endfor %}
+</nav>
+
+<main class="w-main">
+
+{% if pestana == 'tareas' %}
+  {% if atrasadas %}
+  <p class="w-titulo w-alerta">⚠️ Sin cerrar · {{ atrasadas | length }}</p>
+  <ul class="w-lista">
+    {% for t in atrasadas %}
+    <li class="w-item">
+      <form method="POST" action="{{ url_for('widget.tarea_toggle', todo_id=t.id) }}">
+        <button class="w-check" title="Marcar como hecha"></button>
+      </form>
+      <span class="w-txt">{{ t.text }}</span>
+      <span class="w-fecha">{{ t.todo_date | fechacorta }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <p class="w-titulo">Hoy</p>
+  {% if tareas_hoy %}
+  <ul class="w-lista">
+    {% for t in tareas_hoy %}
+    <li class="w-item {% if t.done %}w-hecha{% endif %}">
+      <form method="POST" action="{{ url_for('widget.tarea_toggle', todo_id=t.id) }}">
+        <button class="w-check {% if t.done %}w-check-on{% endif %}"
+                title="{{ 'Reabrir' if t.done else 'Marcar como hecha' }}">{% if t.done %}✓{% endif %}</button>
+      </form>
+      <span class="w-txt">{{ t.text }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="w-vacio">Nada anotado para hoy.</p>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('widget.tarea_agregar') }}" class="w-form">
+    <input type="text" name="text" placeholder="Agregar una tarea..." maxlength="200" required>
+    <button class="w-btn">+</button>
+  </form>
+
+{% elif pestana == 'calendario' %}
+  <div class="w-mes">
+    <a href="{{ url_for('widget.vista', p='calendario', anio=prev[0], mes=prev[1]) }}" class="w-icono">←</a>
+    <span>{{ mes_nombre }} {{ anio }}</span>
+    <a href="{{ url_for('widget.vista', p='calendario', anio=sig[0], mes=sig[1]) }}" class="w-icono">→</a>
+  </div>
+  <table class="w-cal">
+    <thead><tr>{% for d in dow %}<th>{{ d }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for semana in semanas %}
+      <tr>
+        {% for dia in semana %}
+        {% if dia == 0 %}<td></td>{% else %}
+        {% set ds = "%04d-%02d-%02d" | format(anio, mes, dia) %}
+        {% set tc = conteo_tareas.get(ds) %}
+        <td>
+          <form method="POST" action="{{ url_for('widget.dia', date_str=ds) }}">
+            <button class="w-dia {% if ds == hoy %}w-dia-hoy{% endif %}"
+                    title="Abrir ese día en la ventana grande">
+              {{ dia }}
+              <span class="w-puntos">
+                {%- if notas_por_dia.get(ds) %}<i class="w-p w-p-nota"></i>{% endif -%}
+                {%- if eventos_por_dia.get(ds) %}<i class="w-p w-p-rut"></i>{% endif -%}
+                {%- if tc and tc.done < tc.total %}<i class="w-p w-p-tarea"></i>{% endif -%}
+              </span>
+            </button>
+          </form>
+        </td>
+        {% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+{% else %}
+  <p class="w-titulo">Nota rápida de hoy</p>
+  <form method="POST" action="{{ url_for('widget.nota') }}" class="w-form-nota">
+    <textarea name="content" rows="8" placeholder="Anotar algo..." required></textarea>
+    <button class="w-btn w-btn-ancho">Guardar</button>
+  </form>
+{% endif %}
+
+</main>
+</body>
+</html>

@@ -20,6 +20,8 @@ profiles.py             # Perfiles locales: índice perfiles.json, crear/usar/bo
                         #   en caliente. Sin HT_PERFILES se desactiva solo (tests, navegador)
 sync.py                 # Merge entre dos dispositivos: exportar/analizar/aplicar. El paquete
                         #   es un .db y el merge se resuelve en SQL con ATTACH
+widget.py               # Ventana del widget de escritorio (segunda ventana pywebview)
+tray.py                 # Icono en el área de notificación (NotifyIcon vía pythonnet, solo Win)
 services.py             # Presentación compartida: events_by_date, journal_badges y, para el
                         #   visor de tareas, overdue_buckets / overdue_cutoff / periodo_ventana
 helpers.py              # _setting, _week_start, _dow_names, MESES[], _fmt_clock, safe_back
@@ -47,6 +49,7 @@ routes/
                         #   + /tareas/alerta (JSON)
   perfiles.py           # /perfiles/* (crear, usar, renombrar, borrar)
   sync.py               # /sync/* (exportar, importar, previa, aplicar, descartar)
+  widget.py             # /widget (panel chico) + sus acciones y el control de la ventana
   recurring.py          # /recurring/* (rutinas)
   journal.py            # /journal/* (notas especiales + categorías)
   update.py             # /update/* (auto-actualización: status/check/download/progress/apply/quit)
@@ -56,7 +59,7 @@ templates/              # base.html → herencia; _macros.html para date_field
                         # stats.html, search.html, export.html ("Datos"), settings.html,
                         # todos.html (visor de tareas),
                         # version.html (tab 🔄 Versión: chequeo manual + changelog)
-static/css/             # base.css, calendar.css, day.css, pages.css, wheel.css
+static/css/             # base.css, calendar.css, day.css, pages.css, wheel.css, widget.css
 static/js/
   zoom.js               # Zoom Ctrl+rueda / Ctrl±, persistido en localStorage
   date-es.js            # Campo de fecha con formato configurable (hidden ISO para el backend)
@@ -102,12 +105,13 @@ Prefijos de backup:
 ## Tests
 
 ```bash
-pytest tests/          # 353 tests, ~20s
+pytest tests/          # 376 tests, ~20s
 ```
 
 Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).
 
-Smoke tests fuera de pytest (necesitan display / ventana real): `tools/smoke_desktop.py` (migración de primer arranque, headless), `tools/smoke_download_linux.py` (descargas en GTK), `tools/snap_settings.py` (screenshot en WebKitGTK para bugs de rendering que no se reproducen en Windows).
+Smoke tests fuera de pytest (necesitan display / ventana real): `tools/smoke_widget.py`
+(widget + bandeja, abre ventanas de verdad y se cierra solo), `tools/smoke_desktop.py` (migración de primer arranque, headless), `tools/smoke_download_linux.py` (descargas en GTK), `tools/snap_settings.py` (screenshot en WebKitGTK para bugs de rendering que no se reproducen en Windows).
 
 ## Build y release
 
@@ -239,6 +243,35 @@ ninguno de los 33 puntos de escritura de `database/*.py` los conoce.
   `SCHEMA_VERSION`** o las DBs instaladas se saltean el paso. `reset_db()` la baja a 0.
 - `updated_at` vacío significa "original, nunca modificada" y ordena antes que cualquier fecha. El
   backfill no lo rellena a propósito: haría ganar al dispositivo que migró último.
+
+## Widget de escritorio y bandeja
+
+Segunda ventana de pywebview **en el mismo proceso**, `frameless` + `easy_drag` + `on_top`.
+
+- ⚠️ **A la ventana del widget se le pasa una URL string, NO el objeto Flask.** Con la app,
+  `webview/window.py:194` le levanta **un servidor Bottle propio a cada ventana**. La URL se captura
+  **una sola vez al arrancar** desde `principal._url_prefix` (`widget.configurar`): después no se
+  puede leer de `webview.windows[0]`, porque una ventana cerrada sale de esa lista.
+- `create_window` solo crea en el acto si se la llama desde un **hilo que no es el principal**
+  (`webview/__init__.py:417`). Por eso el widget se abre desde el handler de `events.shown`, que
+  pywebview ya corre en un hilo aparte (`webview/event.py:56`).
+- **El widget sobrevive a cerrar la ventana grande**: los backends solo terminan la app cuando se
+  cierra la *última* ventana. Es la razón de ser de la feature.
+- ⚠️ **Una ventana destruida NO tira excepción al navegarla.** Hay que preguntarle a pywebview si
+  todavía la tiene (`_principal_viva()`), o el clic en un día se pierde en silencio.
+- ⚠️ **La geometría del widget va a `APP_DIR/widget.json`, nunca a `settings`**: los ajustes
+  sincronizan entre máquinas y el widget aparecería corrido o fuera de pantalla en la otra.
+
+### La regla de seguridad de la bandeja
+`tray.iniciar()` devuelve si pudo poner el icono, y **el cierre solo se intercepta si devolvió
+True**. Esconder la ventana al cerrar sin icono dejaría el programa corriendo **sin forma de
+mostrarlo ni de cerrarlo** salvo el administrador de tareas. `cerrar_a_bandeja` no alcanza por sí
+solo: hay tests que fijan las tres combinaciones.
+
+En Linux `tray.iniciar()` devuelve `False` a propósito: GNOME (Fedora) no muestra iconos de bandeja
+sin una extensión, así que ahí cerrar cierra. El `NotifyIcon` corre en su **propio hilo con su
+propio `Application.Run()`** — válido en WinForms (un bucle por hilo) y evita tocar los internals de
+pywebview para marshalear a su hilo de interfaz.
 
 ## Auto-actualización
 
