@@ -54,6 +54,10 @@ def guion():
         principal = webview.windows[0]
         widget.configurar(principal, principal._url_prefix or "")
         _check(widget.hay_escritorio(), "la URL base se capturó del prefijo del servidor")
+        # Chromium rechaza ~85 puertos con ERR_UNSAFE_PORT y la app queda en blanco.
+        puerto = int((principal._url_prefix or "").rsplit(":", 1)[-1].rstrip("/"))
+        _check(puerto >= desktop.PUERTO_MINIMO,
+               f"el servidor levantó en un puerto que Chromium acepta ({puerto})")
 
         puertos_antes = _puertos()
         _check(widget.abrir(), "el widget se abre desde un hilo que no es el principal")

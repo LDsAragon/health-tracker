@@ -9,12 +9,23 @@ Primer arranque: si no hay DB en appdata pero hay una health.db al lado del
 exe/script, se copia (snapshot consistente via API de backup de SQLite, incluye WAL).
 """
 import os
+import socket
 import sys
 import sqlite3
 import threading
 import traceback
 from datetime import date
 from pathlib import Path
+
+# ⚠️ Chromium —y con él WebView2 y WebKitGTK— se niega a cargar una página servida desde una
+# lista de ~85 puertos "no seguros" (net/base/port_util.cc) y muestra ERR_UNSAFE_PORT: la app
+# entera queda en blanco hasta reiniciarla. pywebview elige el puerto con
+# `random.randint(1023, 65535)`, así que cae en uno de esos cada ~750 arranques. Pasó de verdad,
+# con el 1719 (h323gatedisc).
+#
+# El puerto bloqueado más alto de esa lista es el 10080, así que pedir uno por encima alcanza y
+# evita mantener acá una copia de los 85 números que Chromium puede ampliar.
+PUERTO_MINIMO = 10081
 
 def _default_app_dir():
     """Carpeta de datos por plataforma: LOCALAPPDATA (Win) / XDG data (Linux) / App Support (mac)."""
@@ -36,6 +47,26 @@ WINDOW_SIZE = (1280, 860)
 # Mínimo chico a propósito: la app es responsive (<600px = modo agenda) y así
 # la ventana sirve como "columnita" al costado de la pantalla.
 MIN_SIZE = (420, 480)
+
+
+def puerto_seguro():
+    """Un puerto libre que Chromium no vaya a rechazar, o None para que elija pywebview.
+
+    Deja que el sistema operativo elija (bind al 0) en vez de sortear: el rango efímero de
+    Windows arranca bien arriba de 10080, así que sale al primer intento. Si no se consigue
+    ninguno, devolver None es lo correcto — que pywebview elija y quizá falle es mejor que no
+    abrir la app por no poder reservar un puerto.
+    """
+    for _ in range(50):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(("127.0.0.1", 0))
+                puerto = s.getsockname()[1]
+        except OSError:
+            return None
+        if puerto >= PUERTO_MINIMO:
+            return puerto
+    return None
 
 
 def _base_dir():
@@ -343,6 +374,10 @@ def main():
         height=WINDOW_SIZE[1],
         min_size=MIN_SIZE,
         text_select=True,   # permitir seleccionar/copiar texto (notas, etc.)
+        # Va acá y no en webview.start(): con un objeto Flask, la ventana levanta su propio
+        # servidor en _initialize() y ahí solo llega el http_port de create_window. El del
+        # widget no hace falta — reusa este mismo servidor.
+        http_port=puerto_seguro(),
     )
     principal.events.shown += lambda: _al_mostrarse(principal)
     # private_mode=False + storage_path: persistir localStorage (zoom, tamaño de

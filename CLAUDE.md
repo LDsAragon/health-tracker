@@ -136,7 +136,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 475 tests, ~29s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 482 tests, ~27s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -458,5 +458,14 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
 - **Linux / descargas**: `webview.settings["ALLOW_DOWNLOADS"] = True` es necesario (está en `bitacora/escritorio/main.py`); por defecto pywebview cancela descargas silenciosamente.
 - **Arch / keyring**: `instalar.sh` detecta keyring sin inicializar chequeando `/etc/pacman.d/gnupg/trustdb.gpg` (no solo el directorio — el dir puede existir vacío).
 - **Windows / Mark of the Web**: si el zip viajó por internet, .NET se niega a cargar `Python.Runtime.dll`. `escritorio/main.py::_unblock_dlls()` borra el stream `Zone.Identifier` de las DLLs de `_internal/` en cada arranque; el updater hace lo mismo tras copiar los archivos nuevos.
+- ⚠️ **Puertos que Chromium rechaza**: WebView2 y WebKitGTK se niegan a cargar una página
+  servida desde una lista de ~85 puertos "no seguros" (`net/base/port_util.cc`) y muestran
+  **`ERR_UNSAFE_PORT`** — la app queda en blanco, ventana y widget, hasta reiniciarla. pywebview
+  sortea el puerto con `random.randint(1023, 65535)`, así que cae en uno cada ~750 arranques (pasó
+  con el 1719). `escritorio/main.py::puerto_seguro()` pide uno al sistema operativo y exige
+  `>= PUERTO_MINIMO` (10081, uno más que el bloqueado más alto), y se pasa por
+  **`create_window(http_port=...)`, no por `webview.start()`**: con un objeto Flask la ventana
+  levanta su propio servidor en `_initialize()` y ahí solo llega el de `create_window`. El widget
+  no necesita nada porque reusa ese mismo servidor.
 - **pywebview / localStorage**: `webview.start(private_mode=False, storage_path=...)` — sin eso pywebview borra el zoom y el tamaño de celdas al cerrar.
 - **DB path en tests**: `bitacora.database.conn.DB_PATH` se parchea directamente (por string, así que un cambio de layout lo rompe ruidoso); `get_db()` lo lee en cada call.

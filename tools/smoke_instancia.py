@@ -15,6 +15,7 @@ import urllib.request
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(RAIZ))       # corriendo desde tools/, la raíz no está en sys.path
 tmp = Path(tempfile.mkdtemp(prefix="ht-inst-"))
 fallos = []
 
@@ -53,6 +54,11 @@ try:
         # Popen.pid: el python.exe del venv es un stub que lanza el intérprete real aparte.
         _check(str(datos.get("url", "")).startswith("http://127.0.0.1:"),
                f"la URL publicada es local y con puerto: {datos.get('url')!r}")
+        # Chromium rechaza ~85 puertos con ERR_UNSAFE_PORT y la app queda en blanco.
+        from bitacora.escritorio.main import PUERTO_MINIMO
+        puerto = int(datos["url"].rsplit(":", 1)[-1])
+        _check(puerto >= PUERTO_MINIMO,
+               f"el puerto es uno que Chromium acepta ({puerto} >= {PUERTO_MINIMO})")
 
         req = urllib.request.Request(f"{datos['url'].rstrip('/')}/instancia/mostrar",
                                      data=b"", method="POST")
