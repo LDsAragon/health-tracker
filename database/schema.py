@@ -1,5 +1,21 @@
-"""Esquema y migraciones declarativas."""
+"""Esquema, migraciones declarativas y triggers de identidad para sincronizar."""
 from .conn import get_db, _columns
+
+# Versión del esquema, en PRAGMA user_version. Dos usos:
+#  1. init_db() la usa como guarda: corre en CADA request y sin esto pagaba los COMMIT/fsync
+#     de dos executescript por página.
+#  2. el import de sincronización va a poder rechazar un archivo incompatible.
+# ⚠️ AL AGREGAR UNA MIGRACIÓN HAY QUE SUBIRLA. Si no, las DBs ya instaladas se saltean el
+# paso y nunca reciben la columna nueva.
+SCHEMA_VERSION = 1
+
+# Tablas que participan de la sincronización entre dispositivos. `settings` queda afuera a
+# propósito: mezcla preferencias de la persona (formato de fecha) con las del dispositivo
+# (tema, vista de inicio), y sincronizarla pisaría las segundas. Las tablas legacy del
+# tracker original (entries, goals, custom_events, event_logs) tampoco entran: siguen vivas
+# con datos en las DBs instaladas pero la app ya no las usa.
+SYNCABLE = ("notes", "recurring_events", "completions", "journal_categories",
+            "journal_entries", "todos", "charts")
 
 SCHEMA = """
     CREATE TABLE IF NOT EXISTS notes (
@@ -66,6 +82,17 @@ SCHEMA = """
     );
 """
 
+# Tombstones: sin esto, "lo borré en la portátil" y "todavía no existe en la portátil" son
+# indistinguibles, y un merge resucitaría lo borrado.
+SCHEMA += """
+    CREATE TABLE IF NOT EXISTS deletions (
+        tabla      TEXT NOT NULL,
+        uid        TEXT NOT NULL,
+        deleted_at TEXT NOT NULL,
+        PRIMARY KEY (tabla, uid)
+    );
+"""
+
 # Migraciones declarativas para DBs viejas: (tabla, columna, DDL). Idempotente.
 MIGRATIONS = [
     ("notes",            "color",            "ALTER TABLE notes ADD COLUMN color TEXT DEFAULT ''"),
@@ -80,10 +107,69 @@ MIGRATIONS = [
     ("todos",            "done_at",          "ALTER TABLE todos ADD COLUMN done_at TEXT DEFAULT ''"),
 ]
 
+# Identidad para sincronizar (sep 2026). Generadas y no escritas a mano: 14 entradas idénticas
+# serían ruido. `uid` sobrevive entre dispositivos (las PK autoincrementales colisionan);
+# `updated_at` es el desempate de "última escritura gana".
+MIGRATIONS += [(t, c, f"ALTER TABLE {t} ADD COLUMN {c} TEXT DEFAULT ''")
+               for t in SYNCABLE for c in ("uid", "updated_at")]
+
+# Índice PARCIAL: las filas viejas arrancan con uid = '' y un único normal explotaría con la
+# segunda. Así el orden del backfill deja de importar.
+UID_INDEX = "".join(
+    f'CREATE UNIQUE INDEX IF NOT EXISTS idx_{t}_uid ON {t}(uid) WHERE uid != "";'
+    for t in SYNCABLE
+)
+
+# Tres triggers por tabla evitan tocar los 33 puntos de escritura de database/*.py.
+# ⚠️ Las marcas de tiempo van en UTC (datetime('now') sin 'localtime'), al revés que el resto
+# de la app: son para que dos máquinas comparen entre sí. Si el usuario viaja a otro huso, una
+# comparación en hora local decide mal quién escribió último. No se muestran nunca en pantalla.
+TRIGGERS = "".join(f"""
+    CREATE TRIGGER IF NOT EXISTS {t}_uid AFTER INSERT ON {t}
+    WHEN COALESCE(NEW.uid, '') = ''
+    BEGIN
+        UPDATE {t} SET uid = lower(hex(randomblob(16))),
+                       updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+    CREATE TRIGGER IF NOT EXISTS {t}_upd AFTER UPDATE ON {t}
+    BEGIN
+        UPDATE {t} SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+    CREATE TRIGGER IF NOT EXISTS {t}_del AFTER DELETE ON {t}
+    BEGIN
+        INSERT OR REPLACE INTO deletions (tabla, uid, deleted_at)
+        VALUES ('{t}', OLD.uid, datetime('now'));
+    END;
+""" for t in SYNCABLE)
+
 
 def init_db():
+    """Crea/migra el esquema. Idempotente: corre en cada request (app.before_request).
+
+    El ORDEN NO SE PUEDE CAMBIAR. Los triggers referencian uid/updated_at, que las migraciones
+    agregan recién en el paso 2. Y SQLite no resuelve las columnas al crear un trigger: el
+    CREATE TRIGGER saldría bien y después explotaría CADA INSERT con "no such column: uid".
+    """
     with get_db() as conn:
-        conn.executescript(SCHEMA)
+        if conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION:
+            return                                      # ya está al día
+        conn.executescript(SCHEMA)                      # 1) tablas e índices
+        cols = {}                                       # 2) columnas nuevas
         for table, col, ddl in MIGRATIONS:
-            if col not in _columns(conn, table):
+            # Cacheado por tabla: son 22 migraciones sobre 8 tablas y esto corre en cada
+            # request. Un PRAGMA table_info por entrada costaba ~4 ms por página.
+            if table not in cols:
+                cols[table] = _columns(conn, table)
+            if col not in cols[table]:
                 conn.execute(ddl)
+                cols[table].add(col)
+                if col == "uid":
+                    # Una sola vez, al agregar la columna: de ahí en más los llena el trigger.
+                    # `updated_at` queda vacío a propósito y NO se rellena con la hora de la
+                    # migración: eso haría que el dispositivo que migró último "gane" filas que
+                    # nadie tocó. Vacío significa "original, nunca modificada" y ordena antes
+                    # que cualquier fecha, que es justo lo que tiene que pasar en el merge.
+                    conn.execute(f"UPDATE {table} SET uid = lower(hex(randomblob(16)))"
+                                 " WHERE COALESCE(uid, '') = ''")
+        conn.executescript(UID_INDEX + TRIGGERS)        # 3) recién ahora
+        conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")

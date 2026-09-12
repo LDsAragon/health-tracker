@@ -1,6 +1,9 @@
 """Paquete de acceso a datos. Re-exporta todo para que `import database as db` no cambie."""
-from .conn import get_db, db_path, DB_PATH, _columns, snapshot_to, is_valid_db, restore_from, reset_db
-from .schema import SCHEMA, MIGRATIONS, init_db
+# DB_PATH NO se re-exporta: sería una copia congelada del valor. Al cambiar de perfil se
+# rebindea database.conn.DB_PATH y esta copia quedaría apuntando al perfil viejo.
+# Para leer la ruta vigente está db_path().
+from .conn import get_db, db_path, _columns, snapshot_to, is_valid_db, restore_from, reset_db
+from .schema import SCHEMA, MIGRATIONS, SYNCABLE, SCHEMA_VERSION, init_db
 from .notes import (
     add_note, update_note, delete_note,
     get_notes_for_date, get_notes_range, search_notes,

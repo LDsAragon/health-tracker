@@ -88,6 +88,9 @@ def reset_db():
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()]
         for t in tables:
             conn.execute(f'DROP TABLE IF EXISTS "{t}"')
+        # user_version vive en el header y sobrevive al DROP y al VACUUM. init_db() la usa
+        # como guarda, así que sin este reset se saltearía todo y la DB quedaría sin tablas.
+        conn.execute("PRAGMA user_version = 0")
         conn.commit()
         conn.execute("VACUUM")
     finally:

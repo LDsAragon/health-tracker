@@ -13,10 +13,12 @@ def counts(path):
     return out
 
 
-a, b = sys.argv[1], sys.argv[2]
-ca, cb = counts(a), counts(b)
-print("iguales:", ca == cb)
-for t in sorted(set(ca) | set(cb)):
-    if ca.get(t) != cb.get(t):
-        print("DIF", t, os.path.basename(a), "=", ca.get(t), "|", os.path.basename(b), "=", cb.get(t))
-print(ca)
+# Tras __main__ para que counts() se pueda importar (lo usa la migración a perfiles).
+if __name__ == "__main__":
+    a, b = sys.argv[1], sys.argv[2]
+    ca, cb = counts(a), counts(b)
+    print("iguales:", ca == cb)
+    for t in sorted(set(ca) | set(cb)):
+        if ca.get(t) != cb.get(t):
+            print("DIF", t, os.path.basename(a), "=", ca.get(t), "|", os.path.basename(b), "=", cb.get(t))
+    print(ca)

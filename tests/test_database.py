@@ -3,6 +3,8 @@ Operaciones de base de datos — cada test usa una DB temporal aislada.
 Verifica CRUD de notas, eventos recurrentes y completaciones.
 """
 from datetime import date, timedelta
+from datetime import datetime, timezone
+
 import database as db
 
 EV_BASE = {
@@ -438,8 +440,112 @@ def test_migracion_agrega_columnas_sin_perder_filas(test_db):
                      " todo_date TEXT NOT NULL, text TEXT NOT NULL, done INTEGER DEFAULT 0,"
                      " position INTEGER DEFAULT 0, created_at TEXT)")
         conn.execute("INSERT INTO todos (todo_date, text) VALUES (?,?)", (TDATE, "anterior"))
+        # Una DB realmente vieja tiene el esquema viejo Y la versión vieja: init_db() usa
+        # user_version como guarda, así que simular solo la mitad no es el caso real.
+        conn.execute("PRAGMA user_version = 0")
     db.init_db()
     t = db.get_todos_for_date(TDATE)[0]
     assert t["text"] == "anterior"
     assert t["done_at"] == ""
     assert db.count_overdue_todos("2026-06-10") == 1
+
+
+# ── Cimientos de sincronización: uid, updated_at y tombstones ────────────────────
+
+def _utc_ahora():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+def test_toda_tabla_sincronizable_recibe_uid_y_updated_at(test_db):
+    """Los triggers cubren las 7 tablas: si alguien agrega una a SYNCABLE sin trigger, cae acá."""
+    db.add_note("2026-06-09", "n")
+    db.add_todo("2026-06-09", "t")
+    db.add_recurring_event({"title": "e", "color": "#fff", "recurrence": "daily",
+                            "start_date": "2026-01-01", "end_date": ""})
+    eid = db.get_recurring_events()[0]["id"]
+    db.complete_event(eid, "2026-06-09")
+    db.add_journal_category({"name": "c", "color": "#fff", "fields_json": "[]",
+                             "show_in_calendar": 0})
+    cid = db.get_journal_categories()[0]["id"]
+    db.add_journal_entry({"category_id": cid, "entry_date": "2026-06-09",
+                          "values_json": "{}", "tags": ""})
+    db.add_chart(cid, "campo")
+    with db.get_db() as conn:
+        for t in db.SYNCABLE:
+            faltan = conn.execute(
+                f"SELECT COUNT(*) FROM {t} WHERE COALESCE(uid,'') = '' OR COALESCE(updated_at,'') = ''"
+            ).fetchone()[0]
+            assert faltan == 0, f"{t} quedó sin uid/updated_at"
+
+def test_uid_es_unico_y_el_update_no_lo_cambia(test_db):
+    db.add_note("2026-06-09", "a")
+    db.add_note("2026-06-09", "b")
+    n1, n2 = db.get_notes_for_date("2026-06-09")
+    assert n1["uid"] != n2["uid"]
+    db.update_note(n1["id"], "editada")
+    assert db.get_notes_for_date("2026-06-09")[0]["uid"] == n1["uid"]
+
+def test_update_mueve_updated_at(test_db):
+    db.add_todo("2026-06-09", "x")
+    tid = db.get_todos_for_date("2026-06-09")[0]["id"]
+    with db.get_db() as conn:   # envejecer a mano para no depender del reloj
+        conn.execute("UPDATE todos SET updated_at = '2020-01-01 00:00:00' WHERE id = ?", (tid,))
+    db.update_todo(tid, "editada")
+    assert db.get_todos_for_date("2026-06-09")[0]["updated_at"] > "2020-01-01 00:00:00"
+
+def test_updated_at_es_utc_no_hora_local(test_db):
+    """Va en UTC a propósito, al revés que created_at: es para comparar entre dispositivos y
+    el caso de uso es viajar a otro huso. Si alguien lo 'corrige' a localtime, cae acá."""
+    db.add_note("2026-06-09", "x")
+    n = db.get_notes_for_date("2026-06-09")[0]
+    delta = abs((datetime.fromisoformat(n["updated_at"]) - _utc_ahora()).total_seconds())
+    assert delta < 60, f"updated_at={n['updated_at']} no parece UTC (delta {delta}s)"
+
+def test_delete_deja_tombstone(test_db):
+    db.add_note("2026-06-09", "borrame")
+    n = db.get_notes_for_date("2026-06-09")[0]
+    db.delete_note(n["id"])
+    with db.get_db() as conn:
+        row = conn.execute("SELECT tabla, uid FROM deletions").fetchone()
+    assert (row["tabla"], row["uid"]) == ("notes", n["uid"])
+
+def test_borrar_categoria_deja_tombstones_de_la_cascada(test_db):
+    """delete_journal_category borra las entradas a mano (journal.py): los triggers tienen que
+    dejar tombstone de la categoría Y de cada entrada, o el merge las resucitaría."""
+    db.add_journal_category({"name": "c", "color": "#fff", "fields_json": "[]",
+                             "show_in_calendar": 0})
+    cid = db.get_journal_categories()[0]["id"]
+    db.add_journal_entry({"category_id": cid, "entry_date": "2026-06-09",
+                          "values_json": "{}", "tags": ""})
+    db.delete_journal_category(cid)
+    with db.get_db() as conn:
+        tablas = {r["tabla"] for r in conn.execute("SELECT tabla FROM deletions").fetchall()}
+    assert tablas == {"journal_categories", "journal_entries"}
+
+def test_backfill_de_uid_en_filas_preexistentes(test_db):
+    """Camino real de una DB instalada: la tabla no tiene ni la columna uid ni los triggers."""
+    with db.get_db() as conn:
+        conn.execute("DROP TABLE notes")
+        conn.execute("CREATE TABLE notes (id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                     " note_date TEXT NOT NULL, content TEXT NOT NULL, color TEXT DEFAULT '',"
+                     " created_at TEXT)")
+        conn.execute("INSERT INTO notes (note_date, content) VALUES ('2026-06-09','vieja')")
+        conn.execute("PRAGMA user_version = 0")
+    db.init_db()
+    n = db.get_notes_for_date("2026-06-09")[0]
+    assert n["content"] == "vieja"
+    assert n["uid"] and len(n["uid"]) == 32
+    # updated_at queda vacío a propósito: "original, nunca modificada" ordena antes que
+    # cualquier fecha en el merge. Rellenarlo haría ganar al dispositivo que migró último.
+    assert n["updated_at"] == ""
+
+def test_reset_deja_la_db_usable(test_db):
+    """user_version sobrevive al DROP y al VACUUM; si reset_db no la baja, el init_db()
+    posterior se saltearía todo y la DB quedaría sin tablas."""
+    db.add_note("2026-06-09", "x")
+    db.reset_db()
+    db.init_db()
+    db.add_note("2026-06-10", "despues del reset")
+    assert [n["content"] for n in db.get_notes_for_date("2026-06-10")] == ["despues del reset"]
+    with db.get_db() as conn:
+        trig = conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='trigger'").fetchone()[0]
+    assert trig == 21
