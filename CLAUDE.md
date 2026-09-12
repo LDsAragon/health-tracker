@@ -90,7 +90,11 @@ docs/                   # manual.html → Bitacora-Manual.pdf (tools/make_manual
                         #   shipeado en zip/tar.gz); LEEME.txt y LEEME-Linux.txt
 tools/                  # Builds (make_release*.ps1|sh, publish_release.ps1), instalador y
                         #   launcher Linux (linux/), smoke tests, make_icon.py, compare_dbs.py,
-                        #   screenshots_audit.mjs (Playwright, auditoría visual de todas las pantallas)
+                        #   screenshots_audit.mjs (Playwright, auditoría visual de las pantallas)
+  andamios/             # `hacer.ps1 nuevo ...`: ajuste.py, campo.py, ruta.py + comun.py
+                        #   (leer/escribir/insertar en ancla). Ver § Convenciones
+hacer.ps1               # Un solo lugar para todos los comandos; sin argumentos los lista
+start.bat               # Doble clic: abre en el navegador y crea el venv la primera vez
 ```
 
 **Cómo leer las rutas en este documento**: de acá para abajo, una ruta sin prefijo es **relativa a
@@ -418,12 +422,34 @@ Cero `<select>` entre los 16 ajustes, seis secciones colapsables y **guardado al
 - Sin comentarios que expliquen el *qué* — solo el *por qué* cuando no es obvio.
 - `MESES[]` hardcodeado en `helpers.py` (no `calendar.month_name` — depende del locale del sistema).
 - Renames de datos de usuario: solo con señal explícita (hidden `field_oldlabel[]` o control de UI); nunca por heurística.
-- **Agregar un ajuste**: una entrada en `appconfig.SETTINGS` (default + choices) **y un control en
-  `templates/settings.html`** — la copia en español vive en la plantilla, no en el esquema. Las dos
-  rutas de guardado validan contra `choices`, así que no hay que tocarlas. `test_ajustes.py` falla
-  si el ajuste nuevo se queda sin control.
-- **Agregar un tipo de campo**: entrada en `fieldtypes.FIELD_TYPES` + builder registrado en `static/js/field-registry.js` + su display en `day.html`.
 - Los valores de las entradas se guardan como `{etiqueta: valor}` en `values_json` — por eso renombrar un campo obliga a `migrate_entry_values()` (que además re-clava las etiquetas en la tabla `charts`).
+
+### Agregar cosas: los andamios
+
+Las tres cosas que se agregan seguido tocan 3 o 4 archivos cada una, y **hay un comando que las
+hace**: `.\hacer.ps1 nuevo ajuste | campo | ruta` (cada uno con `--help`). Dejan la suite en verde
+sin tocar nada, e imprimen al terminar qué falta a mano.
+
+| `nuevo …` | Qué toca | Qué queda a mano |
+|---|---|---|
+| `ajuste` | `appconfig.SETTINGS`, un control en `templates/settings.html`, la fila del manual y la lista de `tests/test_ajustes.py` | leer el ajuste donde haga falta; el `data-recargar` si cambia el navbar |
+| `campo` | `fieldtypes.FIELD_TYPES`, `static/js/field-registry.js` y un builder stub en `field-blocks.js` | el cuerpo del builder; el display propio en `day.html` (opcional) |
+| `ruta` | `routes/<n>.py`, `templates/<n>.html`, `tests/test_<n>.py` y las dos listas de `app.py` | el contenido de la pantalla; el enlace del navbar |
+
+⚠️ **Insertan en anclas** (`# ANDAMIO: ...`, `{# ANDAMIO: ... #}`), y si el ancla no está —o está
+dos veces— **abortan y lo dicen** en vez de improvisar. Adivinar dónde va cada cosa parseando el
+archivo es la misma clase de error que ya se rechazó para los datos del usuario. Las anclas son
+parte del código: no moverlas ni borrarlas.
+
+⚠️ **La lista de controles de `tests/test_ajustes.py` está escrita a mano a propósito**: es el
+tripwire del que agrega un ajuste **sin** darle control. El andamio la mantiene porque ahí el
+control está garantizado; el tripwire sigue cubriendo el camino manual, que es para lo que existe.
+
+⚠️ **Los blueprints se listan a mano en `app.py`** (`BLUEPRINTS`), sin descubrimiento automático:
+PyInstaller resuelve imports estáticamente y con un `importlib` dinámico las rutas **no entrarían al
+bundle**.
+
+Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de archivos de la tabla.
 
 ## Quirks conocidos
 
