@@ -202,3 +202,65 @@ window.addEventListener('DOMContentLoaded', function () {
     if (p.dataset.ewSaved) ewRestore(p, p.dataset.ewSaved);
   });
 });
+
+
+// ── Ancho del panel de tareas, arrastrable ───────────────────────────────────
+// La columna lateral toma este ancho y la del medio absorbe (ver day.css), así el arrastre es
+// 1:1 con el mouse y lo que se guarda es lo que se vuelve a aplicar.
+(function () {
+  const PREF = 'day_side_width';
+  const MINIMO = 200, MAXIMO = 560;
+
+  const grip = document.getElementById('day-side-grip');
+  const panel = grip && grip.closest('.day-side');
+  if (!panel) return;
+
+  // ⚠️ Se guarda el ancho PEDIDO y no el medido. Midiendo, cada recarga lo encogía un poco
+  // (402 → 354 → 306...): el ancho real puede ser menor que el pedido si no hay lugar, y
+  // guardar ese valor lo iba achicando en cada vuelta.
+  let pedido = null;
+
+  function aplicar(w) {
+    pedido = Math.min(MAXIMO, Math.max(MINIMO, Math.round(w)));
+    document.documentElement.style.setProperty('--day-side', pedido + 'px');
+  }
+
+  try {
+    const v = parseInt(localStorage.getItem(PREF), 10);
+    if (Number.isFinite(v)) aplicar(v);
+  } catch (e) { /* modo privado */ }
+
+  let arrastrando = false, x0 = 0, w0 = 0;
+
+  grip.addEventListener('pointerdown', (e) => {
+    arrastrando = true;
+    x0 = e.clientX;
+    w0 = pedido || panel.getBoundingClientRect().width;
+    grip.classList.add('arrastrando');
+    document.body.classList.add('day-redimensionando');
+    // Capturar el puntero: sin esto, al salirse del agarre el arrastre se corta. Tira si el
+    // pointerId no está activo (un evento sintético), y ahí el arrastre igual funciona.
+    try { grip.setPointerCapture(e.pointerId); } catch (err) { /* sin captura */ }
+    e.preventDefault();
+  });
+
+  grip.addEventListener('pointermove', (e) => {
+    if (arrastrando) aplicar(w0 + (e.clientX - x0));
+  });
+
+  function terminar() {
+    if (!arrastrando) return;
+    arrastrando = false;
+    grip.classList.remove('arrastrando');
+    document.body.classList.remove('day-redimensionando');
+    try { localStorage.setItem(PREF, String(pedido)); } catch (e) { /* modo privado */ }
+  }
+  grip.addEventListener('pointerup', terminar);
+  grip.addEventListener('pointercancel', terminar);
+
+  grip.addEventListener('dblclick', () => {
+    pedido = null;
+    document.documentElement.style.removeProperty('--day-side');
+    try { localStorage.removeItem(PREF); } catch (e) { /* modo privado */ }
+  });
+})();

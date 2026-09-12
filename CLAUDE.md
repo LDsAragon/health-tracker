@@ -496,6 +496,13 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
 - **Linux / descargas**: `webview.settings["ALLOW_DOWNLOADS"] = True` es necesario (está en `bitacora/escritorio/main.py`); por defecto pywebview cancela descargas silenciosamente.
 - **Arch / keyring**: `instalar.sh` detecta keyring sin inicializar chequeando `/etc/pacman.d/gnupg/trustdb.gpg` (no solo el directorio — el dir puede existir vacío).
 - **Windows / Mark of the Web**: si el zip viajó por internet, .NET se niega a cargar `Python.Runtime.dll`. `escritorio/main.py::_unblock_dlls()` borra el stream `Zone.Identifier` de las DLLs de `_internal/` en cada arranque; el updater hace lo mismo tras copiar los archivos nuevos.
+- ⚠️ **El ancho del panel de tareas del día se arrastra** (`.day-side-grip`, lo maneja `day.js`,
+  queda en `localStorage`; doble clic resetea). Las columnas laterales toman el ancho pedido
+  (`--day-side`, 300px) y la del medio absorbe con `minmax(0, 1fr)`. **Antes eran `1fr` con la del
+  medio capada en 760px y así el panel no podía crecer**: la del medio se quedaba con el espacio
+  primero. El tope de lectura se mudó a `.day-card`. Dos cosas que salieron de probar el arrastre:
+  se guarda el ancho **pedido** y no el medido (midiendo, cada recarga lo encogía: 402 → 354 →
+  306…), y por eso mismo el arrastre es 1:1 con el mouse.
 - ⚠️ **El calendario se deformaba con texto largo**: `grid-template-columns: repeat(7, 1fr)` es
   `minmax(auto, 1fr)`, y ese `auto` como mínimo **impide que la columna se encoja por debajo del
   min-content de su contenido**. Con un `white-space: nowrap` en `.chip` (rutinas y notas

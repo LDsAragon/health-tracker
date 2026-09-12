@@ -6,22 +6,60 @@
   margin: 0 auto;
 }
 
-/* Layout del día: panel de objetivos a la izquierda, card centrada */
+/* Layout del día: panel de objetivos a la izquierda, card centrada.
+   El ancho de los paneles laterales se arrastra (ver el agarre más abajo) y queda en
+   localStorage. Las dos variables van juntas y las setea day.js: agrandar el panel solo no
+   alcanza, porque su columna es `1fr` y la del medio se queda con el espacio primero, así que
+   hay que CEDERLE ancho a la del medio. En los defaults, el layout es idéntico al de siempre. */
 .day-layout {
   display: grid;
-  grid-template-columns: 1fr minmax(0, 760px) 1fr;
+  /* Las columnas laterales toman el ancho PEDIDO y la del medio absorbe. Antes eran `1fr` con
+     la del medio capada en 760px, y así el panel nunca podía crecer: la del medio se quedaba
+     con el espacio primero y las laterales solo repartían el resto. El tope de lectura se mudó
+     a .day-card, que es donde importa. */
+  grid-template-columns: var(--day-side, 300px) minmax(0, 1fr) var(--day-side, 300px);
   gap: 20px;
   align-items: start;
 }
-.day-card { grid-column: 2; }
+.day-card {
+  grid-column: 2;
+  max-width: 760px;     /* ancho de lectura; antes lo imponía la columna */
+  width: 100%;
+  margin: 0 auto;
+}
 .day-side {
   grid-column: 1;
   justify-self: end;
   width: 100%;
-  max-width: 300px;
   position: sticky;
   top: 20px;
 }
+
+/* Agarre para cambiar el ancho: en el borde interno del panel de tareas. Doble clic resetea. */
+.day-side-grip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -10px;
+  width: 12px;
+  cursor: col-resize;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.day-side-grip::before {
+  content: "";
+  width: 3px;
+  height: 34px;
+  border-radius: 3px;
+  background: var(--border);
+  transition: background .15s, height .15s;
+}
+.day-side-grip:hover::before,
+.day-side-grip.arrastrando::before { background: var(--accent); height: 60px; }
+/* Mientras se arrastra, que no se seleccione texto ni parpadee el cursor por toda la página. */
+body.day-redimensionando { cursor: col-resize; user-select: none; }
 .day-side .day-card-todos {
   border: 1px solid var(--border);
   border-radius: var(--r);
@@ -48,6 +86,8 @@
 
 @media (max-width: 1100px) {
   .day-layout { grid-template-columns: 1fr; }
+  /* Apilado en una columna no hay ancho que repartir: el panel ocupa todo. */
+  .day-side-grip { display: none; }
   /* Apilado en una columna: Card → Tareas → Rutinas/eventos */
   .day-card { grid-column: 1; order: 0; }
   .day-side {
@@ -138,6 +178,11 @@
   border-radius: 99px;
   font-size: 14px;
   font-weight: 600;
+  /* Mismo problema que tenía el calendario: un título largo de rutina desbordaba el panel y
+     metía scroll horizontal en toda la página. `inline-flex` + `min-width: auto` del hijo hacen
+     que el chip crezca con el texto si no se lo rompe explícitamente. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
   border: 1.5px solid color-mix(in srgb, var(--c) 40%, transparent);
   background: color-mix(in srgb, var(--c) 15%, transparent);
   color: var(--c);
@@ -159,6 +204,7 @@
   flex-shrink: 0;
 }
 .day-chip-check { font-size: 13px; flex-shrink: 0; }
+.day-chip-title, .day-chip-note { min-width: 0; }   /* item flex: `auto` no deja encoger */
 .day-chip-note { font-size: 12px; font-weight: 400; font-style: italic; }
 .day-chip-hint { font-size: 11px; font-weight: 400; opacity: .6; }
 
