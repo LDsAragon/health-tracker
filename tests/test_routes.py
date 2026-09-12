@@ -523,31 +523,33 @@ def test_restore_sin_archivo(client):
     assert r.status_code == 302
     assert "err-nofile" in r.headers["Location"]
 
-def test_reset_borra_todo_con_frase_exacta(client):
+def test_vaciar_el_perfil_con_frase_exacta(client):
     db.add_note("2026-06-11", "se-va-a-borrar")
-    r = client.post("/reset", data={"confirm_text": "BORRAR TODO"})
+    r = client.post("/reset", data={"confirm_text": "BORRAR DATOS"})
     assert r.status_code == 302
     assert "reset-ok" in r.headers["Location"]
     assert db.get_notes_for_date("2026-06-11") == []
 
-def test_reset_sin_frase_no_borra(client):
+def test_vaciar_sin_frase_no_borra(client):
     db.add_note("2026-06-11", "sobrevive")
-    for malo in ("", "borrar todo", "BORRAR", "BORRARTODO"):
+    # "BORRAR TODO" es la frase VIEJA: sonaba a que borraba todos los perfiles cuando en
+    # realidad vaciaba uno. Tiene que fallar, para que el hábito no dispare nada.
+    for malo in ("", "BORRAR TODO", "borrar datos", "BORRAR", "BORRARDATOS"):
         r = client.post("/reset", data={"confirm_text": malo})
         assert r.status_code == 302
         assert "err-reset-confirm" in r.headers["Location"]
     assert len(db.get_notes_for_date("2026-06-11")) == 1
 
-def test_reset_deja_backup_prereset(client, test_db):
+def test_vaciar_deja_backup_previo(client, test_db):
     import os, glob
     db.add_note("2026-06-11", "estaba-antes")
-    client.post("/reset", data={"confirm_text": "BORRAR TODO"})
+    client.post("/reset", data={"confirm_text": "BORRAR DATOS"})
     backups = glob.glob(os.path.join(os.path.dirname(test_db), "backups", "health-prereset-*.db"))
     assert backups, "no se creó el backup pre-reset en backups/"
     assert db.is_valid_db(backups[0])   # el backup conserva el estado previo
 
-def test_reset_app_sigue_funcionando(client):
-    client.post("/reset", data={"confirm_text": "BORRAR TODO"})
+def test_vaciar_deja_la_app_funcionando(client):
+    client.post("/reset", data={"confirm_text": "BORRAR DATOS"})
     assert client.get("/", follow_redirects=True).status_code == 200
 
 def test_reset_preserva_back(client):
@@ -809,3 +811,77 @@ def test_tab_tareas_se_puede_ocultar(client):
     assert "📋 Tareas".encode() in client.get("/calendar/2026/6").data
     db.set_setting("show_todos", "hide")
     assert "📋 Tareas".encode() not in client.get("/calendar/2026/6").data
+
+
+# ── Zona peligrosa: las tres acciones y sus frases ───────────────────────────
+
+def _con_perfiles(tmp_path, monkeypatch, cuantos=2):
+    import profiles
+    monkeypatch.setenv("HT_PERFILES", str(tmp_path))
+    p = profiles.crear("Principal")
+    profiles.usar(p["slug"])
+    for i in range(cuantos - 1):
+        profiles.crear(f"Otro {i}")
+    db.init_db()
+    return profiles
+
+def test_borrar_todos_los_perfiles_desde_datos(client, tmp_path, monkeypatch):
+    profs = _con_perfiles(tmp_path, monkeypatch)
+    r = client.post("/perfiles/borrar-todos",
+                    data={"confirm_text": "BORRAR TODOS LOS PERFILES"})
+    assert r.status_code == 302 and "todos-ok-2" in r.headers["Location"]
+    assert len(profs.listar()) == 1
+
+def test_borrar_todos_con_la_frase_mal_no_borra_nada(client, tmp_path, monkeypatch):
+    profs = _con_perfiles(tmp_path, monkeypatch)
+    # "BORRAR TODO" es la frase vieja del vaciado: acá tampoco tiene que servir, o el hábito
+    # de tipearla borraría TODOS los perfiles en vez de vaciar uno.
+    for malo in ("", "BORRAR TODO", "BORRAR DATOS", "borrar todos los perfiles"):
+        r = client.post("/perfiles/borrar-todos", data={"confirm_text": malo})
+        assert "err-todos-confirm" in r.headers["Location"], malo
+    assert len(profs.listar()) == 2
+
+def test_borrar_el_perfil_activo_desde_datos(client, tmp_path, monkeypatch):
+    profs = _con_perfiles(tmp_path, monkeypatch)
+    activo = profs.activo()["slug"]
+    r = client.post("/perfiles/borrar",
+                    data={"slug": activo, "confirm_text": "BORRAR PERFIL"})
+    assert r.status_code == 302
+    assert activo not in {p["slug"] for p in profs.listar()}
+
+def test_con_un_solo_perfil_el_boton_de_eliminar_esta_deshabilitado(client, tmp_path, monkeypatch):
+    _con_perfiles(tmp_path, monkeypatch, cuantos=1)
+    html = client.get("/export").data.decode()
+    assert "único perfil que tenés" in html
+    assert "BORRAR PERFIL" not in html        # ni siquiera se ofrece la frase
+
+def test_con_dos_perfiles_se_ofrecen_las_tres_acciones(client, tmp_path, monkeypatch):
+    _con_perfiles(tmp_path, monkeypatch, cuantos=2)
+    html = client.get("/export").data.decode()
+    for frase in ("BORRAR DATOS", "BORRAR PERFIL", "BORRAR TODOS LOS PERFILES"):
+        assert frase in html, frase
+
+def test_ajustes_ofrece_borrar_el_perfil_activo(client, tmp_path, monkeypatch):
+    """El selector de borrado excluía el activo. Ahora lo incluye, como pidió Matías: la misma
+    capacidad en los dos lados. Hay que mirar DENTRO del selector: el slug del activo también
+    aparece en el form de "Usar este", así que buscarlo en todo el HTML no probaría nada."""
+    profs = _con_perfiles(tmp_path, monkeypatch, cuantos=2)
+    html = client.get("/ajustes").data.decode()
+    ini = html.index('id="borrar-perfil-slug"')
+    selector = html[ini:html.index("</select>", ini)]
+    assert f'value="{profs.activo()["slug"]}"' in selector
+    assert "el que estás usando" in selector
+
+def test_borrar_el_perfil_desde_datos_vuelve_a_datos(client, tmp_path, monkeypatch):
+    """Sin el campo volver_a, borrar desde Datos te dejaba en Ajustes, que no es donde estabas."""
+    profs = _con_perfiles(tmp_path, monkeypatch, cuantos=2)
+    r = client.post("/perfiles/borrar", data={"slug": profs.activo()["slug"],
+                                              "confirm_text": "BORRAR PERFIL",
+                                              "volver_a": "datos"})
+    assert "/export" in r.headers["Location"] and "perfil-borrado" in r.headers["Location"]
+
+def test_borrar_el_perfil_desde_ajustes_vuelve_a_ajustes(client, tmp_path, monkeypatch):
+    profs = _con_perfiles(tmp_path, monkeypatch, cuantos=2)
+    r = client.post("/perfiles/borrar", data={"slug": profs.activo()["slug"],
+                                              "confirm_text": "BORRAR PERFIL"})
+    assert "/ajustes" in r.headers["Location"]

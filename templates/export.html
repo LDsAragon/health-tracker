@@ -34,6 +34,17 @@
 {% elif datos == 'sync-err-invalid' %}
 <div class="datos-banner datos-err">✗ Ese archivo no sirve para sincronizar: o no es una base de
   Bitácora, o es de otra versión de la app. Actualizá las dos máquinas y volvé a exportar.</div>
+{% elif datos == 'perfil-borrado' %}
+<div class="datos-banner datos-ok">✓ Perfil eliminado. Estás usando
+  <b>{{ perfil_activo.nombre if perfil_activo else '—' }}</b>.</div>
+{% elif datos and datos.startswith('perfil-err') %}
+<div class="datos-banner datos-err">✗ No se pudo eliminar el perfil: la frase no coincide, o es el
+  único que queda.</div>
+{% elif datos and datos.startswith('todos-ok-') %}
+<div class="datos-banner datos-ok">✓ Se borraron {{ datos.split('-')[2] }} perfil(es). Quedó uno
+  nuevo y vacío; las copias de seguridad están en <code>backups/</code>.</div>
+{% elif datos == 'err-todos-confirm' %}
+<div class="datos-banner datos-err">✗ La frase no coincide: no se borró nada.</div>
 {% elif datos == 'err-reset-confirm' %}
 <div class="datos-banner datos-err">✗ No se borró nada: la frase de confirmación no coincide. Tenés que escribir exactamente <b>BORRAR TODO</b>.</div>
 {% endif %}
@@ -139,42 +150,95 @@
     emparejarlas del todo, exportá desde acá y llevá ese archivo de vuelta.</p>
 </div>
 
-<!-- Zona peligrosa: borrar toda la base de datos -->
+<!-- Zona peligrosa: tres acciones, de menor a mayor daño, cada una con su frase propia -->
 <div class="page-top" style="margin-top:36px;margin-bottom:12px;">
   <h2 class="page-title" style="font-size:20px;color:var(--red);">Zona peligrosa</h2>
-  <p class="page-sub">Borrar todo y empezar de cero.</p>
+  <p class="page-sub">Borrar datos. Nada de esto se puede deshacer desde la app.</p>
 </div>
+
 <div class="rec-form-wrap danger-zone">
   <div class="field-group">
-    <label style="color:var(--red);">Borrar TODA la base de datos</label>
+    <label style="color:var(--red);">Vaciar los datos de este perfil</label>
     <p class="page-sub" style="margin:0 0 8px;">
-      Elimina de forma <b>permanente</b> todos tus datos: notas rápidas, tareas, rutinas y su
-      historial, notas especiales, gráficos y ajustes. <b>No se puede deshacer desde la app.</b>
-      Antes de borrar se guarda un backup automático en la carpeta <code>backups/</code> junto a la
-      base de datos — igual te recomendamos
-      <a href="{{ url_for('main.backup_download') }}">descargar un backup</a> primero.
+      Borra de forma <b>permanente</b> todo lo anotado en
+      {% if perfil_activo %}<b>{{ perfil_activo.nombre }}</b>{% else %}este perfil{% endif %}:
+      notas rápidas, tareas, rutinas y su historial, notas especiales, gráficos y ajustes.
+      El perfil sigue existiendo, pero vacío.
+      {% if perfiles | length > 1 %}<b>Los otros perfiles no se tocan.</b>{% endif %}
+      Antes se guarda un backup automático en <code>backups/</code>, junto a la base — igual
+      conviene <a href="{{ url_for('main.backup_download') }}">descargar uno</a> primero.
     </p>
     <form method="POST" action="{{ url_for('main.reset_db_route') }}"
-          onsubmit="return confirm('ÚLTIMA CONFIRMACIÓN\n\nSe van a borrar TODOS los datos de la app (notas, tareas, rutinas, notas especiales, gráficos y ajustes) y vas a empezar de cero.\n\n¿Borrar todo?');">
+          onsubmit="return confirm('ÚLTIMA CONFIRMACIÓN\n\nSe va a vaciar este perfil: notas, tareas, rutinas, notas especiales, gráficos y ajustes.\n\n¿Vaciarlo?');">
       <input type="hidden" name="back" value="{{ back or '' }}">
-      <label for="confirm_text" style="display:block;font-size:13px;margin-bottom:4px;">
-        Para confirmar, escribí <b>BORRAR TODO</b>:
+      <label for="c_vaciar" style="display:block;font-size:13px;margin-bottom:4px;">
+        Para confirmar, escribí <b>BORRAR DATOS</b>:
       </label>
-      <input type="text" name="confirm_text" id="confirm_text" class="danger-confirm-input"
-             placeholder="BORRAR TODO" autocomplete="off">
-      <button type="submit" class="btn-danger" id="reset-btn" disabled>Borrar todos los datos</button>
+      <input type="text" name="confirm_text" id="c_vaciar" class="danger-confirm-input"
+             placeholder="BORRAR DATOS" autocomplete="off" data-frase="BORRAR DATOS">
+      <button type="submit" class="btn-danger" disabled>Vaciar este perfil</button>
     </form>
   </div>
+
+  {% if perfil_activo %}
+  <div class="field-group" style="margin-top:26px;">
+    <label style="color:var(--red);">Eliminar este perfil</label>
+    {% if perfiles | length > 1 %}
+    <p class="page-sub" style="margin:0 0 8px;">
+      Borra el perfil <b>{{ perfil_activo.nombre }}</b> entero: sus datos, sus backups y el perfil
+      en sí. La app pasa a usar otro de los perfiles que tengas.
+    </p>
+    <form method="POST" action="{{ url_for('perfiles.borrar') }}"
+          onsubmit="return confirm('ÚLTIMA CONFIRMACIÓN\n\nSe elimina el perfil y todo lo que tiene adentro, backups incluidos.\n\n¿Eliminarlo?');">
+      <input type="hidden" name="back" value="{{ back or '' }}">
+      <input type="hidden" name="slug" value="{{ perfil_activo.slug }}">
+      <input type="hidden" name="volver_a" value="datos">
+      <label for="c_perfil" style="display:block;font-size:13px;margin-bottom:4px;">
+        Para confirmar, escribí <b>BORRAR PERFIL</b>:
+      </label>
+      <input type="text" name="confirm_text" id="c_perfil" class="danger-confirm-input"
+             placeholder="BORRAR PERFIL" autocomplete="off" data-frase="BORRAR PERFIL">
+      <button type="submit" class="btn-danger" disabled>Eliminar este perfil</button>
+    </form>
+    {% else %}
+    <p class="page-sub" style="margin:0 0 8px;">
+      Es el único perfil que tenés, así que no se puede eliminar: no puede quedar ninguno. Para
+      dejarlo en blanco usá <b>Vaciar los datos de este perfil</b>, acá arriba.
+    </p>
+    <button type="button" class="btn-danger" disabled>Eliminar este perfil</button>
+    {% endif %}
+  </div>
+
+  <div class="field-group" style="margin-top:26px;">
+    <label style="color:var(--red);">Borrar todos los perfiles</label>
+    <p class="page-sub" style="margin:0 0 8px;">
+      Esta sí borra <b>todo</b>: los {{ perfiles | length }} perfil(es) de esta computadora con sus
+      datos y sus backups, y deja uno nuevo y vacío. Antes se guarda una copia de cada perfil en
+      la carpeta <code>backups/</code> de la app — fuera de lo que se borra.
+    </p>
+    <form method="POST" action="{{ url_for('perfiles.borrar_todos') }}"
+          onsubmit="return confirm('ÚLTIMA CONFIRMACIÓN\n\nSe borran TODOS los perfiles de esta computadora y todo lo que tienen adentro.\n\n¿Borrar todo?');">
+      <input type="hidden" name="back" value="{{ back or '' }}">
+      <label for="c_todos" style="display:block;font-size:13px;margin-bottom:4px;">
+        Para confirmar, escribí <b>BORRAR TODOS LOS PERFILES</b>:
+      </label>
+      <input type="text" name="confirm_text" id="c_todos" class="danger-confirm-input"
+             placeholder="BORRAR TODOS LOS PERFILES" autocomplete="off"
+             data-frase="BORRAR TODOS LOS PERFILES">
+      <button type="submit" class="btn-danger" disabled>Borrar todos los perfiles</button>
+    </form>
+  </div>
+  {% endif %}
 </div>
 
 <script>
-// El botón de borrado se habilita solo si la frase coincide exactamente.
-(function () {
-  var input = document.getElementById('confirm_text');
-  var btn = document.getElementById('reset-btn');
+// Cada botón se habilita solo con SU frase. Va en el data-frase del input, así la frase no se
+// repite en el JS y no puede quedar desincronizada de la que valida el servidor.
+document.querySelectorAll('.danger-confirm-input').forEach(function (input) {
+  var btn = input.form.querySelector('button[type="submit"]');
   input.addEventListener('input', function () {
-    btn.disabled = input.value.trim() !== 'BORRAR TODO';
+    btn.disabled = input.value.trim() !== input.dataset.frase;
   });
-})();
+});
 </script>
 {% endblock %}

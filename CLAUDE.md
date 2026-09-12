@@ -100,12 +100,14 @@ Prefijos de backup:
 - `health-prereset-<ts>` — antes de borrar todo
 - `health-prerestore-<ts>` — antes de restaurar un backup externo
 - `health-prerename-<ts>` — antes de migrar renombres de campos/opciones
+- `health-preborrado-<slug>-<ts>` — antes de borrar todos los perfiles. **Este va a
+  `APP_DIR/backups/`, no al del perfil**: la carpeta del perfil es justo lo que se borra
 - `health-preperfiles-<ts>` — antes de mudar la DB al layout de perfiles
 
 ## Tests
 
 ```bash
-pytest tests/          # 376 tests, ~20s
+pytest tests/          # 388 tests, ~21s
 ```
 
 Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).
@@ -261,6 +263,22 @@ Segunda ventana de pywebview **en el mismo proceso**, `frameless` + `easy_drag` 
   todavía la tiene (`_principal_viva()`), o el clic en un día se pierde en silencio.
 - ⚠️ **La geometría del widget va a `APP_DIR/widget.json`, nunca a `settings`**: los ajustes
   sincronizan entre máquinas y el widget aparecería corrido o fuera de pantalla en la otra.
+
+### Borrado: tres acciones, tres frases
+| Acción | Qué hace | Frase |
+|---|---|---|
+| Vaciar este perfil (`/reset`) | `reset_db()` del perfil activo; los otros no se tocan | `BORRAR DATOS` |
+| Eliminar un perfil (`/perfiles/borrar`) | Saca del índice + `rmtree`. Acepta el activo | `BORRAR PERFIL` |
+| Borrar todos (`/perfiles/borrar-todos`) | Arrasa `perfiles/` y deja uno vacío | `BORRAR TODOS LOS PERFILES` |
+
+⚠️ **`BORRAR TODO` ya no coincide con nada, a propósito.** Vaciaba *un* perfil pero sonaba a que
+borraba todo. Dársela a la acción nueva habría hecho que el hábito de tipearla borre los tres
+perfiles; dejársela a la vieja habría mantenido el cartel mintiendo. Que falle es lo único que
+garantiza que un hábito viejo no dispare un borrado más grande. Hay tests en `test_routes.py` que lo
+fijan para las dos acciones.
+
+⚠️ **Borrar el perfil activo cambia de perfil ANTES de tocar los archivos** (`profiles.borrar`): en
+Windows la base que se estaba usando queda lockeada hasta que el GC recoja la conexión.
 
 ### La regla de seguridad de la bandeja
 `tray.iniciar()` devuelve si pudo poner el icono, y **el cierre solo se intercepta si devolvió

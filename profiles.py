@@ -162,24 +162,77 @@ def aplicar():
 
 
 def borrar(slug_: str) -> tuple[bool, str]:
-    """Saca el perfil del índice y borra su carpeta. No se puede borrar el activo ni el último."""
+    """Saca el perfil del índice y borra su carpeta. Se puede borrar el activo; el último no."""
     ind = leer()
     if len(ind["perfiles"]) <= 1:
-        return False, "No se puede borrar el único perfil."
-    if slug_ == ind.get("activo"):
-        return False, "No se puede borrar el perfil activo: cambiá a otro primero."
+        return False, "No se puede borrar el único perfil que queda."
     if slug_ not in {p["slug"] for p in ind["perfiles"]}:
         return False, "Ese perfil no existe."
-    ind["perfiles"] = [p for p in ind["perfiles"] if p["slug"] != slug_]
+
+    quedan = [p for p in ind["perfiles"] if p["slug"] != slug_]
+    ind["perfiles"] = quedan
+    # Si se borra el activo hay que CAMBIAR DE PERFIL ANTES de tocar los archivos: en Windows
+    # la base que se estaba usando queda lockeada hasta que el GC recoja la conexión.
+    if slug_ == ind.get("activo"):
+        ind["activo"] = quedan[0]["slug"]
     guardar(ind)
-    # Los callers hacen `with get_db()`, que commitea pero NO cierra, así que en Windows el
-    # archivo queda lockeado hasta que el GC recoja la conexión. Sin este collect, rmtree
-    # falla y el perfil queda sin índice pero con archivos en disco.
+    aplicar()
+
+    ok = _borrar_carpeta(slug_)
+    if not ok:
+        return True, "El perfil se quitó, pero sus archivos no se pudieron borrar (quedaron en disco)."
+    return True, "Perfil eliminado."
+
+
+def _borrar_carpeta(slug_: str) -> bool:
+    """Los callers hacen `with get_db()`, que commitea pero NO cierra, así que en Windows el
+    archivo sigue lockeado hasta que el GC recoja la conexión. Sin el collect, rmtree falla."""
     import gc
     import shutil
     gc.collect()
     try:
         shutil.rmtree(os.path.dirname(db_de(slug_)))
+        return True
     except OSError:
-        return True, "El perfil se quitó, pero sus archivos no se pudieron borrar (quedaron en disco)."
-    return True, "Perfil eliminado."
+        return False
+
+
+def borrar_todos() -> tuple[int, list]:
+    """Arrasa todos los perfiles y deja uno nuevo y vacío.
+
+    Devuelve (cuántos había, backups que quedaron). El `dispositivo` se conserva: identifica la
+    instalación, no los datos.
+    """
+    import database as db
+
+    ind = leer()
+    previos = list(ind["perfiles"])
+    backups = []
+    for p in previos:
+        ruta = db_de(p["slug"])
+        if os.path.exists(ruta):
+            dest = _backup_fuera_del_perfil(p["slug"])
+            try:
+                conn.DB_PATH = ruta
+                db.snapshot_to(dest)
+                backups.append(os.path.basename(dest))
+            except Exception:
+                pass
+    for p in previos:
+        _borrar_carpeta(p["slug"])
+
+    guardar({"activo": "", "dispositivo": ind.get("dispositivo", ""), "perfiles": []})
+    nuevo = crear("Principal")
+    usar(nuevo["slug"])
+    return len(previos), backups
+
+
+def _backup_fuera_del_perfil(slug_: str) -> str:
+    """⚠️ NO se puede usar conn.backup_path(): deriva la carpeta de la ruta de la base, o sea
+    DENTRO del perfil, que es justo lo que esta acción borra — el backup se iría con el rmtree.
+    Va a APP_DIR/backups/, que sobrevive."""
+    from datetime import datetime
+    base = os.path.join(raiz(), "backups")
+    os.makedirs(base, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return os.path.join(base, f"health-preborrado-{slug_}-{ts}.db")

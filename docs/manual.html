@@ -560,10 +560,19 @@
   </ul>
 
   <h3>Zona peligrosa</h3>
-  <p>Borra <b>toda</b> la base y arranca de cero. Para que no pase por accidente, pide tres
-  confirmaciones: escribir la frase <b>BORRAR TODO</b> (el botón está deshabilitado hasta que
-  coincida), confirmar el aviso final, y aun así deja un backup automático en la
-  carpeta <code>backups/</code> junto a la base de datos.</p>
+  <p>Tres formas de borrar, de menor a mayor. Cada una pide <b>su propia frase</b> escrita a mano —
+  el botón está deshabilitado hasta que coincida — más el aviso final, y todas dejan un backup
+  automático antes de tocar nada.</p>
+  <table>
+    <tr><th>Acción</th><th>Qué borra</th><th>Frase</th></tr>
+    <tr><td><b>Vaciar los datos de este perfil</b></td><td>Todo lo anotado en el perfil que estás usando. El perfil sigue existiendo, vacío. <b>Los otros perfiles no se tocan.</b></td><td><code>BORRAR DATOS</code></td></tr>
+    <tr><td><b>Eliminar este perfil</b></td><td>El perfil entero: sus datos, sus backups y el perfil en sí. La app pasa a usar otro. No se puede si es el único que tenés.</td><td><code>BORRAR PERFIL</code></td></tr>
+    <tr><td><b>Borrar todos los perfiles</b></td><td>Todos los perfiles de la computadora, y deja uno nuevo y vacío. Las copias de cada uno quedan en la carpeta <code>backups/</code> de la app, fuera de lo que se borra.</td><td><code>BORRAR TODOS LOS PERFILES</code></td></tr>
+  </table>
+  <p>Las mismas acciones de perfiles están también en <b>Ajustes → Perfiles</b>.</p>
+  <p class="small muted">Si usabas la frase <b>BORRAR TODO</b> de versiones anteriores: ya no
+  funciona, a propósito. Antes vaciaba un solo perfil aunque sonara a que borraba todo, y dejarle
+  ese nombre a la acción nueva habría hecho que el hábito borre más de lo que esperás.</p>
 
   <div class="card warn"><span class="t">La regla de la casa:</span> antes de restaurar o
   borrar, descargá un backup. Tarda dos segundos y convierte cualquier error en anécdota.</div>
@@ -589,9 +598,11 @@
   recién aparece cuando hay dos.</p>
 
   <h3>Borrar un perfil</h3>
-  <p>Borra ese diario completo y no se puede deshacer, así que está detrás de la misma reja que el
-  borrado total: hay que escribir <b>BORRAR PERFIL</b> a mano. Tampoco se puede borrar el perfil que
-  estás usando ni el último que quede.</p>
+  <p>Borra ese diario completo y no se puede deshacer, así que hay que escribir <b>BORRAR PERFIL</b>
+  a mano. Se puede borrar <b>cualquiera, incluido el que estás usando</b>: en ese caso la app pasa
+  sola a otro de los que tengas. Lo único que no se puede es quedarte sin ninguno, así que el último
+  perfil no se borra — para dejarlo en blanco está <i>Vaciar los datos de este perfil</i>.</p>
+  <p>Todo esto se puede hacer tanto acá como desde <b>Datos → Zona peligrosa</b> (sección 11).</p>
 
   <h3>Dónde quedan tus datos</h3>
   <p>Cada perfil vive en su propia carpeta dentro de la carpeta de datos de la app, y cada uno lleva

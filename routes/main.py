@@ -352,17 +352,20 @@ def restore_upload():
     return redirect(url_for("main.export_view", datos="ok" if ok else "err-invalid", back=back))
 
 
-# Frase exacta que el usuario tiene que escribir para habilitar el borrado total.
-RESET_PHRASE = "BORRAR TODO"
+# Frase para vaciar el perfil activo. ⚠️ Antes era "BORRAR TODO", que sonaba a que borraba
+# todos los perfiles cuando en realidad vacía uno. La frase vieja ya no coincide con nada a
+# propósito: si se la hubiéramos dado al borrado total, el hábito de tipearla habría borrado
+# MÁS de lo esperado (ver profiles.borrar_todos y FRASE_BORRAR_TODOS).
+FRASE_VACIAR = "BORRAR DATOS"
 
 
 @bp.route("/reset", methods=["POST"])
 def reset_db_route():
-    # Borra TODOS los datos y arranca de cero. Triple verificación: botón
-    # deshabilitado hasta escribir la frase (JS), confirm() del form, y acá la
-    # frase se re-valida server-side. reset_db deja un backup pre-reset.
+    # Vacía la base del PERFIL ACTIVO; los otros perfiles no se tocan. Triple verificación:
+    # botón deshabilitado hasta escribir la frase (JS), confirm() del form, y acá se re-valida
+    # server-side. reset_db deja un backup previo dentro de la carpeta del perfil.
     back = safe_back(request.form.get("back"))
-    if request.form.get("confirm_text", "").strip() != RESET_PHRASE:
+    if request.form.get("confirm_text", "").strip() != FRASE_VACIAR:
         return redirect(url_for("main.export_view", datos="err-reset-confirm", back=back))
     db.reset_db()
     db.init_db()   # recrea el esquema vacío (defaults de ajustes incluidos)

@@ -7,9 +7,17 @@ from helpers import safe_back
 bp = Blueprint("perfiles", __name__)
 
 BORRAR_FRASE = "BORRAR PERFIL"
+# Larga y explícita a propósito: nadie la tipea por costumbre, así que un hábito viejo no
+# puede disparar el borrado más grande de todos.
+FRASE_BORRAR_TODOS = "BORRAR TODOS LOS PERFILES"
 
 
 def _volver(back, msg=""):
+    """Vuelve a la pantalla desde la que se posteó. Sin esto, borrar el perfil desde Datos te
+    dejaba en Ajustes, que no es donde estabas."""
+    if request.form.get("volver_a") == "datos":
+        return redirect(url_for("main.export_view", datos=f"perfil-{msg or 'ok'}",
+                                back=safe_back(back)))
     return redirect(url_for("main.settings_view", back=safe_back(back), perfiles=msg or None))
 
 
@@ -43,3 +51,15 @@ def borrar():
         return _volver(request.form.get("back"), "err-frase")
     ok, _msg = profiles.borrar(request.form.get("slug", ""))
     return _volver(request.form.get("back"), "borrado" if ok else "err-borrar")
+
+
+@bp.route("/perfiles/borrar-todos", methods=["POST"])
+def borrar_todos():
+    """Arrasa todos los perfiles. Los backups quedan en APP_DIR/backups/, fuera de lo borrado."""
+    back = request.form.get("back")
+    if request.form.get("confirm_text", "").strip() != FRASE_BORRAR_TODOS:
+        return redirect(url_for("main.export_view", datos="err-todos-confirm",
+                                back=safe_back(back)))
+    cuantos, _backups = profiles.borrar_todos()
+    return redirect(url_for("main.export_view", datos=f"todos-ok-{cuantos}",
+                            back=safe_back(back)))

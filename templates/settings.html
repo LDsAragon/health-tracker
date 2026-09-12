@@ -260,14 +260,16 @@
   <div class="danger-zone" style="margin-top:20px; padding:14px; border-radius:var(--r);">
     <label style="color:var(--red);">Eliminar un perfil</label>
     <p class="page-sub" style="margin:6px 0 10px;">Borra ese diario entero: sus notas, rutinas,
-      tareas y backups. No se puede deshacer y no se puede borrar el que estás usando.</p>
+      tareas y backups. No se puede deshacer. Si borrás el que estás usando, la app pasa sola a
+      otro de los que tengas.</p>
     <form method="POST" action="{{ url_for('perfiles.borrar') }}"
           onsubmit="return confirm('¿Eliminar ese perfil y todos sus datos?');"
           style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
       <input type="hidden" name="back" value="{{ back or '' }}">
-      <select name="slug" class="journal-type-select" style="max-width:200px;">
-        {% for p in perfiles if p.slug != perfil_activo.slug %}
-        <option value="{{ p.slug }}">{{ p.nombre }}</option>
+      {# Incluye el perfil activo: si lo borrás, la app pasa sola al que quede. #}
+      <select name="slug" id="borrar-perfil-slug" class="journal-type-select" style="max-width:200px;">
+        {% for p in perfiles %}
+        <option value="{{ p.slug }}">{{ p.nombre }}{% if p.slug == perfil_activo.slug %} (el que estás usando){% endif %}</option>
         {% endfor %}
       </select>
       <input type="text" name="confirm_text" placeholder="Escribí BORRAR PERFIL" autocomplete="off">

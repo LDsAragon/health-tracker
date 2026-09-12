@@ -112,10 +112,15 @@ def test_no_se_puede_borrar_el_unico_perfil(perfiles):
     ok, _ = profiles.borrar(profiles.activo()["slug"])
     assert not ok and len(profiles.listar()) == 1
 
-def test_no_se_puede_borrar_el_perfil_activo(perfiles):
-    profiles.crear("Trabajo")
-    ok, _ = profiles.borrar(profiles.activo()["slug"])
-    assert not ok and len(profiles.listar()) == 2
+def test_borrar_el_perfil_activo_cambia_al_que_queda(perfiles):
+    """Se puede borrar el perfil en el que estás: la app pasa al otro sin reiniciar."""
+    otro = profiles.crear("Trabajo")["slug"]
+    activo = profiles.activo()["slug"]
+    ok, _ = profiles.borrar(activo)
+    assert ok
+    assert [p["slug"] for p in profiles.listar()] == [otro]
+    assert profiles.activo()["slug"] == otro
+    assert db.db_path() == profiles.db_de(otro)
 
 def test_borrar_saca_el_perfil_y_sus_archivos(perfiles):
     b = profiles.crear("Trabajo")["slug"]
@@ -219,3 +224,63 @@ def test_instalacion_nueva_sin_db_previa(tmp_path, monkeypatch):
     db.init_db()
     db.add_note("2026-06-09", "arranque limpio")
     assert [n["content"] for n in db.get_notes_for_date("2026-06-09")] == ["arranque limpio"]
+
+
+# ── Borrado: vaciar un perfil, borrar el activo, borrar todos ────────────────
+
+def test_vaciar_un_perfil_no_toca_a_los_otros(perfiles):
+    """El cartel viejo decía "todos tus datos" pero el reset solo vacía el perfil activo.
+    Ahora el texto lo dice, y este test fija que el comportamiento sea ese."""
+    a = profiles.activo()["slug"]
+    db.init_db()
+    db.add_note("2026-06-09", "de A")
+    b = profiles.crear("Trabajo")["slug"]
+    profiles.usar(b)
+    db.init_db()
+    db.add_note("2026-06-09", "de B")
+
+    profiles.usar(a)
+    db.reset_db()
+    db.init_db()
+    assert db.get_notes_for_date("2026-06-09") == []      # A quedó vacío
+    profiles.usar(b)
+    assert [n["content"] for n in db.get_notes_for_date("2026-06-09")] == ["de B"]
+
+def test_borrar_todos_deja_uno_vacio_y_conserva_el_dispositivo(perfiles):
+    disp = profiles.dispositivo()
+    assert disp, "dispositivo() es lazy: sin esto el test compararia '' contra '' y no probaria nada"
+    db.init_db()
+    db.add_note("2026-06-09", "se va")
+    profiles.crear("Trabajo")
+    profiles.crear("Otro")
+
+    cuantos, backups = profiles.borrar_todos()
+    assert cuantos == 3
+    assert len(profiles.listar()) == 1
+    assert profiles.activo()["nombre"] == "Principal"
+    assert profiles.leer()["dispositivo"] == disp    # identifica la instalación, no los datos
+    db.init_db()
+    assert db.get_notes_for_date("2026-06-09") == []
+
+def test_borrar_todos_deja_los_backups_FUERA_de_lo_borrado(perfiles):
+    """backup_path() deriva la carpeta de la ruta de la base, o sea DENTRO del perfil — que es
+    justo lo que esta acción borra. El backup se iría con el rmtree y el cartel prometería una
+    red que no existe."""
+    db.init_db()
+    db.add_note("2026-06-09", "x")
+    profiles.usar(profiles.crear("Trabajo")["slug"])
+    db.init_db()
+    db.add_note("2026-06-09", "y")
+
+    _cuantos, backups = profiles.borrar_todos()
+    carpeta = perfiles / "backups"
+    archivos = sorted(f.name for f in carpeta.glob("health-preborrado-*.db"))
+    assert len(archivos) == 2, archivos          # uno por perfil, no solo el activo
+    assert sorted(backups) == archivos
+    assert all(db.is_valid_db(str(carpeta / f)) for f in archivos)
+    assert not (perfiles / profiles.CARPETA / "trabajo").exists()   # el perfil sí se borró
+
+def test_no_se_puede_borrar_el_ultimo_ni_estando_en_el(perfiles):
+    ok, msg = profiles.borrar(profiles.activo()["slug"])
+    assert not ok and "único" in msg
+    assert len(profiles.listar()) == 1
