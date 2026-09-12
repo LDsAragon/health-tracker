@@ -16,6 +16,7 @@ GEOMETRIA = "widget.json"
 _ventana = None
 _principal = None
 _url_base = ""
+_minimizada = False
 _lock = threading.Lock()
 
 
@@ -24,6 +25,28 @@ def configurar(ventana_principal, url_base: str):
     global _principal, _url_base
     _principal = ventana_principal
     _url_base = (url_base or "").rstrip("/")
+    _seguir_el_estado(ventana_principal)
+
+
+def _seguir_el_estado(ventana):
+    """Anotar si la ventana grande está minimizada.
+
+    Hace falta porque `window.minimized` de pywebview es el flag con el que se CREÓ la ventana
+    y nunca se actualiza: el estado vivo solo llega por estos eventos. Sin esto habría que
+    llamar a `restore()` a ciegas, y `restore()` fuerza WindowState=Normal — o sea que
+    desmaximizaría una ventana maximizada.
+    """
+    def marcar(valor):
+        def _h():
+            global _minimizada
+            _minimizada = valor
+        return _h
+    try:
+        ventana.events.minimized += marcar(True)
+        ventana.events.restored += marcar(False)
+        ventana.events.maximized += marcar(False)
+    except Exception:
+        pass
 
 
 def hay_escritorio() -> bool:
@@ -191,5 +214,25 @@ def _olvidar_principal():
 
 
 def mostrar_principal():
-    """Para el menú de la bandeja: traer de vuelta la ventana grande."""
+    """Traer de vuelta la ventana grande, **donde la dejaste**.
+
+    La usan el menú de la bandeja y una segunda Bitácora que se cierra sola. No navega a
+    propósito: cargar "/" te sacaría del día que estabas mirando, y lo que se pidió fue que
+    volviera la misma ventana. Si ya no queda ninguna (la cerraste y seguiste con el widget)
+    ahí sí hay que crear una, y esa arranca en el inicio porque no hay nada que preservar.
+    """
+    if _principal_viva():
+        # Escondida en la bandeja y minimizada son estados distintos y pueden darse los dos.
+        # `restore()` va SOLO si está minimizada: fuerza WindowState=Normal, así que a una
+        # ventana maximizada la desmaximizaría.
+        if _minimizada:
+            try:
+                _principal.restore()
+            except Exception:
+                pass
+        try:
+            _principal.show()       # en Windows es Show() + Activate(): la trae al frente
+        except Exception:
+            return False
+        return True
     return abrir_en_principal("/")

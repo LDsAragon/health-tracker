@@ -103,6 +103,18 @@ def abrir():
     return redirect(url_for("main.settings_view"))
 
 
+@bp.route("/instancia/mostrar", methods=["POST"])
+def instancia_mostrar():
+    """La llama por HTTP una segunda Bitácora que se está por cerrar sola.
+
+    `mostrar_principal()` sirve los dos casos: la ventana escondida en la bandeja vuelve, y si
+    la habías cerrado dejando solo el widget, se crea de nuevo. Se puede crear porque esto corre
+    en el hilo de la request y no en el principal, que es lo que pide create_window.
+    """
+    widget.mostrar_principal()
+    return "", 204
+
+
 @bp.route("/widget/dia/<date_str>", methods=["POST"])
 def dia(date_str):
     """Abre ese día en la ventana grande. Que no haya ventana grande es un caso NORMAL:

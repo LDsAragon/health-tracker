@@ -244,6 +244,11 @@ def _al_mostrarse(principal):
     # porque si la ventana grande se cierra deja de estar en la lista (el servidor sigue vivo).
     widget.configurar(principal, principal._url_prefix or "")
 
+    # El puerto lo elige pywebview, así que la URL para avisarle a una segunda instancia no se
+    # puede saber antes de este punto.
+    import instancia
+    instancia.publicar_url(principal._url_prefix or "")
+
     with_bandeja = tray.iniciar(
         abrir_app=widget.mostrar_principal,
         mostrar_widget=widget.abrir,
@@ -275,6 +280,15 @@ def main():
     APP_DIR.mkdir(parents=True, exist_ok=True)
     os.environ["HT_PERFILES"] = str(APP_DIR)
     os.environ["HT_DB"] = str(DB_FILE)
+
+    # Una sola Bitácora a la vez: si ya hay una, le pedimos que se muestre y nos vamos. Va
+    # ANTES de las migraciones y el auto-backup — no hay por qué pagarlos para después salir,
+    # y dos procesos migrando la misma base a la vez es justo lo que no queremos.
+    import instancia
+    if not instancia.tomar():
+        instancia.avisar_a_la_otra()
+        return
+
     _migrate_first_run()
     import profiles
     try:

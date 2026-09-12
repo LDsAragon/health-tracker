@@ -22,6 +22,7 @@ sync.py                 # Merge entre dos dispositivos: exportar/analizar/aplica
                         #   es un .db y el merge se resuelve en SQL con ATTACH
 widget.py               # Ventana del widget de escritorio (segunda ventana pywebview)
 tray.py                 # Icono en el área de notificación (NotifyIcon vía pythonnet, solo Win)
+instancia.py            # Una sola Bitácora a la vez: lock del SO + aviso por HTTP
 services.py             # Presentación compartida: events_by_date, journal_badges y, para el
                         #   visor de tareas, overdue_buckets / overdue_cutoff / periodo_ventana
 helpers.py              # _setting, _week_start, _dow_names, MESES[], _fmt_clock, safe_back
@@ -49,7 +50,8 @@ routes/
                         #   + /tareas/alerta (JSON)
   perfiles.py           # /perfiles/* (crear, usar, renombrar, borrar)
   sync.py               # /sync/* (exportar, importar, previa, aplicar, descartar)
-  widget.py             # /widget (panel chico) + sus acciones y el control de la ventana
+  widget.py             # /widget (panel chico) + sus acciones, el control de la ventana
+                        #   y /instancia/mostrar (la llama una segunda instancia)
   recurring.py          # /recurring/* (rutinas)
   journal.py            # /journal/* (notas especiales + categorías)
   update.py             # /update/* (auto-actualización: status/check/download/progress/apply/quit)
@@ -109,13 +111,14 @@ Prefijos de backup:
 ## Tests
 
 ```bash
-pytest tests/          # 456 tests, ~25s
+pytest tests/          # 475 tests, ~29s
 ```
 
 Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).
 
 Smoke tests fuera de pytest (necesitan display / ventana real): `tools/smoke_widget.py`
-(widget + bandeja, abre ventanas de verdad y se cierra solo), `tools/smoke_desktop.py` (migración de primer arranque, headless), `tools/smoke_download_linux.py` (descargas en GTK), `tools/snap_settings.py` (screenshot en WebKitGTK para bugs de rendering que no se reproducen en Windows).
+(widget + bandeja, abre ventanas de verdad y se cierra solo), `tools/smoke_instancia.py`
+(lanza dos y tres Bitácoras reales y verifica que sobreviva una sola), `tools/smoke_desktop.py` (migración de primer arranque, headless), `tools/smoke_download_linux.py` (descargas en GTK), `tools/snap_settings.py` (screenshot en WebKitGTK para bugs de rendering que no se reproducen en Windows).
 
 ## Build y release
 
@@ -265,6 +268,29 @@ Segunda ventana de pywebview **en el mismo proceso**, `frameless` + `easy_drag` 
   todavía la tiene (`_principal_viva()`), o el clic en un día se pierde en silencio.
 - ⚠️ **La geometría del widget va a `APP_DIR/widget.json`, nunca a `settings`**: los ajustes
   sincronizan entre máquinas y el widget aparecería corrido o fuera de pantalla en la otra.
+
+### Una sola instancia
+Abrir Bitácora estando abierta **no lanza otra**: vuelve la que ya está, y donde la dejaste.
+`instancia.py` lo resuelve con dos piezas y las dos hacen falta:
+
+- ⚠️ **Un lock del sistema operativo** (`msvcrt.locking` / `fcntl.flock`) sobre
+  `APP_DIR/instancia.lock`, **no un archivo con el PID**: si la app se cuelga y la matás desde
+  el administrador de tareas, el lock lo suelta el sistema, mientras que un archivo-bandera
+  quedaría y la app no abriría nunca más. El handle se deja abierto a propósito — cerrarlo
+  suelta el lock.
+- **Un archivo con la URL** (`instancia.json`) para avisarle por HTTP a la que ya corre
+  (`POST /instancia/mostrar`). No se puede saber antes: pywebview asigna un puerto al azar y
+  recién se conoce en el handler de `shown`. Que el aviso falle es un caso **normal** (la otra
+  puede estar arrancando todavía) y la segunda se cierra igual.
+- El chequeo va **antes** de las migraciones y el auto-backup: no hay por qué pagarlos en un
+  proceso que sale, y dos procesos migrando la misma base a la vez es justo lo que no se quiere.
+- ⚠️ **`mostrar_principal()` no navega.** Antes hacía `load_url("/")`, que te sacaba del día que
+  estabas mirando. Solo crea una ventana nueva si no quedaba ninguna.
+- ⚠️ **`restore()` va solo si la ventana está minimizada**, porque fuerza `WindowState=Normal` y
+  a ciegas desmaximizaría una ventana maximizada. Y el estado hay que **rastrearlo por eventos**
+  (`minimized`/`restored`/`maximized`): `window.minimized` de pywebview es el flag con el que se
+  creó la ventana y nunca se actualiza. En Windows `show()` es `Show()` + `Activate()`, así que
+  alcanza para traerla al frente.
 
 ### Borrado: tres acciones, tres frases
 | Acción | Qué hace | Frase |
