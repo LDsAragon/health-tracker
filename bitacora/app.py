@@ -56,7 +56,11 @@ def create_app():
         settings = db.get_all_settings()
         return {"settings": settings, "field_types": FIELD_TYPES, "pet_art": PET_ART,
                 "overdue_count": _overdue_count(settings),
-                "perfiles": profiles.listar(), "perfil_activo": profiles.activo()}
+                "perfiles": profiles.listar(), "perfil_activo": profiles.activo(),
+                # Acá y no en cada ruta: lo necesitan base.html y widget.html, que son los dos
+                # árboles de plantillas. Servirlo con la página evita que la primera vuelta del
+                # poleo tenga que establecer la referencia.
+                "token_datos": db.token_datos()}
 
     for module in BLUEPRINTS:
         app.register_blueprint(module.bp)

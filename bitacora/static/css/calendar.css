@@ -95,7 +95,13 @@
 /* Grid */
 .cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* ⚠️ minmax(0, 1fr) y NO 1fr: `1fr` es `minmax(auto, 1fr)`, y ese `auto` como mínimo impide
+     que la columna se encoja por debajo del min-content de su contenido. Con `1fr`, una rutina
+     o una nota de texto largo estiraba su columna y deformaba el calendario entero. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  /* Tope de líneas para TODO lo que se muestra en una celda (chips y notas). Un solo lugar
+     para cambiarlo; lo heredan los hijos. Pasado el tope se corta, que es lo que se pidió. */
+  --cal-max-lineas: 10;
   border: 1px solid var(--border);
   border-radius: var(--r);
   overflow: hidden;
@@ -117,6 +123,9 @@
 
 .cal-cell {
   min-height: var(--cell-height, 180px);
+  /* Item de grid: su min-width es `auto` por default, asi que podria desbordar la columna
+     aunque la columna ya no crezca (ver minmax(0, 1fr) arriba). */
+  min-width: 0;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -130,6 +139,7 @@
 /* Área de contenido clickeable */
 .cal-cell-body {
   flex: 1;
+  min-width: 0;            /* idem, pero como item flex de .cal-cell */
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -206,14 +216,19 @@
 .chip {
   font-size: 12px;
   font-weight: 600;
+  line-height: 1.4;
   padding: 3px 8px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--c, #6366f1) 18%, transparent);
   color: var(--c, #6366f1);
   border: 1px solid color-mix(in srgb, var(--c, #6366f1) 35%, transparent);
-  white-space: nowrap;
+  /* ⚠️ Sin `white-space: nowrap`: con nowrap el min-content del chip es el texto ENTERO, y una
+     rutina de título largo estiraba su columna del calendario. El `text-overflow: ellipsis` que
+     había acá nunca llegaba a actuar, justamente porque nada limitaba el ancho.
+     `anywhere` y no `break-word`: es el que rompe también una palabra sola larguísima. */
+  overflow-wrap: anywhere;
   overflow: hidden;
-  text-overflow: ellipsis;
+  max-height: calc(var(--cal-max-lineas, 10) * 1.4em + 6px);   /* + el padding vertical */
 }
 .chip-done    { opacity: .4; text-decoration: line-through; }
 .chip-skipped {
@@ -231,14 +246,13 @@
   line-height: 1.5;
   padding: 5px 9px;
   border-radius: 5px;
-  word-break: break-word;
+  overflow-wrap: anywhere;   /* como .chip: `break-word` no garantiza romper una palabra sola */
   /* contraste claro sobre el fondo oscuro de la celda */
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
   border-left: 3px solid rgba(255, 255, 255, 0.2);
-  /* máximo 6 líneas */
   overflow: hidden;
-  max-height: calc(6 * 1.5 * 13px);
+  max-height: calc(var(--cal-max-lineas, 10) * 1.5em);
 }
 .cal-note-card.cal-note-colored {
   background: color-mix(in srgb, var(--c) 22%, rgba(0,0,0,0.4));

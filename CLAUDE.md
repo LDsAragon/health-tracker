@@ -376,6 +376,44 @@ sin una extensión, así que ahí cerrar cierra. El `NotifyIcon` corre en su **p
 propio `Application.Run()`** — válido en WinForms (un bucle por hilo) y evita tocar los internals de
 pywebview para marshalear a su hilo de interfaz.
 
+## El calendario y el widget se refrescan
+
+Las dos ventanas poletean `GET /refresco` cada 3 s (`static/js/refresco.js`, incluido en
+`base.html` **y** en `widget.html`, que es plantilla propia). Si el token cambió, recargan.
+
+`db.token_datos()` es la ruta de la DB + el `st_mtime_ns` del `.db` y del `-wal`. Son `os.stat`,
+sin SQL: no hay que saber nada del esquema y cubre gratis lo que no pasa por un INSERT de la app
+(restaurar un backup, aplicar un sync, vaciar el perfil). Se sirve con la página en
+`window.TOKEN_DATOS` desde el context processor, así la primera vuelta ya tiene con qué comparar.
+
+- ⚠️ **El `-wal` no es opcional**: la app corre en `journal_mode=WAL`, así que un commit puede
+  tocar solo el sidecar y dejar el `.db` con la mtime vieja. Mirando solo el `.db`, los cambios
+  recién se verían en el próximo checkpoint.
+- ⚠️ **`/refresco` va con `Cache-Control: no-store`**, o el WebView se lo cachea y el poleo deja
+  de ver los cambios.
+- ⚠️ **Poleo y no avisarle a la otra ventana con `evaluate_js`.** El aviso directo sale más corto
+  pero solo anda en la app de escritorio (el mismo problema existe con dos pestañas), no cubre los
+  cambios que no vienen de un POST de la otra ventana, y obliga a mantener a mano qué rutas tocan
+  datos: de las 9 POST de `routes/widget.py`, **6 no cambian nada** (fijar, minimizar, cerrar,
+  abrir, dia, instancia).
+
+Dos cosas del JS que parecen de más y no lo son — las dos salieron de verlo fallar en el navegador:
+
+- ⚠️ **Solo los campos donde se TIPEA cuentan como borrador** (`TIPEABLES`). La primera versión
+  usaba "cualquier input cuyo `value` difiera del `defaultValue`", y **el calendario no se
+  refrescaba nunca**: el slider de tamaño de celda se restaura de `localStorage` al cargar, así
+  que su `value` siempre difiere del HTML. Un slider o un radio no son texto a medio escribir.
+- ⚠️ **`refresco.js` envuelve `fetch` para ignorar las escrituras PROPIAS de la página.** Sin eso,
+  tocar un switch en Ajustes (que guarda al instante) o cerrar el aviso de tareas hacía que la
+  página se recargara sola a los 3 segundos. Los formularios normales no tienen el problema porque
+  recargan y traen un token nuevo; los que hacen `fetch`, sí — y hoy hay cuatro (`ajustes.js`,
+  `day.js`, `week.html` y el "visto" del aviso). Se envuelve `fetch` en vez de avisar desde cada
+  llamador justamente para que el quinto no vuelva a traer el bug. Solo observa: la respuesta se
+  devuelve intacta.
+
+Y el guard nunca pierde el aviso: con borrador no recarga, pero al tick siguiente el token sigue
+distinto y reintenta — al soltar el campo, recarga.
+
 ## La pantalla de Ajustes
 
 Cero `<select>` entre los 16 ajustes, seis secciones colapsables y **guardado al instante**.
@@ -458,6 +496,17 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
 - **Linux / descargas**: `webview.settings["ALLOW_DOWNLOADS"] = True` es necesario (está en `bitacora/escritorio/main.py`); por defecto pywebview cancela descargas silenciosamente.
 - **Arch / keyring**: `instalar.sh` detecta keyring sin inicializar chequeando `/etc/pacman.d/gnupg/trustdb.gpg` (no solo el directorio — el dir puede existir vacío).
 - **Windows / Mark of the Web**: si el zip viajó por internet, .NET se niega a cargar `Python.Runtime.dll`. `escritorio/main.py::_unblock_dlls()` borra el stream `Zone.Identifier` de las DLLs de `_internal/` en cada arranque; el updater hace lo mismo tras copiar los archivos nuevos.
+- ⚠️ **El calendario se deformaba con texto largo**: `grid-template-columns: repeat(7, 1fr)` es
+  `minmax(auto, 1fr)`, y ese `auto` como mínimo **impide que la columna se encoja por debajo del
+  min-content de su contenido**. Con un `white-space: nowrap` en `.chip` (rutinas y notas
+  especiales), el min-content era el título entero: las columnas pasaban de 174px a **558px** y
+  los últimos días de cada semana quedaban clipeados por el `overflow: hidden` de la grilla. Va
+  `minmax(0, 1fr)` + `min-width: 0` en `.cal-cell` y `.cal-cell-body` (los dos tienen `auto` por
+  default), y los chips envuelven con `overflow-wrap: anywhere` en vez de `nowrap`.
+  El tope de líneas de todo lo que se muestra en una celda sale de **`--cal-max-lineas` en
+  `.cal-grid`** (10): un solo lugar, heredado por chips y notas.
+  ⚠️ `.chip-journal` vive en `pages.css`, que carga **después** de `calendar.css`: un
+  `white-space` ahí le gana al de `.chip`, y por eso se lo saca de esa regla también.
 - ⚠️ **Puertos que Chromium rechaza**: WebView2 y WebKitGTK se niegan a cargar una página
   servida desde una lista de ~85 puertos "no seguros" (`net/base/port_util.cc`) y muestran
   **`ERR_UNSAFE_PORT`** — la app queda en blanco, ventana y widget, hasta reiniciarla. pywebview

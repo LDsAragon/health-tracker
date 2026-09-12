@@ -2,8 +2,8 @@
 # DB_PATH NO se re-exporta: sería una copia congelada del valor. Al cambiar de perfil se
 # rebindea database.conn.DB_PATH y esta copia quedaría apuntando al perfil viejo.
 # Para leer la ruta vigente está db_path().
-from .conn import (get_db, db_path, _columns, snapshot_to, is_valid_db, restore_from,
-                   reset_db, backup_path, table_counts)
+from .conn import (get_db, db_path, token_datos, _columns, snapshot_to, is_valid_db,
+                   restore_from, reset_db, backup_path, table_counts)
 from .schema import SCHEMA, MIGRATIONS, SYNCABLE, SCHEMA_VERSION, init_db
 from .notes import (
     add_note, update_note, delete_note,

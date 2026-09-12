@@ -122,6 +122,20 @@ def settings_view():
                            back=safe_back(request.args.get("back")))
 
 
+@bp.route("/refresco")
+def refresco():
+    """"Versión" de los datos, para que la ventana grande y el widget se enteren de los cambios
+    de la otra. Lo poletea `static/js/refresco.js` desde las dos.
+
+    Texto plano y no JSON: es un string opaco que el front solo compara con el que le llegó en la
+    página. Y sin `no-store` el WebView se lo cachea y el poleo deja de ver los cambios.
+    """
+    r = make_response(db.token_datos())
+    r.headers["Content-Type"] = "text/plain; charset=utf-8"
+    r.headers["Cache-Control"] = "no-store"
+    return r
+
+
 @bp.route("/version")
 def version_view():
     return render_template("version.html", version=updater.current_version(),

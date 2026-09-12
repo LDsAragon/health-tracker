@@ -369,7 +369,9 @@ select.journal-cat-select {
   background: color-mix(in srgb, var(--c, #6366f1) 20%, transparent);
   color: var(--c, #6366f1);
   border: 1px solid color-mix(in srgb, var(--c, #6366f1) 40%, transparent);
-  white-space: nowrap;
+  /* ⚠️ Sin `white-space: nowrap`. Siempre se usa junto a `.chip` (`class="chip chip-journal"`),
+     y esta hoja carga DESPUÉS de calendar.css: un nowrap acá le ganaba al envolver de `.chip` y
+     una categoría de nombre largo quedaba cortada a la mitad de una línea en el calendario. */
 }
 
 .cal-todo-badge {

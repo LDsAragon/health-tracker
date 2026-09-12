@@ -14,6 +14,29 @@ def db_path():
     return DB_PATH
 
 
+def token_datos() -> str:
+    """"Versión" de los datos: cambia con cualquier escritura. Para que dos ventanas abiertas
+    (la grande y el widget) se enteren de los cambios de la otra.
+
+    Son `os.stat`, sin SQL: no hay que saber nada del esquema y cubre gratis lo que no pasa por
+    un INSERT de la app —restaurar un backup, aplicar un sync, vaciar el perfil—.
+
+    ⚠️ **El `-wal` no es opcional.** La app corre en `journal_mode=WAL`, así que un commit puede
+    tocar solo el sidecar y dejar el `.db` con la mtime vieja: mirando solo el `.db`, los cambios
+    recién se verían en el próximo checkpoint.
+
+    ⚠️ **La ruta va en el token.** Al cambiar de perfil cambia la base, y sin la ruta el cambio
+    podría pasar desapercibido si las mtimes coincidieran.
+    """
+    partes = [DB_PATH]
+    for p in (DB_PATH, DB_PATH + "-wal"):
+        try:
+            partes.append(str(os.stat(p).st_mtime_ns))
+        except OSError:
+            partes.append("-")      # todavía no existe (DB nueva, o sin WAL abierto)
+    return "|".join(partes)
+
+
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
