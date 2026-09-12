@@ -57,18 +57,19 @@ def test_mascotita_no_sale_en_cada_completado(client, monkeypatch):
     assert "pet=1" not in client.post(f"/day/{DATE}/todo/{tid}/toggle", headers=ref).headers["Location"]
 
 
-def test_mascotita_apagada_por_defecto(client):
-    """Una base nueva no festeja hasta que la prendas."""
+def test_mascotita_prendida_por_defecto(client):
+    """Una base nueva trae el gatito. Ojo: asoma solo a veces, no en cada completado."""
     from appconfig import DEFAULT_SETTINGS
-    assert DEFAULT_SETTINGS["pet"] == "none"
-    assert db.get_all_settings()["pet"] == "none"
+    assert DEFAULT_SETTINGS["pet"] == "cat"
+    assert db.get_all_settings()["pet"] == "cat"
 
 
 def test_mascotita_apagada_no_dibuja_aunque_gane_el_dado(client, monkeypatch):
-    """El ?pet=1 puede quedar en la URL (link pegado, recarga): la plantilla igual no la dibuja."""
+    """El ?pet=1 puede quedar en la URL (link pegado, recarga): con la mascota apagada la
+    plantilla igual no la dibuja. Apaga a mano porque ya no es el default."""
     _dado(monkeypatch, True)
-    body = client.get(f"/day/{DATE}?pet=1").data.decode()
-    assert "pet-overlay" not in body
+    db.set_setting("pet", "none")
+    assert "pet-overlay" not in client.get(f"/day/{DATE}?pet=1").data.decode()
     db.set_setting("pet", "cat")
     assert "pet-overlay" in client.get(f"/day/{DATE}?pet=1").data.decode()
 
@@ -90,11 +91,11 @@ def test_dia_chips_de_categorias(client):
 
 
 def test_home_redirige_segun_start_view(client):
-    assert "/calendar/" in client.get("/").headers["Location"]   # default month
+    assert "/week/" in client.get("/").headers["Location"]       # default: semana
+    db.set_setting("start_view", "month")
+    assert "/calendar/" in client.get("/").headers["Location"]
     db.set_setting("start_view", "today")
     assert "/day/" in client.get("/").headers["Location"]
-    db.set_setting("start_view", "week")
-    assert "/week/" in client.get("/").headers["Location"]
 
 def test_calendario_mes_especifico(client):
     assert client.get("/calendar/2026/6").status_code == 200

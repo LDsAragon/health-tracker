@@ -361,7 +361,7 @@ def test_week_start_default(test_db):
     assert db.get_setting("week_start") == "mon"
 
 def test_start_view_default(test_db):
-    assert db.get_setting("start_view") == "month"
+    assert db.get_setting("start_view") == "week"
 
 
 # ── Visor de tareas: done_at, atrasadas y filtros ───────────────────────────────

@@ -129,7 +129,7 @@ def test_geometria_ignora_valores_que_no_son_numeros(tmp_path, monkeypatch):
 # ── Bandeja ──────────────────────────────────────────────────────────────────
 
 def test_los_ajustes_nuevos_existen():
-    assert SETTINGS["widget_autostart"]["default"] == "off"
+    assert SETTINGS["widget_autostart"]["default"] == "on"
     assert SETTINGS["cerrar_a_bandeja"]["default"] == "on"
 
 def test_la_bandeja_no_se_intenta_en_linux(monkeypatch):
@@ -160,6 +160,7 @@ def test_sin_bandeja_no_se_engancha_el_cierre(cliente, monkeypatch):
     Es el caso de Linux y el de un NotifyIcon que falla."""
     import desktop
     monkeypatch.setattr(tray, "iniciar", lambda **kw: False)
+    monkeypatch.setattr(widget, "abrir", lambda: False)
     db.set_setting("cerrar_a_bandeja", "on")     # aun prendido, no debe engancharse
     v = _VentanaFalsa()
     desktop._al_mostrarse(v)
@@ -169,6 +170,7 @@ def test_sin_bandeja_no_se_engancha_el_cierre(cliente, monkeypatch):
 def test_con_bandeja_si_se_engancha_el_cierre(cliente, monkeypatch):
     import desktop
     monkeypatch.setattr(tray, "iniciar", lambda **kw: True)
+    monkeypatch.setattr(widget, "abrir", lambda: False)
     db.set_setting("cerrar_a_bandeja", "on")
     v = _VentanaFalsa()
     desktop._al_mostrarse(v)
@@ -178,10 +180,28 @@ def test_con_bandeja_si_se_engancha_el_cierre(cliente, monkeypatch):
 def test_con_bandeja_pero_el_ajuste_apagado_no_engancha(cliente, monkeypatch):
     import desktop
     monkeypatch.setattr(tray, "iniciar", lambda **kw: True)
+    monkeypatch.setattr(widget, "abrir", lambda: False)
     db.set_setting("cerrar_a_bandeja", "off")
     v = _VentanaFalsa()
     desktop._al_mostrarse(v)
     assert v.enganchados == []
+
+
+def test_el_widget_se_abre_solo_con_el_autostart_prendido(cliente, monkeypatch):
+    """Default desde sep 2026: el widget arranca con la app. Lo abre _al_mostrarse, que corre
+    en el hilo del evento `shown` — el único desde el que create_window crea en el acto."""
+    import desktop
+    abiertos = []
+    monkeypatch.setattr(tray, "iniciar", lambda **kw: False)
+    monkeypatch.setattr(widget, "abrir", lambda: abiertos.append(1) or True)
+
+    db.set_setting("widget_autostart", "on")
+    desktop._al_mostrarse(_VentanaFalsa())
+    assert len(abiertos) == 1
+
+    db.set_setting("widget_autostart", "off")
+    desktop._al_mostrarse(_VentanaFalsa())
+    assert len(abiertos) == 1          # apagado no abre nada
 
 
 def test_a_la_bandeja_cancela_el_cierre_y_esconde():
