@@ -1,4 +1,6 @@
 @echo off
+rem Doble clic para abrir Bitacora en el navegador. Crea el venv la primera vez, asi que es
+rem tambien el arranque desde cero. Todo lo demas (tests, builds, release) esta en hacer.ps1.
 cd /d "%~dp0"
 echo Iniciando Bitacora...
 

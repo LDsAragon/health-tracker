@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Genera dist/Bitacora-linux-<fecha>.tar.gz listo para compartir:
 # carpeta Bitacora/ con el código de la app + instalador + LEEME + manual.
-# Correr en Linux o WSL (release-linux.bat lo hace desde Windows).
+# Correr en Linux o WSL (hacer.ps1 build-linux lo hace desde Windows).
 set -e
 cd "$(dirname "$0")/.."
 

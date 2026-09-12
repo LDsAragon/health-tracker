@@ -131,38 +131,70 @@ Prefijos de backup:
 
 ## Tests
 
-```bash
-pytest tests/          # 475 tests, ~29s
+```powershell
+.\hacer.ps1 tests              # 475 tests, ~29s (o `pytest tests/` directo)
+.\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
-Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).
+Los tests parchean `bitacora.database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).
 
-Smoke tests fuera de pytest (necesitan display / ventana real): `tools/smoke_widget.py`
-(widget + bandeja, abre ventanas de verdad y se cierra solo), `tools/smoke_instancia.py`
-(lanza dos y tres Bitácoras reales y verifica que sobreviva una sola), `tools/smoke_desktop.py` (migración de primer arranque, headless), `tools/smoke_download_linux.py` (descargas en GTK), `tools/snap_settings.py` (screenshot en WebKitGTK para bugs de rendering que no se reproducen en Windows).
+Smoke tests fuera de pytest, porque necesitan display o ventana real — todos vía
+`.\hacer.ps1 smoke <cual>`:
+
+| `smoke …` | Qué cubre |
+|---|---|
+| `widget` | widget + bandeja: abre ventanas de verdad y se cierra solo |
+| `instancia` | lanza dos y tres Bitácoras reales y verifica que sobreviva una sola |
+| `desktop` | migración de primer arranque (headless) |
+| `descargas` | descargas en GTK (solo Linux) |
+| `captura` | screenshot en WebKitGTK, para bugs de rendering que no se ven en Windows |
+
+## Comandos: `hacer.ps1`
+
+**Todos los comandos del proyecto salen de un solo lugar.** Sin argumentos los lista:
+
+```powershell
+.\hacer.ps1                          # lista todo con su descripción
+.\hacer.ps1 tests -k ajustes         # los argumentos pasan tal cual
+.\hacer.ps1 smoke instancia
+.\hacer.ps1 build
+.\hacer.ps1 publicar -Aviso "..."
+```
+
+`hacer.ps1` **no duplica lógica**: cada subcomando despacha al script de `tools/` que ya hacía el
+trabajo, así que seguir llamándolos directo funciona igual. Lo único que agrega es el chequeo del
+venv y la instalación de `pywebview` en `abrir` (lo que hacía `desktop.bat`).
+
+`start.bat` se queda aparte a propósito: es el doble clic para abrir en el navegador y **crea el
+venv la primera vez**, así que es también el arranque desde cero. El manual lo documenta.
+
+Se fueron `desktop.bat`, `release.bat`, `release-linux.bat` y `publicar.bat` (eran wrappers de una
+línea) y `build_exe.bat`, que llamaba a PyInstaller **sin generar `_version.py`**: el `.exe` que
+armaba se quedaba sin versión y el updater no corría.
 
 ## Build y release
 
-**Windows** — PyInstaller:
-```powershell
-.\publicar.bat           # build + upload a GitHub Releases
-# o solo el build:
-powershell -File tools\make_release.ps1
-```
-Ojo: `Bitacora.exe` debe estar cerrada antes del build (`make_release.ps1` aborta si detecta el proceso). El zip lleva la carpeta `Bitacora`, `docs/LEEME.txt` y `docs/Bitacora-Manual.pdf`; el PDF se regenera aparte con `tools\make_manual.ps1` (Edge headless) cuando cambia `docs/manual.html`.
+**Windows** — PyInstaller (`.\hacer.ps1 build` → `tools\make_release.ps1`):
+Ojo: `Bitacora.exe` debe estar cerrada antes del build (`make_release.ps1` aborta si detecta el
+proceso). El zip lleva la carpeta `Bitacora`, `docs/LEEME.txt` y `docs/Bitacora-Manual.pdf`; el PDF
+se regenera aparte con `.\hacer.ps1 manual` (Edge headless) cuando cambia `docs/manual.html`.
 
-**Linux** — tarball con instalador:
-```bat
-release-linux.bat        # llama a WSL → tools/make_release_linux.sh
-```
-El tarball incluye `tools/linux/instalar.sh` (detecta apt/dnf/pacman) y `tools/linux/bitacora.sh` (launcher con env vars).
+⚠️ **El entry point del build es `main.py`, no el paquete**, y `--add-data` deja `templates/` y
+`static/` en la **raíz** del bundle (`bitacora/templates;templates`) porque ahí las busca la rama
+congelada de `create_app()`.
 
-**Publicar a GitHub Releases** (ambas plataformas):
-```powershell
-.\publicar.bat
-# re-publicar un tag existente:
-powershell -File tools\publish_release.ps1 -Tag v2026-06-12.1
-```
+**Linux** — tarball con instalador (`.\hacer.ps1 build-linux` → WSL → `tools/make_release_linux.sh`):
+El tarball incluye `tools/linux/instalar.sh` (detecta apt/dnf/pacman) y `tools/linux/bitacora.sh`
+(launcher con env vars, ejecuta `main.py`). Copia `main.py` + el paquete `bitacora/` entero, sin
+lista de módulos: una lista explícita se desactualiza sola (`updater.py` faltó desde `v2026-06-25`
+y la app de Linux ni arrancaba, y por eso el CI verifica que el tarball importe).
+
+**Publicar a GitHub Releases** (ambas plataformas): `.\hacer.ps1 publicar`.
+⚠️ **Sin `-Tag`, el script busca el primer sufijo libre del día** (`.1`, `.2`, …) y avisa cuál
+eligió. Antes usaba `v<fecha>` a secas y, con un release del día ya publicado, le reemplazaba los
+archivos y las notas en silencio — y encima ese tag compara **menor** que el del día con sufijo
+(`_version_tuple`: `(2026,9,12) < (2026,9,12,2)`), así que el release nuevo no se le ofrecía a
+nadie. La rama que reemplaza sigue existiendo, pero solo se llega pasando `-Tag` a propósito.
 
 **CI**: `.github/workflows/ci.yml` — pytest + tarball Linux como artifact, corre en push/PR a main.
 
