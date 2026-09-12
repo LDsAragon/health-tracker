@@ -136,7 +136,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 482 tests, ~27s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 503 tests, ~31s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -381,38 +381,47 @@ pywebview para marshalear a su hilo de interfaz.
 Las dos ventanas poletean `GET /refresco` cada 3 s (`static/js/refresco.js`, incluido en
 `base.html` **y** en `widget.html`, que es plantilla propia). Si el token cambió, recargan.
 
-`db.token_datos()` es la ruta de la DB + el `st_mtime_ns` del `.db` y del `-wal`. Son `os.stat`,
-sin SQL: no hay que saber nada del esquema y cubre gratis lo que no pasa por un INSERT de la app
-(restaurar un backup, aplicar un sync, vaciar el perfil). Se sirve con la página en
-`window.TOKEN_DATOS` desde el context processor, así la primera vuelta ya tiene con qué comparar.
+`db.token_datos()` sale de **datos commiteados**: la ruta de la base + un `MAX()` de los
+`updated_at` de las 7 tablas de `SYNCABLE` (los llenan los triggers del sync), del `deleted_at` de
+`deletions` y del `updated_at` de `settings`. Una sola consulta con subselects, armada desde
+`SYNCABLE` para que no pueda quedar desfasada del esquema. Cubre gratis lo que no es un INSERT
+normal: `reset_db()` deja los máximos vacíos y restaurar un backup trae otros `updated_at`.
 
-- ⚠️ **El `-wal` no es opcional**: la app corre en `journal_mode=WAL`, así que un commit puede
-  tocar solo el sidecar y dejar el `.db` con la mtime vieja. Mirando solo el `.db`, los cambios
-  recién se verían en el próximo checkpoint.
-- ⚠️ **`/refresco` va con `Cache-Control: no-store`**, o el WebView se lo cachea y el poleo deja
-  de ver los cambios.
-- ⚠️ **Poleo y no avisarle a la otra ventana con `evaluate_js`.** El aviso directo sale más corto
-  pero solo anda en la app de escritorio (el mismo problema existe con dos pestañas), no cubre los
-  cambios que no vienen de un POST de la otra ventana, y obliga a mantener a mano qué rutas tocan
-  datos: de las 9 POST de `routes/widget.py`, **6 no cambian nada** (fijar, minimizar, cerrar,
-  abrir, dia, instancia).
+### Los dos bugs que lo tuvieron recargándose cada 3 segundos
+Se publicaron juntos en `v2026-09-12.5` y los dos daban el mismo síntoma —la app parpadeando sola—
+así que conviene tener los dos presentes:
 
-Dos cosas del JS que parecen de más y no lo son — las dos salieron de verlo fallar en el navegador:
+- ⚠️ **El token NO puede salir de la mtime de los archivos.** La primera versión usaba `os.stat`
+  del `.db` y del `-wal`. Pero `with get_db()` deja la conexión sin referencias y CPython la
+  cierra, y **al cerrarse la última conexión de una base en WAL SQLite hace checkpoint y borra el
+  `-wal`**: que el archivo exista —y con qué mtime— en el momento del stat es una carrera.
+  `test_el_token_no_se_mueve_entre_REQUESTS` lo fija pidiéndolo **por HTTP** varias veces, que es
+  lo único que reproduce las conexiones abriéndose y cerrándose; llamarlo dos veces en el mismo
+  proceso daba estable y por eso el bug pasó.
+- ⚠️ **El token se embute con `| tojson`, nunca como `"{{ token_datos }}"`.** Lleva la ruta de la
+  base, que en Windows tiene barras invertidas, y en un literal de JavaScript esas barras son
+  escapes que desaparecen. La página guardaba un valor que **nunca** iba a coincidir con el de la
+  ruta. `test_el_token_de_la_pagina_es_IGUAL_al_de_la_ruta` parsea el literal como JSON, igual que
+  el navegador, y lo compara con la respuesta de `/refresco`.
 
-- ⚠️ **Solo los campos donde se TIPEA cuentan como borrador** (`TIPEABLES`). La primera versión
-  usaba "cualquier input cuyo `value` difiera del `defaultValue`", y **el calendario no se
-  refrescaba nunca**: el slider de tamaño de celda se restaura de `localStorage` al cargar, así
-  que su `value` siempre difiere del HTML. Un slider o un radio no son texto a medio escribir.
+### Cuándo recarga
+- ⚠️ **`Cache-Control: no-store` en `/refresco`**, o el WebView se lo cachea y el poleo deja de ver
+  los cambios.
+- **No se recarga encima de lo que estás haciendo**: si la ventana no tiene el foco, recarga ya; si
+  lo tiene, espera a que sueltes mouse y teclado 1,5 s. "Tiene el foco" solo no alcanza como regla
+  —una ventana enfocada y quieta se quedaría vieja para siempre—.
+- **Ni encima de algo tipeado.** Solo cuentan los campos donde se escribe (`TIPEABLES`): la primera
+  versión miraba cualquier input con `value !== defaultValue` y **el calendario no se refrescaba
+  nunca**, porque el slider de tamaño de celda se restaura de `localStorage` y su value siempre
+  difiere del HTML.
 - ⚠️ **`refresco.js` envuelve `fetch` para ignorar las escrituras PROPIAS de la página.** Sin eso,
-  tocar un switch en Ajustes (que guarda al instante) o cerrar el aviso de tareas hacía que la
-  página se recargara sola a los 3 segundos. Los formularios normales no tienen el problema porque
-  recargan y traen un token nuevo; los que hacen `fetch`, sí — y hoy hay cuatro (`ajustes.js`,
-  `day.js`, `week.html` y el "visto" del aviso). Se envuelve `fetch` en vez de avisar desde cada
-  llamador justamente para que el quinto no vuelva a traer el bug. Solo observa: la respuesta se
-  devuelve intacta.
-
-Y el guard nunca pierde el aviso: con borrador no recarga, pero al tick siguiente el token sigue
-distinto y reintenta — al soltar el campo, recarga.
+  tocar un switch en Ajustes (que guarda al instante) o cerrar el aviso de tareas la recargaba sola
+  a los 3 s. Se envuelve en vez de avisar desde cada llamador porque hoy hay cuatro (`ajustes.js`,
+  `day.js`, `week.html` y el "visto" del aviso) y el quinto traería el bug de vuelta.
+- Mientras está oculta no poletea, y al volver a verse chequea en el acto.
+- **Corta-circuitos**: más de 3 recargas en 30 s y el poleo se corta con un `console.warn`. No
+  arregla la causa, la acota — convierte "la app es inusable" en "el refresco dejó de andar".
+  También se corta tras 5 fallos de red seguidos, que es lo que pasa al cerrar la app.
 
 ## La pantalla de Ajustes
 

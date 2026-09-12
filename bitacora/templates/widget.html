@@ -122,7 +122,9 @@
 
 </main>
 
-<script>window.TOKEN_DATOS = "{{ token_datos }}";</script>
+{# ⚠️ tojson, y NO el valor entre comillas — ver la nota en base.html: las barras invertidas de
+   la ruta de Windows se comían como escapes de JavaScript y la página se recargaba sin parar. #}
+<script>window.TOKEN_DATOS = {{ token_datos | tojson }};</script>
 <script src="{{ url_for('static', filename='js/refresco.js') }}"></script>
 </body>
 </html>

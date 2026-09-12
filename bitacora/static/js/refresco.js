@@ -11,10 +11,38 @@
   let referencia = window.TOKEN_DATOS;
   if (!referencia) return;
 
-  // ⚠️ Las escrituras PROPIAS de esta página no son "cambios de la otra ventana": si contaran,
-  // tocar un switch en Ajustes (que guarda al instante por AJAX) o tildar el aviso de tareas
-  // haría que la página se recargue sola a los 3 segundos. Los formularios normales no tienen el
-  // problema porque recargan y traen un token nuevo; los que hacen fetch, sí.
+  // ── Corta-circuitos ───────────────────────────────────────────────────────
+  // ⚠️ Un token que oscile deja la app recargándose sin parar, y es exactamente lo que pasó
+  // cuando salía de la mtime de los archivos. Esto no arregla la causa, la acota: convierte
+  // "la app es inusable" en "el refresco dejó de andar", que se nota mucho menos y se ve en la
+  // consola.
+  const TOPE = 3, VENTANA = 30000;
+  const CLAVE = 'refresco_recargas';
+
+  function recargasRecientes() {
+    try {
+      const t = JSON.parse(sessionStorage.getItem(CLAVE) || '[]');
+      return t.filter((ts) => Date.now() - ts < VENTANA);
+    } catch (e) { return []; }
+  }
+
+  function anotarRecarga() {
+    try {
+      sessionStorage.setItem(CLAVE, JSON.stringify(recargasRecientes().concat(Date.now())));
+    } catch (e) { /* modo privado */ }
+  }
+
+  if (recargasRecientes().length > TOPE) {
+    console.warn('Bitácora: el refresco recargó ' + recargasRecientes().length +
+                 ' veces en ' + (VENTANA / 1000) + ' s. Lo corto para no seguir parpadeando; ' +
+                 'el token de /refresco debe estar inestable.');
+    return;
+  }
+
+  // ── Las escrituras propias no son cambios de la otra ventana ──────────────
+  // Sin esto, tocar un switch en Ajustes (que guarda al instante por AJAX) o cerrar el aviso de
+  // tareas haría que la página se recargue sola a los 3 segundos. Los formularios normales no
+  // tienen el problema porque recargan y traen un token nuevo; los que hacen fetch, sí.
   //
   // Se envuelve fetch en vez de avisar desde cada llamador: hoy hay cuatro (ajustes.js, day.js,
   // week.html y el "visto" del aviso), y el quinto que alguien agregue volvería a traer el bug.
@@ -24,20 +52,31 @@
     const metodo = ((opciones && opciones.method) || 'GET').toUpperCase();
     const p = fetchOriginal.apply(this, arguments);
     if (metodo !== 'GET' && metodo !== 'HEAD') {
-      p.then(function (r) {
-        if (r && r.ok) alDia();
-      }).catch(function () { /* que falle el POST no es asunto del refresco */ });
+      p.then(function (r) { if (r && r.ok) alDia(); })
+       .catch(function () { /* que falle el POST no es asunto del refresco */ });
     }
     return p;
   };
 
   function alDia() {
-    fetchOriginal('/refresco', { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.text() : null; })
-      .then(function (t) { if (t) referencia = t; })
-      .catch(function () {});
+    pedirToken().then(function (t) { if (t) { referencia = t; pendiente = false; } });
   }
 
+  // Si el servidor se fue, dejar de polear. Pasa al cerrar la app: la página sobrevive un rato
+  // al server y cada vuelta dejaba un ERR_CONNECTION_REFUSED en la consola, para siempre.
+  const FALLOS_TOPE = 5;
+  let fallos = 0;
+
+  function pedirToken() {
+    return fetchOriginal('/refresco', { cache: 'no-store' })
+      .then(function (r) {
+        fallos = 0;
+        return r.ok ? r.text() : null;
+      })
+      .catch(function () { fallos++; return null; });
+  }
+
+  // ── Cuándo se puede recargar ──────────────────────────────────────────────
   // ⚠️ Solo los campos donde se TIPEA cuentan como borrador. Con "cualquier input cuyo value
   // difiera del defaultValue" el calendario no se refrescaba nunca: el slider de tamaño de celda
   // se restaura de localStorage al cargar, así que su value siempre difiere del HTML. Un slider,
@@ -66,15 +105,50 @@
     return false;
   }
 
-  setInterval(function () {
+  let pendiente = false;
+
+  // Cuándo fue la última vez que el usuario hizo algo en esta ventana.
+  const QUIETO = 1500;
+  let ultimaInteraccion = 0;
+  ['pointerdown', 'pointermove', 'keydown', 'wheel', 'scroll'].forEach(function (ev) {
+    window.addEventListener(ev, function () { ultimaInteraccion = Date.now(); },
+                            { passive: true });
+  });
+
+  // ⚠️ No recargar ENCIMA de lo que estás haciendo — el parpadeo justo abajo del mouse es lo
+  // que se ve mal. Pero "tiene el foco" solo no sirve como regla: una ventana enfocada y quieta
+  // se quedaría desactualizada para siempre. Así que la de atrás recarga ya, y la de adelante
+  // espera a que sueltes el mouse y el teclado un segundo y medio.
+  function puedeRecargar() {
+    if (hayBorrador()) return false;
+    if (!document.hasFocus()) return true;
+    return Date.now() - ultimaInteraccion > QUIETO;
+  }
+
+  function intentar() {
+    if (!pendiente || !puedeRecargar()) return;
+    anotarRecarga();
+    location.reload();
+  }
+
+  window.addEventListener('blur', intentar);
+
+  // Al volver a verse (el widget que estaba tapado, una pestaña de atrás) se chequea en el
+  // acto: mientras estuvo oculta no poleó, así que puede estar vieja.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) revisar();
+  });
+
+  function revisar() {
+    return pedirToken().then(function (token) {
+      if (token && token !== referencia) pendiente = true;
+      intentar();
+    });
+  }
+
+  const timer = setInterval(function () {
+    if (fallos >= FALLOS_TOPE) { clearInterval(timer); return; }
     if (document.hidden) return;            // el widget tapado o la ventana minimizada
-    fetchOriginal('/refresco', { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.text() : null; })
-      .then(function (token) {
-        // Con borrador no se recarga, pero tampoco se pierde el aviso: al tick siguiente el
-        // token sigue distinto y se reintenta.
-        if (token && token !== referencia && !hayBorrador()) location.reload();
-      })
-      .catch(function () { /* la app se está cerrando, o el server todavía no levantó */ });
+    revisar();
   }, INTERVALO);
 })();

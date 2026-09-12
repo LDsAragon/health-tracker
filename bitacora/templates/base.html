@@ -321,7 +321,11 @@
   });
   </script>
 
-<script>window.TOKEN_DATOS = "{{ token_datos }}";</script>
+{# ⚠️ tojson, y NO el valor entre comillas: en Windows el token lleva la ruta de la base con
+   barras invertidas, y en un literal de JavaScript esas barras son escapes (inválidos) que
+   desaparecen. El valor quedaba distinto del que devuelve /refresco y la página se recargaba
+   cada 3 segundos para siempre. Es el mismo `| tojson` que ya usa el contexto del día. #}
+<script>window.TOKEN_DATOS = {{ token_datos | tojson }};</script>
 <script src="{{ url_for('static', filename='js/refresco.js') }}"></script>
 </body>
 </html>

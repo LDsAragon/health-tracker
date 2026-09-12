@@ -15,6 +15,31 @@ def test_el_token_no_se_mueve_solo(client):
     assert db.token_datos() == db.token_datos()
 
 
+def test_el_token_no_se_mueve_entre_REQUESTS(client):
+    """⚠️ EL test de esta feature, y el que faltaba cuando el bug se publicó.
+
+    La primera versión del token salía del `os.stat` del `.db` y del `-wal`, y llamarlo dos veces
+    en el mismo proceso (el test de arriba) daba estable. Pero cada request abre y cierra
+    conexiones, y **al cerrarse la última conexión de una base en WAL, SQLite hace checkpoint y
+    BORRA el `-wal`**: que el archivo exista en el momento del stat era una carrera, el token
+    alternaba y las dos ventanas se recargaban cada 3 segundos para siempre.
+
+    Pedirlo por HTTP varias veces es lo único que reproduce esas conexiones abriéndose y
+    cerrándose.
+    """
+    tokens = {client.get("/refresco").data for _ in range(12)}
+    assert len(tokens) == 1, f"el token se movió sin escribir nada: {tokens}"
+
+
+def test_el_token_no_se_mueve_navegando(client):
+    """Cada página calcula el token en el context processor, así que navegar también abre y
+    cierra conexiones. Tampoco puede moverlo."""
+    inicial = client.get("/refresco").data
+    for ruta in ("/calendar/2026/6", "/widget", "/tareas", "/day/2026-06-10", "/ajustes"):
+        client.get(ruta)
+        assert client.get("/refresco").data == inicial, f"{ruta} movió el token"
+
+
 def test_el_token_cambia_al_escribir(client):
     antes = db.token_datos()
     db.add_note("2026-06-10", "una nota")
@@ -29,17 +54,34 @@ def test_el_token_cambia_al_tildar_una_tarea(client):
     assert db.token_datos() != antes
 
 
-def test_el_token_lleva_el_wal_y_no_solo_el_db(client, tmp_path):
-    """⚠️ La app corre en WAL: un commit puede tocar solo el sidecar y dejar la mtime del .db
-    igual. Mirando solo el .db, los cambios recién se verían en el próximo checkpoint.
+def test_el_token_NO_depende_de_los_archivos(client):
+    """⚠️ La invariante que se rompió cuando el token salía de `os.stat`.
 
-    Se toca el `-wal` a mano en vez de confiar en cuándo SQLite hace checkpoint, que es lo que
-    haría el test intermitente."""
+    Tocar las mtimes del `.db` y del `-wal` no puede mover el token: son justo los que cambian
+    solos cuando SQLite abre, cierra y hace checkpoint, y por eso las ventanas se recargaban sin
+    parar."""
     import os
-    wal = db.db_path() + "-wal"
-    open(wal, "ab").close()
     antes = db.token_datos()
-    os.utime(wal, ns=(0, 123456789))
+    for p in (db.db_path(), db.db_path() + "-wal"):
+        if os.path.exists(p):
+            os.utime(p, ns=(0, 123456789))
+    assert db.token_datos() == antes
+
+
+def test_el_token_ve_los_borrados(client):
+    """Borrar no toca ningún `updated_at`: el token tiene que salir del tombstone."""
+    db.add_note("2026-06-10", "para borrar")
+    nid = db.get_notes_for_date("2026-06-10")[0]["id"]
+    antes = db.token_datos()
+    db.delete_note(nid)
+    assert db.token_datos() != antes
+
+
+def test_el_token_ve_un_ajuste(client):
+    """`settings` no está en SYNCABLE pero tiene su propio updated_at, y cambiar el tema tiene
+    que refrescar la otra ventana."""
+    antes = db.token_datos()
+    db.set_setting("theme", "oceano")
     assert db.token_datos() != antes
 
 
@@ -66,11 +108,13 @@ def test_el_token_cambia_al_cambiar_de_perfil(tmp_path, monkeypatch):
     assert db.token_datos() != antes
 
 
-def test_sin_archivos_todavia_no_explota(tmp_path, monkeypatch):
-    """Primer arranque: la DB puede no existir aún y el token igual tiene que salir."""
+def test_sin_esquema_todavia_no_explota(tmp_path, monkeypatch):
+    """Primer arranque: la DB puede no tener las tablas y el token igual tiene que salir, o la
+    página entera se caería con un 500."""
     monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "no-existe.db"))
     t = db.token_datos()
-    assert t.endswith("|-|-")       # ni .db ni -wal
+    assert t.startswith(str(tmp_path))
+    assert db.token_datos() == t        # y estable igual
 
 
 # ── La ruta ──────────────────────────────────────────────────────────────────
@@ -101,3 +145,24 @@ def test_las_pantallas_traen_el_token_y_el_script(client, ruta):
     html = client.get(ruta).data.decode()
     assert "window.TOKEN_DATOS" in html
     assert "js/refresco.js" in html
+
+
+@pytest.mark.parametrize("ruta", ["/calendar/2026/6", "/widget", "/tareas", "/ajustes"])
+def test_el_token_de_la_pagina_es_IGUAL_al_de_la_ruta(client, ruta):
+    """⚠️ El otro bug que se publicó, y el más difícil de ver.
+
+    El token lleva la ruta de la base, que en Windows tiene barras invertidas. Embutido como
+    `window.TOKEN_DATOS = "{{ token_datos }}"`, JavaScript se comía esas barras (`\\U`, `\\T`… son
+    escapes inválidos) y la página guardaba un valor que NUNCA iba a coincidir con lo que
+    devuelve /refresco: recargaba cada 3 segundos para siempre. Se arregla con `| tojson`.
+
+    El test compara el literal de la página, parseado como JSON igual que lo haría el navegador,
+    contra la respuesta de la ruta.
+    """
+    import json
+    import re
+    html = client.get(ruta).data.decode()
+    m = re.search(r"window\.TOKEN_DATOS = (.+?);", html)
+    assert m, "no se encontró window.TOKEN_DATOS"
+    del_html = json.loads(m.group(1))          # tal como lo lee el navegador
+    assert del_html == client.get("/refresco").data.decode()

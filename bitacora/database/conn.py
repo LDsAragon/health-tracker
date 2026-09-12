@@ -15,26 +15,37 @@ def db_path():
 
 
 def token_datos() -> str:
-    """"Versión" de los datos: cambia con cualquier escritura. Para que dos ventanas abiertas
-    (la grande y el widget) se enteren de los cambios de la otra.
+    """"Versión" de los datos: cambia con cualquier escritura y **solo** con una escritura. Para
+    que dos ventanas abiertas (la grande y el widget) se enteren de los cambios de la otra.
 
-    Son `os.stat`, sin SQL: no hay que saber nada del esquema y cubre gratis lo que no pasa por
-    un INSERT de la app —restaurar un backup, aplicar un sync, vaciar el perfil—.
+    Sale de datos commiteados, que es lo que lo hace estable: los `updated_at` que llenan los
+    triggers en las tablas de `SYNCABLE`, los tombstones de `deletions` y el `updated_at` de
+    `settings`. Una sola consulta con subselects.
 
-    ⚠️ **El `-wal` no es opcional.** La app corre en `journal_mode=WAL`, así que un commit puede
-    tocar solo el sidecar y dejar el `.db` con la mtime vieja: mirando solo el `.db`, los cambios
-    recién se verían en el próximo checkpoint.
+    ⚠️ **NO usar la mtime de los archivos.** Fue la primera versión y se publicó rota: cada
+    request abre y cierra conexiones, y al cerrarse la última conexión de una base en WAL SQLite
+    hace checkpoint y borra el `-wal`. Que el archivo exista —y con qué mtime— en el momento del
+    `os.stat` es una carrera, así que el token alternaba y las dos ventanas se recargaban cada 3
+    segundos para siempre. `test_el_token_no_se_mueve_entre_REQUESTS` lo fija.
 
-    ⚠️ **La ruta va en el token.** Al cambiar de perfil cambia la base, y sin la ruta el cambio
-    podría pasar desapercibido si las mtimes coincidieran.
+    ⚠️ **La ruta va en el token.** Al cambiar de perfil cambia la base entera, y los `updated_at`
+    del otro perfil podrían dar el mismo máximo.
+
+    Cubre lo que no es un INSERT normal: `reset_db()` vacía todo (el máximo queda vacío) y
+    restaurar un backup trae otros `updated_at`, aunque sean más viejos — en los dos casos el
+    token cambia, que es lo único que importa.
     """
-    partes = [DB_PATH]
-    for p in (DB_PATH, DB_PATH + "-wal"):
-        try:
-            partes.append(str(os.stat(p).st_mtime_ns))
-        except OSError:
-            partes.append("-")      # todavía no existe (DB nueva, o sin WAL abierto)
-    return "|".join(partes)
+    from .schema import SYNCABLE
+    fuentes = [f"(SELECT MAX(updated_at) FROM {t})" for t in SYNCABLE]
+    fuentes.append("(SELECT MAX(deleted_at) FROM deletions)")
+    fuentes.append("(SELECT MAX(updated_at) FROM settings)")
+    try:
+        with get_db() as conn:
+            fila = conn.execute("SELECT " + ", ".join(fuentes)).fetchone()
+        partes = [x if x is not None else "" for x in fila]
+    except sqlite3.Error:
+        partes = ["?"]              # DB sin esquema todavía: que no reviente la página
+    return "|".join([DB_PATH] + list(partes))
 
 
 def get_db():
