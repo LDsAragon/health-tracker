@@ -12,7 +12,16 @@ from bitacora.appconfig import PET_ART
 from bitacora.helpers import _week_start
 # Re-export para tests que hacen `from app import dur_fmt_filter, ...`
 from bitacora.filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
-from bitacora.routes import main, day, recurring, journal, update, todos, perfiles, sync, widget
+from bitacora.routes import (
+    main, day, recurring, journal, update, todos, perfiles, sync, widget,
+    # ANDAMIO: blueprints (import) — `hacer.ps1 nuevo ruta` inserta aca. No mover ni borrar.
+)
+# Los blueprints se importan y se listan a mano, sin descubrimiento automatico: PyInstaller
+# resuelve imports estaticamente y con un `importlib` dinamico no entrarian al bundle.
+BLUEPRINTS = (
+    main, day, recurring, journal, update, todos, perfiles, sync, widget,
+    # ANDAMIO: blueprints (registro) — idem.
+)
 
 
 def _overdue_count(settings) -> int:
@@ -49,7 +58,7 @@ def create_app():
                 "overdue_count": _overdue_count(settings),
                 "perfiles": profiles.listar(), "perfil_activo": profiles.activo()}
 
-    for module in (main, day, recurring, journal, update, todos, perfiles, sync, widget):
+    for module in BLUEPRINTS:
         app.register_blueprint(module.bp)
 
     return app

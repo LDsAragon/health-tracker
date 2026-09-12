@@ -158,3 +158,5 @@ function restoreFieldBlocks(root) {
   });
 }
 document.addEventListener('DOMContentLoaded', function () { restoreFieldBlocks(document); });
+
+// ANDAMIO: campos — `hacer.ps1 nuevo campo` inserta el builder aca. No mover ni borrar.

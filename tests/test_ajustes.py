@@ -11,8 +11,8 @@ import pytest
 from bitacora import database as db
 from bitacora.appconfig import SETTINGS
 
-# Los 16 ajustes por tipo de control. La lista está a mano a propósito: si alguien agrega un
-# ajuste a appconfig y no le da un control, `test_los_16_ajustes_tienen_un_control` lo grita.
+# Los ajustes por tipo de control. La lista está a mano a propósito: si alguien agrega un
+# ajuste a appconfig y no le da un control, `test_todos_los_ajustes_tienen_un_control` lo grita.
 SWITCHES = {
     "note_form_default": ("open", "collapsed"),
     "journal_form_default": ("open", "collapsed"),
@@ -22,9 +22,12 @@ SWITCHES = {
     "show_todos": ("show", "hide"),
     "show_stats": ("show", "hide"),
     "show_export": ("show", "hide"),
+    # ANDAMIO: switches — `hacer.ps1 nuevo ajuste` inserta aca. No mover ni borrar.
 }
 SEGMENTADOS = ("date_format", "time_format", "week_start", "start_view",
-               "todo_alert", "todo_overdue_from", "pet")
+               "todo_alert", "todo_overdue_from", "pet",
+               # ANDAMIO: segmentados — idem.
+               )
 SECCIONES = ("apariencia", "calendario", "tareas", "escritorio", "menu", "detalles")
 
 
@@ -65,12 +68,12 @@ def valor_del_form(html, name):
 
 # ── La reescritura no se comió ningún ajuste ─────────────────────────────────
 
-def test_los_16_ajustes_tienen_un_control():
+def test_todos_los_ajustes_tienen_un_control():
     """El esquema es la fuente única: un ajuste nuevo sin control quedaría invisible."""
     assert set(SWITCHES) | set(SEGMENTADOS) | {"theme"} == set(SETTINGS)
 
 
-def test_los_16_ajustes_estan_en_la_pagina(client):
+def test_todos_los_ajustes_estan_en_la_pagina(client):
     html = client.get("/ajustes").data.decode()
     faltan = [k for k in SETTINGS if not _inputs(html, k)]
     assert faltan == []

@@ -13,4 +13,5 @@ FIELD_TYPES = [
     ("sino",          "☑️ Sí / No"),
     ("opciones",      "🔘 Opciones"),
     ("numero",        "🔢 Número"),
+    # ANDAMIO: campos — `hacer.ps1 nuevo campo` inserta aca. No mover ni borrar.
 ]

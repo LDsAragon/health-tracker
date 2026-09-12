@@ -92,6 +92,29 @@ $COMANDOS = [ordered]@{
         d = "Compara conteos de filas entre dos bases (chequeo post-migracion)"
         f = { & $py "tools\compare_dbs.py" @Resto }
     }
+    "nuevo" = @{
+        d = "Andamios: nuevo ajuste | campo | ruta (agregan las 3-4 piezas que pide la convencion)"
+        f = {
+            $mapa = [ordered]@{
+                ajuste = "tools\andamios\ajuste.py"
+                campo  = "tools\andamios\campo.py"
+                ruta   = "tools\andamios\ruta.py"
+            }
+            $cual = if ($Resto.Count) { $Resto[0] } else { "" }
+            if (-not $mapa.Contains($cual)) {
+                Write-Output "Que cosa nueva: $($mapa.Keys -join ' | ')"
+                Write-Output ""
+                Write-Output "  ajuste   un ajuste de la pantalla de Ajustes (esquema + control + manual)"
+                Write-Output "  campo    un tipo de campo de notas especiales (catalogo + builder)"
+                Write-Output "  ruta     una pantalla nueva (blueprint + plantilla + tests + registro)"
+                Write-Output ""
+                Write-Output "  Cada uno con --help explica sus argumentos. Ejemplo:"
+                Write-Output "    .\hacer.ps1 nuevo ajuste --help"
+                return
+            }
+            & $py $mapa[$cual] @($Resto | Select-Object -Skip 1)
+        }
+    }
 }
 
 function Mostrar-Ayuda {

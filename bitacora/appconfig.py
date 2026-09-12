@@ -31,6 +31,7 @@ SETTINGS = {
     "todo_notify":       {"default": "off",   "choices": ("on", "off")},
     "widget_autostart":  {"default": "on",    "choices": ("on", "off")},
     "cerrar_a_bandeja":  {"default": "on",    "choices": ("on", "off")},
+    # ANDAMIO: ajustes — `hacer.ps1 nuevo ajuste` inserta aca. No mover ni borrar.
 }
 
 # Clave de la tabla settings que NO va en SETTINGS: guarda una fecha ISO libre (el lunes de

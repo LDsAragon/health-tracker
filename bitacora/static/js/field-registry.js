@@ -10,4 +10,5 @@ window.FIELD_BUILDERS = {
   'sino':          (label, ph) => buildSinoField(label, ph),
   'opciones':      (label, ph) => buildOpcionesField(label, ph),
   'numero':        (label, ph) => buildNumeroField(label, ph),
+  // ANDAMIO: campos — `hacer.ps1 nuevo campo` inserta aca. No mover ni borrar.
 };
