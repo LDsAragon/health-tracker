@@ -80,13 +80,13 @@ LEEME_PERFILES = """Bitácora — dónde están tus datos
 Desde la versión de septiembre de 2026 la app maneja PERFILES, y por eso tus
 datos ya no están en health.db al lado de este archivo sino en:
 
-    perfiles\\<nombre del perfil>\\health.db
+    perfiles/<nombre del perfil>/health.db
 
 Si instalaste una versión VIEJA de Bitácora encima y la ves vacía: no perdiste
 nada. Esa versión busca health.db en esta carpeta y no lo encuentra. Volvé a
 instalar la versión nueva y vas a ver todo de nuevo.
 
-Los backups de cada perfil están dentro de su propia carpeta, en backups\\.
+Los backups de cada perfil están dentro de su propia carpeta, en backups/.
 """
 
 
