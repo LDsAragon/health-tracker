@@ -209,7 +209,15 @@ window.addEventListener('DOMContentLoaded', function () {
 // 1:1 con el mouse y lo que se guarda es lo que se vuelve a aplicar.
 (function () {
   const PREF = 'day_side_width';
-  const MINIMO = 200, MAXIMO = 560;
+  // El tope sale de la pantalla y no es un número fijo: el conjunto mide 2 paneles + la card
+  // (760) + los gaps, así que lo que sobra se reparte entre los dos lados. En un monitor de
+  // 2560 eso da ~870 por lado; con un 560 fijo quedaba media pantalla sin usar.
+  const MINIMO = 200, TOPE = 900, CARD = 760, GAPS = 40;
+
+  function maximo() {
+    const cabe = (document.documentElement.clientWidth - 48 - CARD - GAPS) / 2;
+    return Math.max(MINIMO, Math.min(TOPE, Math.floor(cabe)));
+  }
 
   const grip = document.getElementById('day-side-grip');
   const panel = grip && grip.closest('.day-side');
@@ -221,7 +229,7 @@ window.addEventListener('DOMContentLoaded', function () {
   let pedido = null;
 
   function aplicar(w) {
-    pedido = Math.min(MAXIMO, Math.max(MINIMO, Math.round(w)));
+    pedido = Math.min(maximo(), Math.max(MINIMO, Math.round(w)));
     document.documentElement.style.setProperty('--day-side', pedido + 'px');
   }
 
@@ -262,5 +270,14 @@ window.addEventListener('DOMContentLoaded', function () {
     pedido = null;
     document.documentElement.style.removeProperty('--day-side');
     try { localStorage.removeItem(PREF); } catch (e) { /* modo privado */ }
+  });
+
+  // Al achicar la ventana, re-acotar: un ancho elegido en un monitor grande le comía la card
+  // del medio en una ventana chica. No se guarda el valor acotado, así que al volver a agrandar
+  // la ventana el ancho elegido vuelve.
+  window.addEventListener('resize', () => {
+    if (pedido === null) return;
+    document.documentElement.style.setProperty(
+      '--day-side', Math.min(maximo(), Math.max(MINIMO, pedido)) + 'px');
   });
 })();

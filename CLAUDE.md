@@ -505,6 +505,15 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
 - **Linux / descargas**: `webview.settings["ALLOW_DOWNLOADS"] = True` es necesario (está en `bitacora/escritorio/main.py`); por defecto pywebview cancela descargas silenciosamente.
 - **Arch / keyring**: `instalar.sh` detecta keyring sin inicializar chequeando `/etc/pacman.d/gnupg/trustdb.gpg` (no solo el directorio — el dir puede existir vacío).
 - **Windows / Mark of the Web**: si el zip viajó por internet, .NET se niega a cargar `Python.Runtime.dll`. `escritorio/main.py::_unblock_dlls()` borra el stream `Zone.Identifier` de las DLLs de `_internal/` en cada arranque; el updater hace lo mismo tras copiar los archivos nuevos.
+- ⚠️ **`.main-day` NO lleva `max-width`**, como `.main-wide` (el calendario). Con el tope de
+  1400px que tenía, en una pantalla grande el día vivía en 1400px centrados y ensanchar el panel
+  solo podía robarle ancho a la card: los costados quedaban sin usar. Y las tres columnas de
+  `.day-layout` son **topes `minmax(0, X)` sin ninguna `1fr`** + `justify-content: center`: con un
+  `1fr` en el medio, esa columna se comía todo el sobrante y la card quedaba lejísimos del panel.
+  Así el conjunto mide lo que necesita, queda centrado y el sobrante va **afuera** — que es el
+  espacio que se gana al ensanchar. El tope del arrastre sale de la pantalla
+  (`(ancho - card - gaps) / 2`, hasta 900) y no es un número fijo: en un monitor de 2560 da ~856
+  por lado, y con el 560 fijo que tenía quedaba media pantalla sin usar.
 - ⚠️ **El ancho del panel de tareas del día se arrastra** (`.day-side-grip`, lo maneja `day.js`,
   queda en `localStorage`; doble clic resetea). Las columnas laterales toman el ancho pedido
   (`--day-side`, 300px) y la del medio absorbe con `minmax(0, 1fr)`. **Antes eran `1fr` con la del

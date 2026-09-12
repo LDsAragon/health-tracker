@@ -2,7 +2,9 @@
 
 .main-day {
   padding: 20px 24px;
-  max-width: 1400px;
+  /* Sin max-width, como .main-wide (el calendario). Con el tope de 1400px, en una pantalla
+     grande el día entero vivía en 1400px centrados y ensanchar el panel de tareas solo podía
+     robarle ancho a la card del medio: el espacio de los costados quedaba sin usar. */
   margin: 0 auto;
 }
 
@@ -13,11 +15,15 @@
    hay que CEDERLE ancho a la del medio. En los defaults, el layout es idéntico al de siempre. */
 .day-layout {
   display: grid;
-  /* Las columnas laterales toman el ancho PEDIDO y la del medio absorbe. Antes eran `1fr` con
-     la del medio capada en 760px, y así el panel nunca podía crecer: la del medio se quedaba
-     con el espacio primero y las laterales solo repartían el resto. El tope de lectura se mudó
-     a .day-card, que es donde importa. */
-  grid-template-columns: var(--day-side, 300px) minmax(0, 1fr) var(--day-side, 300px);
+  /* El ancho de los paneles laterales se arrastra (`--day-side`, ver el agarre más abajo) y
+     queda en localStorage.
+     Los tres anchos son topes (minmax(0, X)) y NO hay ninguna columna `1fr`: con un `1fr` en
+     el medio, la del medio se comía todo el sobrante y la card quedaba lejísimos del panel. Así
+     el conjunto mide lo que necesita, `justify-content: center` lo centra y **el sobrante queda
+     afuera** — que es el espacio que se aprovecha al ensanchar los paneles. */
+  grid-template-columns: minmax(0, var(--day-side, 300px)) minmax(0, 760px)
+                         minmax(0, var(--day-side, 300px));
+  justify-content: center;
   gap: 20px;
   align-items: start;
 }
