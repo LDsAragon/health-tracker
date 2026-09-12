@@ -7,7 +7,7 @@ from .conn import get_db, _columns
 #  2. el import de sincronización va a poder rechazar un archivo incompatible.
 # ⚠️ AL AGREGAR UNA MIGRACIÓN HAY QUE SUBIRLA. Si no, las DBs ya instaladas se saltean el
 # paso y nunca reciben la columna nueva.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Tablas que participan de la sincronización entre dispositivos. `settings` queda afuera a
 # propósito: mezcla preferencias de la persona (formato de fecha) con las del dispositivo
@@ -112,33 +112,59 @@ MIGRATIONS = [
 # `updated_at` es el desempate de "última escritura gana".
 MIGRATIONS += [(t, c, f"ALTER TABLE {t} ADD COLUMN {c} TEXT DEFAULT ''")
                for t in SYNCABLE for c in ("uid", "updated_at")]
+MIGRATIONS.append(("settings", "updated_at",
+                   "ALTER TABLE settings ADD COLUMN updated_at TEXT DEFAULT ''"))
 
 # Índice PARCIAL: las filas viejas arrancan con uid = '' y un único normal explotaría con la
 # segunda. Así el orden del backfill deja de importar.
+# settings viaja en el sync pero no está en SYNCABLE: su `key` ya es una identidad estable
+# entre dispositivos, así que no necesita uid, solo la marca para desempatar por clave.
+# set_setting es un UPSERT, por eso hacen falta los dos triggers; y la tabla no tiene `id`.
+TRIGGERS_SETTINGS = """
+    CREATE TRIGGER IF NOT EXISTS settings_ins AFTER INSERT ON settings
+    WHEN COALESCE(NEW.updated_at, '') = ''
+    BEGIN
+        UPDATE settings SET updated_at = strftime('%Y-%m-%d %H:%M:%f','now') WHERE key = NEW.key;
+    END;
+    CREATE TRIGGER IF NOT EXISTS settings_upd AFTER UPDATE ON settings
+    WHEN NEW.updated_at = OLD.updated_at
+    BEGIN
+        UPDATE settings SET updated_at = strftime('%Y-%m-%d %H:%M:%f','now') WHERE key = NEW.key;
+    END;
+"""
+
 UID_INDEX = "".join(
     f'CREATE UNIQUE INDEX IF NOT EXISTS idx_{t}_uid ON {t}(uid) WHERE uid != "";'
     for t in SYNCABLE
 )
 
 # Tres triggers por tabla evitan tocar los 33 puntos de escritura de database/*.py.
-# ⚠️ Las marcas de tiempo van en UTC (datetime('now') sin 'localtime'), al revés que el resto
-# de la app: son para que dos máquinas comparen entre sí. Si el usuario viaja a otro huso, una
-# comparación en hora local decide mal quién escribió último. No se muestran nunca en pantalla.
+# ⚠️ El de UPDATE lleva `WHEN NEW.updated_at = OLD.updated_at`: si el UPDATE trae su propia
+# marca es el merge del sync trayendo la versión remota, y pisarla con la hora local haría que
+# la fila mienta sobre cuándo se modificó (en el viaje de vuelta, una edición vieja le ganaría
+# a una nueva). Si el UPDATE no toca updated_at es la app normal y ahí sí hay que sellar.
+# ⚠️ Las marcas van en UTC y con MILISEGUNDOS, al revés que el resto de la app (que usa
+# localtime y segundos): son para que dos máquinas comparen entre sí, y nunca se muestran en
+# pantalla. Si el usuario viaja a otro huso, una comparación en hora local decide mal quién
+# escribió último. Y con resolución de segundos, dos ediciones del mismo segundo empatan y
+# "la más reciente gana" no dispara. Las marcas viejas en segundos siguen comparando bien:
+# '...:10' < '...:10.001' < '...:11'.
 TRIGGERS = "".join(f"""
     CREATE TRIGGER IF NOT EXISTS {t}_uid AFTER INSERT ON {t}
     WHEN COALESCE(NEW.uid, '') = ''
     BEGIN
         UPDATE {t} SET uid = lower(hex(randomblob(16))),
-                       updated_at = datetime('now') WHERE id = NEW.id;
+                       updated_at = strftime('%Y-%m-%d %H:%M:%f','now') WHERE id = NEW.id;
     END;
     CREATE TRIGGER IF NOT EXISTS {t}_upd AFTER UPDATE ON {t}
+    WHEN NEW.updated_at = OLD.updated_at
     BEGIN
-        UPDATE {t} SET updated_at = datetime('now') WHERE id = NEW.id;
+        UPDATE {t} SET updated_at = strftime('%Y-%m-%d %H:%M:%f','now') WHERE id = NEW.id;
     END;
     CREATE TRIGGER IF NOT EXISTS {t}_del AFTER DELETE ON {t}
     BEGIN
         INSERT OR REPLACE INTO deletions (tabla, uid, deleted_at)
-        VALUES ('{t}', OLD.uid, datetime('now'));
+        VALUES ('{t}', OLD.uid, strftime('%Y-%m-%d %H:%M:%f','now'));
     END;
 """ for t in SYNCABLE)
 
@@ -171,5 +197,10 @@ def init_db():
                     # que cualquier fecha, que es justo lo que tiene que pasar en el merge.
                     conn.execute(f"UPDATE {table} SET uid = lower(hex(randomblob(16)))"
                                  " WHERE COALESCE(uid, '') = ''")
-        conn.executescript(UID_INDEX + TRIGGERS)        # 3) recién ahora
+        # 3) Los triggers se DROPEAN y recrean: `CREATE TRIGGER IF NOT EXISTS` no reemplaza
+        # uno existente, así que una DB de una versión anterior se quedaría con el viejo.
+        drops = "".join(f"DROP TRIGGER IF EXISTS {t}_{suf};"
+                        for t in SYNCABLE for suf in ("uid", "upd", "del"))
+        drops += "DROP TRIGGER IF EXISTS settings_ins; DROP TRIGGER IF EXISTS settings_upd;"
+        conn.executescript(drops + UID_INDEX + TRIGGERS + TRIGGERS_SETTINGS)
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")

@@ -118,6 +118,25 @@ def renombrar(slug_: str, nombre: str):
     guardar(ind)
 
 
+def emparejar(slug_: str, uid_remoto: str):
+    """Recuerda que ese perfil de la otra máquina es el mismo que este, para no volver a
+    preguntar en cada sincronización."""
+    if not uid_remoto:
+        return
+    ind = leer()
+    for p in ind["perfiles"]:
+        if p["slug"] == slug_:
+            p["emparejados"] = sorted(set(p.get("emparejados", [])) | {uid_remoto})
+    guardar(ind)
+
+
+def es_conocido(perfil: dict | None, uid_remoto: str) -> bool:
+    """True si ese uid remoto es este mismo perfil o uno ya emparejado con él."""
+    if not perfil or not uid_remoto:
+        return True     # sin identidad de un lado u otro no hay nada que confrontar
+    return uid_remoto == perfil.get("uid") or uid_remoto in perfil.get("emparejados", [])
+
+
 def usar(slug_: str) -> bool:
     """Cambia el perfil activo en caliente. False si el slug no existe."""
     ind = leer()

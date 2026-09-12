@@ -20,6 +20,20 @@
 <div class="datos-banner datos-err">✗ No seleccionaste ningún archivo.</div>
 {% elif datos == 'reset-ok' %}
 <div class="datos-banner datos-ok">✓ Base de datos borrada — empezás de cero. Quedó un backup automático en la carpeta <code>backups/</code> junto a la base de datos por si te arrepentís.</div>
+{% elif datos and datos.startswith('sync-ok-') %}
+<div class="datos-banner datos-ok">
+  {% set n = datos.split('-') %}
+  ✓ Listo: se agregaron {{ n[2] }}, se actualizaron {{ n[3] }} y se borraron {{ n[4] }} cosas.
+  Ahora esta computadora tiene todo — si querés emparejarlas, exportá desde acá y llevá el archivo
+  a la otra.
+</div>
+{% elif datos == 'sync-descartado' %}
+<div class="datos-banner datos-ok">✓ Paquete descartado. No se tocó nada.</div>
+{% elif datos == 'sync-err-nofile' %}
+<div class="datos-banner datos-err">✗ No elegiste ningún archivo.</div>
+{% elif datos == 'sync-err-invalid' %}
+<div class="datos-banner datos-err">✗ Ese archivo no sirve para sincronizar: o no es una base de
+  Bitácora, o es de otra versión de la app. Actualizá las dos máquinas y volvé a exportar.</div>
 {% elif datos == 'err-reset-confirm' %}
 <div class="datos-banner datos-err">✗ No se borró nada: la frase de confirmación no coincide. Tenés que escribir exactamente <b>BORRAR TODO</b>.</div>
 {% endif %}
@@ -82,6 +96,47 @@
       <button type="submit" class="btn-primary">Restaurar base de datos</button>
     </form>
   </div>
+</div>
+
+<div class="page-top" style="margin-top:36px;margin-bottom:12px;">
+  <h2 class="page-title" style="font-size:20px;">🔄 Sincronizar con otra computadora</h2>
+  <p class="page-sub">Para cuando usás Bitácora en dos máquinas en momentos distintos — la de casa
+    y la portátil del viaje. Se combinan las dos: lo que anotaste en cada una se conserva, y si
+    tocaste lo mismo en las dos queda la versión más reciente.</p>
+  <p class="page-sub">Es <b>todo local</b>: el archivo lo movés vos por donde quieras (pendrive,
+    mail, lo que uses). No hay servidor ni cuentas.</p>
+</div>
+
+<div class="rec-form-wrap">
+  <div class="field-group">
+    <label>1 · Exportar desde esta computadora</label>
+    <p class="page-sub" style="margin:0 0 8px;">Te da un archivo con todo lo de este perfil, para
+      llevar a la otra máquina.</p>
+    <a href="{{ url_for('sync.exportar') }}" class="back-link" style="display:inline-flex;">⬇&nbsp; Exportar para sincronizar</a>
+  </div>
+
+  <div class="field-group" style="margin-top:22px;">
+    <label for="paquete-input">2 · Traer lo de la otra computadora</label>
+    <p class="page-sub" style="margin:0 0 8px;">Antes de combinar nada te muestra qué va a pasar, y
+      recién ahí decidís. Se guarda un backup automático previo (<code>health-presync-*.db</code>).</p>
+    <form method="POST" action="{{ url_for('sync.importar') }}" enctype="multipart/form-data">
+      <input type="hidden" name="back" value="{{ back or '' }}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <label class="btn-undo" style="cursor:pointer;margin:0;">
+          📂 Elegir el archivo
+          <input type="file" name="paquete" id="paquete-input" accept=".db,.sqlite,.sqlite3" required
+                 style="display:none;"
+                 onchange="document.getElementById('paquete-name').textContent = this.files[0] ? this.files[0].name : 'Ningún archivo seleccionado';">
+        </label>
+        <span id="paquete-name" style="font-size:13px;color:var(--muted);">Ningún archivo seleccionado</span>
+      </div>
+      <button type="submit" class="btn-primary">Ver qué va a pasar</button>
+    </form>
+  </div>
+
+  <p class="page-sub" style="margin-top:18px;">Ojo: cada archivo va en <b>una sola dirección</b>.
+    Traer la portátil deja esta computadora completa, pero la portátil sigue sin lo de acá — para
+    emparejarlas del todo, exportá desde acá y llevá ese archivo de vuelta.</p>
 </div>
 
 <!-- Zona peligrosa: borrar toda la base de datos -->

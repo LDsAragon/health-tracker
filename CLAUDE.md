@@ -18,6 +18,8 @@ desktop.py              # Entrada pywebview; auto-backup diario; APP_DIR por pla
 appconfig.py            # THEMES, SETTINGS y PET_ART (fuente única de defaults)
 profiles.py             # Perfiles locales: índice perfiles.json, crear/usar/borrar, cambio
                         #   en caliente. Sin HT_PERFILES se desactiva solo (tests, navegador)
+sync.py                 # Merge entre dos dispositivos: exportar/analizar/aplicar. El paquete
+                        #   es un .db y el merge se resuelve en SQL con ATTACH
 services.py             # Presentación compartida: events_by_date, journal_badges y, para el
                         #   visor de tareas, overdue_buckets / overdue_cutoff / periodo_ventana
 helpers.py              # _setting, _week_start, _dow_names, MESES[], _fmt_clock, safe_back
@@ -44,6 +46,7 @@ routes/
   todos.py              # /tareas (visor) + /tareas/agregar + acciones sobre atrasadas
                         #   + /tareas/alerta (JSON)
   perfiles.py           # /perfiles/* (crear, usar, renombrar, borrar)
+  sync.py               # /sync/* (exportar, importar, previa, aplicar, descartar)
   recurring.py          # /recurring/* (rutinas)
   journal.py            # /journal/* (notas especiales + categorías)
   update.py             # /update/* (auto-actualización: status/check/download/progress/apply/quit)
@@ -99,7 +102,7 @@ Prefijos de backup:
 ## Tests
 
 ```bash
-pytest tests/          # 324 tests, ~15s
+pytest tests/          # 353 tests, ~20s
 ```
 
 Los tests parchean `database.conn.DB_PATH` para usar una DB temporal. **No mockear SQLite** — los tests tocan una DB real en `tmp_path`. Correr en venv Windows normal (no WSL).
@@ -189,13 +192,43 @@ ordenar, no para esconder.
   commitea pero **no cierra**, así que el archivo sigue lockeado hasta que el GC recoja la conexión.
   Mismo motivo en la migración, donde además borrar el original es *best-effort* y nunca aborta.
 
-### Cimientos del sync (ya están; el merge no)
+### Sincronizar dos dispositivos (`sync.py`)
+El paquete es **un archivo `.db`** (un `snapshot_to` del perfil) con la identidad escrita en su
+propia tabla `settings` (claves `_sync_*`, que el merge excluye). Viaja **la base entera, no un
+delta**: no hay que registrar qué se sincronizó y reimportar el mismo archivo es inofensivo.
+
+El merge se resuelve en SQL con `ATTACH`, en este orden y con estas reglas:
+- **Padres antes que hijos** (`ORDEN`), porque un hijo necesita que su padre exista para traducir
+  la referencia.
+- **Las FK guardan enteros locales**: la misma categoría es la 1 acá y la 77 allá. Se traduce
+  resolviendo el padre por su `uid` (`PADRES`). Si el padre no existe acá, la fila se saltea en vez
+  de entrar con NULL y violar el NOT NULL.
+- **`completions` es el único caso con otra clave única** (`UNIQUE(event_id, done_date)`): la misma
+  rutina marcada el mismo día en dos máquinas tiene uid distinto pero choca. Ahí manda la clave
+  natural, no el uid — es el mismo hecho.
+- **`todos.position`** se recompacta después del merge: las dos máquinas la calculan con
+  `MAX(position)+1` y generan las mismas.
+- Los ajustes viajan con última-escritura-gana por clave (por eso `settings.updated_at`).
+- El merge trabaja **siempre sobre `SYNCABLE`**, nunca sobre "todas las tablas": las 4 legacy
+  (`entries`, `goals`, `custom_events`, `event_logs`) viajan en el archivo pero no se tocan.
+- `analizar()` y `aplicar()` comparten los mismos `WHERE`: la vista previa y el merge no pueden
+  divergir.
+- El paquete subido va a una **ruta fija** (`sync-pendiente.db`, junto a la DB): así entre la previa
+  y el aplicar no viaja ninguna ruta por el formulario.
+
+### Cimientos del sync
 Las 7 tablas de `SYNCABLE` tienen `uid` (las PK autoincrementales colisionan entre dispositivos) y
 `updated_at`, más la tabla `deletions` para tombstones. Todo se llena con **triggers**, así que
 ninguno de los 33 puntos de escritura de `database/*.py` los conoce.
 
-- ⚠️ `updated_at` y `deleted_at` van en **UTC** (`datetime('now')`), al revés que el resto de la app:
-  son para comparar entre máquinas y el caso de uso es viajar a otro huso. Hay un test que lo fija.
+- ⚠️ `updated_at` y `deleted_at` van en **UTC y con milisegundos**
+  (`strftime('%Y-%m-%d %H:%M:%f','now')`), al revés que el resto de la app: son para comparar entre
+  máquinas y el caso de uso es viajar a otro huso. Los milisegundos no son cosmética — con
+  resolución de segundos, dos ediciones del mismo segundo empatan y "la más reciente gana" no
+  dispara. Hay tests que fijan las dos cosas.
+- ⚠️ El trigger de UPDATE lleva **`WHEN NEW.updated_at = OLD.updated_at`**: si el UPDATE trae su
+  propia marca es el merge trayendo la versión remota y hay que respetarla. Sin esa guarda la fila
+  queda diciendo "modificada ahora" y en el viaje de vuelta una edición vieja le gana a una nueva.
   Y **no usar `created_at` para ordenar entre dispositivos**: en las DBs viejas quedó en UTC y en
   las nuevas en localtime, porque `CREATE TABLE IF NOT EXISTS` nunca reescribe una tabla existente.
 - ⚠️ **El orden de `init_db()` no se puede cambiar**: triggers *después* de las migraciones. SQLite

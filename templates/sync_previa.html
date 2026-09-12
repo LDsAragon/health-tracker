@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Sincronizar{% endblock %}
+
+{% set NOMBRES = {'notes': 'Notas rápidas', 'recurring_events': 'Rutinas',
+                  'completions': 'Marcas de rutinas', 'journal_categories': 'Categorías',
+                  'journal_entries': 'Notas especiales', 'todos': 'Tareas',
+                  'charts': 'Gráficos'} %}
+
+{% block content %}
+<div class="page-back" style="margin-bottom:14px;">
+  <a href="{{ back or url_for('main.export_view') }}" class="back-link">&#8592; Volver</a>
+</div>
+
+<div class="page-top">
+  <h1 class="page-title">🔄 Sincronizar con otro dispositivo</h1>
+  <p class="page-sub">Esto es lo que va a pasar. Todavía <b>no se tocó nada</b>.</p>
+</div>
+
+{% if ajeno %}
+<div class="datos-banner datos-err">
+  ⚠️ Este paquete viene del perfil <b>{{ meta.perfil_nombre or '(sin nombre)' }}</b>, que no es el
+  que estás usando{% if perfil %} (<b>{{ perfil.nombre }}</b>){% endif %}. Si son la misma persona
+  en dos computadoras, confirmá abajo y no se vuelve a preguntar. Si no, descartalo.
+</div>
+{% endif %}
+
+<div class="rec-form-wrap">
+  <p class="page-sub" style="margin:0 0 12px;">
+    Paquete exportado el {{ meta.exportado or '?' }} (UTC){% if meta.perfil_nombre %},
+    del perfil <b>{{ meta.perfil_nombre }}</b>{% endif %}.
+  </p>
+
+  {% if resumen.total.altas or resumen.total.updates or resumen.total.bajas or resumen.ajustes %}
+  <table class="stats-summary">
+    <thead><tr><th>Qué</th><th>Se agregan</th><th>Se actualizan</th><th>Se borran</th></tr></thead>
+    <tbody>
+      {% for tabla, n in resumen.tablas.items() %}
+      <tr>
+        <td class="stats-summary-name">{{ NOMBRES.get(tabla, tabla) }}</td>
+        <td>{{ n.altas or '—' }}</td><td>{{ n.updates or '—' }}</td><td>{{ n.bajas or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if resumen.total.updates %}
+  <p class="page-sub" style="margin-top:10px;">De lo que se actualiza: son cosas que existen en
+    las dos computadoras y cambiaron. Se queda <b>la versión más reciente</b>.</p>
+  {% endif %}
+  {% if resumen.ajustes %}
+  <p class="page-sub" style="margin-top:6px;">También viajan <b>{{ resumen.ajustes }}</b> ajuste(s)
+    más nuevos — puede cambiarte el tema o la vista de inicio.</p>
+  {% endif %}
+  {% else %}
+  <p class="empty-msg">No hay nada nuevo que traer: las dos computadoras ya están iguales.</p>
+  {% endif %}
+
+  <p class="page-sub" style="margin-top:14px;">Antes de combinar se guarda una copia de seguridad
+    (<code>health-presync-*.db</code>) en la carpeta de backups.</p>
+
+  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px;">
+    <form method="POST" action="{{ url_for('sync.aplicar') }}"
+          onsubmit="return confirm('¿Combinar los datos de las dos computadoras?');">
+      <input type="hidden" name="back" value="{{ back or '' }}">
+      {% if ajeno %}<input type="hidden" name="confirmo_ajeno" value="si">{% endif %}
+      <button type="submit" class="btn-primary">
+        {% if ajeno %}Sí, son la misma persona: combinar{% else %}Combinar{% endif %}
+      </button>
+    </form>
+    <form method="POST" action="{{ url_for('sync.descartar') }}">
+      <input type="hidden" name="back" value="{{ back or '' }}">
+      <button type="submit" class="btn-cancel">Descartar el paquete</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

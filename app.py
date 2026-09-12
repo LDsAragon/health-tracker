@@ -12,7 +12,7 @@ from appconfig import PET_ART
 from helpers import _week_start
 # Re-export para tests que hacen `from app import dur_fmt_filter, ...`
 from filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
-from routes import main, day, recurring, journal, update, todos, perfiles
+from routes import main, day, recurring, journal, update, todos, perfiles, sync
 
 
 def _overdue_count(settings) -> int:
@@ -49,7 +49,7 @@ def create_app():
                 "overdue_count": _overdue_count(settings),
                 "perfiles": profiles.listar(), "perfil_activo": profiles.activo()}
 
-    for module in (main, day, recurring, journal, update, todos, perfiles):
+    for module in (main, day, recurring, journal, update, todos, perfiles, sync):
         app.register_blueprint(module.bp)
 
     return app

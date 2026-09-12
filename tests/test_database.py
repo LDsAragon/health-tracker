@@ -547,5 +547,10 @@ def test_reset_deja_la_db_usable(test_db):
     db.add_note("2026-06-10", "despues del reset")
     assert [n["content"] for n in db.get_notes_for_date("2026-06-10")] == ["despues del reset"]
     with db.get_db() as conn:
-        trig = conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='trigger'").fetchone()[0]
-    assert trig == 21
+        trig = {r["name"] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='trigger'").fetchall()}
+    # Derivado del esquema y no un número fijo: agregar una tabla sincronizable no debería
+    # romper este test, pero olvidarse de sus triggers sí.
+    esperados = {f"{t}_{suf}" for t in db.SYNCABLE for suf in ("uid", "upd", "del")}
+    esperados |= {"settings_ins", "settings_upd"}
+    assert trig == esperados

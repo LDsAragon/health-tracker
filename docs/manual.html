@@ -88,9 +88,10 @@
     <div><span class="n">10</span> Estadísticas (solo lo que vos pidas)</div>
     <div><span class="n">11</span> Tus datos: exportar, backup y reset</div>
     <div><span class="n">12</span> Perfiles: varias bitácoras en una computadora</div>
-    <div><span class="n">13</span> Ajustes</div>
-    <div><span class="n">14</span> Atajos y trucos</div>
-    <div><span class="n">15</span> Recetas: maneras de usarla</div>
+    <div><span class="n">13</span> Sincronizar dos computadoras</div>
+    <div><span class="n">14</span> Ajustes</div>
+    <div><span class="n">15</span> Atajos y trucos</div>
+    <div><span class="n">16</span> Recetas: maneras de usarla</div>
   </div>
 </section>
 
@@ -598,9 +599,51 @@
   seguridad antes de mover nada y se verifica que no falte ni un registro.</p>
 </section>
 
-<!-- ───────────────────────── 13. AJUSTES ───────────────────────── -->
+<!-- ───────────────────────── 13. SINCRONIZAR ───────────────────────── -->
 <section>
-  <h2>13 · Ajustes</h2>
+  <h2>13 · Sincronizar dos computadoras</h2>
+  <p>Para cuando usás Bitácora en dos máquinas en momentos distintos: la de casa y la portátil que
+  te llevás de viaje. Al volver, las dos tienen cosas que la otra no — esto las <b>combina</b>.</p>
+
+  <p><b>Es todo local y sin terceros.</b> No hay servidor ni cuentas: la app te da un archivo y vos
+  lo movés por donde quieras (un pendrive, un mail, lo que uses). Está en <b>Datos → Sincronizar con
+  otra computadora</b>.</p>
+
+  <h3>Cómo se hace</h3>
+  <table>
+    <tr><th>Paso</th><th>Dónde</th></tr>
+    <tr><td><b>1.</b> Tocás <b>Exportar para sincronizar</b> y te guardás el archivo.</td><td>En la computadora del viaje</td></tr>
+    <tr><td><b>2.</b> Elegís ese archivo en <b>Traer lo de la otra computadora</b>.</td><td>En la de casa</td></tr>
+    <tr><td><b>3.</b> Mirás el resumen de lo que va a pasar y confirmás.</td><td>En la de casa</td></tr>
+  </table>
+  <p>Antes de combinar nada te muestra <b>qué va a cambiar</b> — cuántas cosas se agregan, cuáles se
+  actualizan y cuáles se borran — y recién ahí decidís. Y se guarda una copia de seguridad
+  automática (<code>health-presync-*.db</code>) por las dudas.</p>
+
+  <h3>Qué pasa si tocaste lo mismo en las dos</h3>
+  <p>Se queda <b>la versión más reciente</b>. Lo que anotaste solo en una máquina se conserva
+  siempre; lo que borraste en una se borra en la otra. Nada se pierde en silencio.</p>
+
+  <h3>Cada archivo va en una sola dirección</h3>
+  <p>Traer la portátil deja la computadora de casa completa, pero <i>la portátil sigue sin lo de
+  casa</i>. Para emparejarlas del todo, exportá ahora desde la de casa —que ya tiene todo— y llevá
+  ese archivo de vuelta. Son dos viajes, uno para cada lado.</p>
+
+  <h3>Detalles que conviene saber</h3>
+  <ul>
+    <li>Los <b>ajustes también viajan</b>: si cambiaste el tema en la portátil más recientemente que
+      en la PC, al sincronizar la PC toma ese tema.</li>
+    <li>Si el archivo viene de <b>otro perfil</b>, la app te avisa y no toca nada hasta que
+      confirmes que son la misma persona. Después de confirmarlo una vez, no vuelve a preguntar.</li>
+    <li>Las dos computadoras tienen que tener la <b>misma versión</b> de Bitácora. Si no, te lo dice
+      y no combina nada.</li>
+    <li>Podés sincronizar las veces que quieras: repetir el mismo archivo no duplica nada.</li>
+  </ul>
+</section>
+
+<!-- ───────────────────────── 14. AJUSTES ───────────────────────── -->
+<section>
+  <h2>14 · Ajustes</h2>
   <table>
     <tr><th>Ajuste</th><th>Qué hace</th></tr>
     <tr><td><b>Tema</b></td><td>8 paletas (7 oscuras + 1 clara). Se previsualizan al tocar; guardá para fijar.</td></tr>
@@ -620,9 +663,9 @@
   <p class="small muted">Al final de Ajustes está también la referencia de atajos de teclado.</p>
 </section>
 
-<!-- ───────────────────────── 14. ATAJOS ───────────────────────── -->
+<!-- ───────────────────────── 15. ATAJOS ───────────────────────── -->
 <section>
-  <h2>14 · Atajos y trucos</h2>
+  <h2>15 · Atajos y trucos</h2>
 
   <h3>Atajos de teclado</h3>
   <table>
@@ -651,9 +694,9 @@
   </ul>
 </section>
 
-<!-- ───────────────────────── 15. RECETAS ───────────────────────── -->
+<!-- ───────────────────────── 16. RECETAS ───────────────────────── -->
 <section>
-  <h2>15 · Recetas: maneras de usarla</h2>
+  <h2>16 · Recetas: maneras de usarla</h2>
 
   <h3>🩺 Registro de salud para la consulta</h3>
   <p>Categorías con campos número (peso, glucemia), sí/no (medicación) y escala (energía), con
