@@ -17,6 +17,10 @@ import traceback
 from datetime import date
 from pathlib import Path
 
+# La carpeta de la instalación sale del updater para tener UNA sola definición:
+# estuvo duplicada acá y divergió, y la copia de allá era la que estaba mal.
+from bitacora.escritorio.updater import base_dir
+
 # ⚠️ Chromium —y con él WebView2 y WebKitGTK— se niega a cargar una página servida desde una
 # lista de ~85 puertos "no seguros" (net/base/port_util.cc) y muestra ERR_UNSAFE_PORT: la app
 # entera queda en blanco hasta reiniciarla. pywebview elige el puerto con
@@ -69,19 +73,6 @@ def puerto_seguro():
     return None
 
 
-def _base_dir():
-    """Carpeta del .exe (congelada) o la raíz del repo (desarrollo).
-
-    Se usa para encontrar una `health.db` vieja al lado del programa y migrarla. En desarrollo
-    tiene que ser la raíz del repo —dos niveles arriba de este archivo, que vive en
-    `bitacora/escritorio/`— o dejaría de encontrar las bases de antes de que el código se
-    mudara al paquete.
-    """
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent
-    return Path(__file__).resolve().parent.parent.parent
-
-
 def _copy_db(src_path, dest_path):
     """Copia consistente src → dest con la API de backup de SQLite (incluye WAL)."""
     src = sqlite3.connect(str(src_path))
@@ -103,7 +94,7 @@ def _migrate_first_run():
     """
     if DB_FILE.exists():
         return
-    old = _base_dir() / "health.db"
+    old = base_dir() / "health.db"
     if not old.exists():
         return  # arranque limpio: init_db crea la DB nueva en appdata
     from bitacora import database as db

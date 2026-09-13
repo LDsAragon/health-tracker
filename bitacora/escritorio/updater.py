@@ -38,10 +38,26 @@ _state = {
 }
 
 
-def _base_dir():
+def base_dir():
+    """La carpeta de la INSTALACIÓN: la que tiene el programa adentro.
+
+    Dos usos, y por eso vive en un solo lugar: acá es el destino de la actualización, y en
+    `escritorio/main.py` es dónde buscar una `health.db` vieja al lado del programa para
+    migrarla. Ya estuvo duplicada y **divergió** —esta copia devolvía otra carpeta—, que es
+    justamente lo que no puede pasar con algo que se usa para copiar archivos encima.
+
+    ⚠️ Congelada es la carpeta del `.exe`. Sin congelar hay que subir **tres** niveles: este
+    archivo vive en `bitacora/escritorio/`, así que `Path(__file__).parent` es `escritorio/` y
+    no la raíz. En Linux la app corre **desde el código** (no se empaqueta con PyInstaller
+    porque WebKitGTK es frágil de bundlear), así que ese es el camino real allá: con el valor
+    mal, `apply_update` volcaba la carpeta nueva **dentro de `bitacora/escritorio/`** y después
+    buscaba ahí `venv/bin/pip`, `instalar.sh` y `bitacora.sh`, que están en la raíz. No borraba
+    nada —el rsync no lleva `--delete`— pero la actualización no se aplicaba, la app no se
+    relanzaba y quedaba una copia anidada.
+    """
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent
-    return Path(__file__).parent
+    return Path(__file__).resolve().parent.parent.parent
 
 
 def current_version():
@@ -129,7 +145,7 @@ def _do_check(current):
             _state["latest"]    = latest
             _state["notes"]     = changelog(data.get("body"))
             # `current` es None en dev: sin versión propia no hay con qué comparar, y
-            # ofrecer instalar sobreescribiría el repo (apply_update copia sobre _base_dir).
+            # ofrecer instalar sobreescribiría el repo (apply_update copia sobre base_dir).
             _state["available"] = bool(current and latest
                                        and _version_tuple(latest) > _version_tuple(current) and asset)
             _state["asset_url"]  = asset["browser_download_url"] if asset else None
@@ -227,7 +243,7 @@ def apply_update():
     if not src.exists():
         return False, "El archivo no tiene la estructura esperada (falta carpeta Bitacora/)"
 
-    dst = _base_dir()
+    dst = base_dir()
     pid = os.getpid()
 
     try:

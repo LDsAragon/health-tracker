@@ -139,7 +139,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 753 tests, ~67s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 756 tests, ~70s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -730,7 +730,17 @@ Cero `<select>` entre los 16 ajustes, seis secciones colapsables y **guardado al
 - Comparación de versiones por tupla: `v2026-06-12.1` → `(2026, 6, 12, 1)` (`_version_tuple`).
 - Chequeo bajo demanda desde el tab 🔄 Versión (`/version`): `POST /update/check` → `force_check()` (mismo `_do_check`, pero sin exigir versión propia). El front poletea `/update/status` hasta `checked: true` y reusa `updateShowModal()` de `base.html` para instalar o reinstalar.
 - `changelog(body)` parsea el cuerpo del release que arma `publish_release.ps1` (bullets de commits; corta en el `---` que separa las instrucciones de instalación).
-- ⚠️ **`available` y `can_reinstall` exigen `current_version()`**: `apply_update()` copia sobre `_base_dir()`, que en dev es el repo, y en Windows con `robocopy /MIR`. Sin esa guarda, un chequeo forzado en dev habilitaría un botón que borra el repo.
+- ⚠️ **`available` y `can_reinstall` exigen `current_version()`**: `apply_update()` copia sobre `base_dir()`, que en dev es el repo, y en Windows con `robocopy /MIR`. Sin esa guarda, un chequeo forzado en dev habilitaría un botón que borra el repo.
+- ⚠️ **`base_dir()` es la carpeta de la INSTALACIÓN, y hay UNA sola definición** (en `updater.py`;
+  `escritorio/main.py` la importa). Sin congelar sube **tres** niveles, porque el módulo vive en
+  `bitacora/escritorio/`. Estuvo duplicada y **divergió**: la copia del updater subía uno solo, y
+  como **en Linux la app corre desde el código** (nada de PyInstaller: bundlear WebKitGTK es
+  frágil) ese era el camino real allá — `apply_update` volcaba la carpeta nueva **dentro de
+  `bitacora/escritorio/`** y después buscaba ahí `venv/bin/pip`, `instalar.sh` y `bitacora.sh`,
+  que están en la raíz. No borraba nada (el rsync no lleva `--delete`) pero la actualización no
+  se aplicaba, la app no se relanzaba y quedaba una copia anidada. Hay un tripwire que falla si
+  aparece una segunda definición, y la verificación de verdad es armar una instalación desde el
+  tarball en WSL y preguntarle al updater dónde copiaría.
 
 ## Convenciones de código
 

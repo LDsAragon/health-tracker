@@ -212,3 +212,45 @@ def test_un_build_local_ordena_por_encima_de_lo_publicado():
     ultima = _version_tuple("v2026-09-13.7")
     assert _version_tuple("v2026-09-13") < ultima      # el viejo: ofrecía actualizar
     assert _version_tuple("v2026-09-13.8") > ultima    # el nuevo: no ofrece nada
+
+
+# ── A dónde copia la actualización ──────────────────────────────────────────
+
+def test_base_dir_es_la_raiz_de_la_instalacion():
+    """⚠️ El bug de Linux. Sin congelar hay que subir TRES niveles: este módulo vive en
+    `bitacora/escritorio/`, así que `Path(__file__).parent` es `escritorio/` y no la raíz.
+
+    En Linux la app corre desde el código (no se empaqueta con PyInstaller porque WebKitGTK es
+    frágil de bundlear), así que ese es el camino real allá: `apply_update` volcaba la carpeta
+    nueva **dentro de `bitacora/escritorio/`** y después buscaba ahí `venv/bin/pip`,
+    `instalar.sh` y `bitacora.sh`, que están en la raíz. No borraba nada, pero la actualización
+    no se aplicaba y la app no se relanzaba.
+    """
+    base = updater.base_dir()
+    assert (base / "main.py").exists(), f"{base} no es la raíz: no tiene main.py"
+    assert (base / "bitacora").is_dir()
+    # Y lo que el script de actualización usa DESPUÉS de copiar.
+    assert (base / "tools" / "linux" / "bitacora.sh").exists()
+
+
+def test_hay_UNA_sola_definicion_de_base_dir():
+    """Estuvo duplicada —acá y en `escritorio/main.py`— y divergió: una subía tres niveles y la
+    otra uno. Con algo que se usa para copiar archivos encima, eso no puede volver a pasar."""
+    import pathlib
+    import re
+    raiz = pathlib.Path(__file__).resolve().parent.parent / "bitacora"
+    definiciones = []
+    for p in raiz.rglob("*.py"):
+        for n, linea in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            if re.match(r"def _?base_dir\s*\(", linea.strip()):
+                # `as_posix` porque el CI corre en Ubuntu y acá se desarrolla en Windows: con el
+                # separador nativo el test pasaría en una plataforma y fallaría en la otra.
+                definiciones.append(p.relative_to(raiz).as_posix())
+    assert definiciones == ["escritorio/updater.py"], definiciones
+
+
+def test_el_arranque_busca_la_base_vieja_en_la_raiz():
+    """El otro uso de `base_dir`: encontrar una `health.db` de antes de que el código se mudara
+    al paquete. Si apuntara a `escritorio/`, no la encontraría nunca."""
+    from bitacora.escritorio import main as escritorio_main
+    assert escritorio_main.base_dir is updater.base_dir
