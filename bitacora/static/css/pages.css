@@ -1171,6 +1171,18 @@ select.journal-cat-select {
 .rec-grupo-sec > summary:hover .rec-grupo-acciones,
 .rec-grupo-sec > summary:focus-within .rec-grupo-acciones { opacity: 1; }
 
+/* La cruz con la misma caja que el lápiz. `.btn-delete` es sin borde por diseño en el resto de
+   la app, pero acá van los dos pegados: uno enmarcado y el otro suelto se leen como dos cosas
+   distintas. El rojo se reserva para el hover, que es cuando importa. */
+.rec-grupo-acciones .btn-delete {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 3px 9px;
+  font-size: 12px;
+}
+
+.rec-grupo-acciones .btn-delete:hover { color: var(--red); border-color: var(--red); }
+
 .rec-grupo-edit,
 .rec-grupo-nuevo form {
   display: flex;

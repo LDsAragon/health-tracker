@@ -7,3 +7,81 @@
   <input type="hidden" name="{{ name }}" class="date-es-iso" value="{{ value }}">
 </span>
 {%- endmacro %}
+
+{# Los tres campos que el alta y la edición de una rutina comparten: dónde va, la edad si es un
+   cumpleaños, y la antelación si es un recordatorio.
+
+   ⚠️ Viven en un macro porque NACIERON divergiendo: el formulario de edición se quedó sin ellos
+   y, como el navegador no manda lo que el formulario no tiene, guardar cualquier cambio le
+   borraba a la rutina el grupo, el tipo, la antelación y el año de nacimiento. Un formulario que
+   pierde datos que no estás editando es peor que uno incompleto.
+
+   `suf` hace únicos los ids: vacío en el alta, "-<id>" en cada edición. El JS lo recibe para
+   saber sobre qué formulario trabaja. #}
+{% macro campos_rutina(secciones, anio_actual, ev=None, suf='') -%}
+{% set actual = ('g:' ~ ev.group_id) if ev and ev.group_id else ('sin:' ~ (ev.tipo or 'rutina') if ev else 'sin:rutina') %}
+<div class="field-group">
+  <label>Dónde va</label>
+  <select name="donde" id="rec-donde{{ suf }}" class="journal-cat-select"
+          onchange="recDonde('{{ suf }}')">
+    {% for sec in secciones %}
+    <optgroup label="{{ sec.titulo | upper }} · {{ sec.sub }}">
+      {% for grupo, _evs in sec.bloques %}
+      {% if grupo %}
+      <option value="g:{{ grupo.id }}" data-especial="{{ grupo.especial }}"
+              data-tipo="{{ grupo.tipo }}"
+              {% if actual == 'g:' ~ grupo.id %}selected{% endif %}>{{ grupo.name }}</option>
+      {% endif %}
+      {% endfor %}
+      <option value="sin:{{ sec.tipo }}" data-tipo="{{ sec.tipo }}"
+              {% if actual == 'sin:' ~ sec.tipo %}selected{% endif %}>(sin grupo)</option>
+    </optgroup>
+    {% endfor %}
+  </select>
+</div>
+
+{# Se guarda el AÑO —no se desactualiza— pero se puede cargar la edad, que es el caso real:
+   sabés que cumple 34 y no le vas a preguntar el año. #}
+<div id="rec-cumple{{ suf }}" class="freq-detail" style="display:none;">
+  <div class="field-row">
+    <div class="field-group">
+      <label>Año de nacimiento <span style="font-weight:400;">(opcional)</span></label>
+      <input type="number" name="birth_year" min="1900" max="{{ anio_actual }}"
+             value="{{ ev.birth_year or '' if ev else '' }}" placeholder="1992" style="width:120px;">
+    </div>
+    <div class="field-group">
+      <label>…o cuántos cumple este año</label>
+      <input type="number" name="edad" min="0" max="130" placeholder="34" style="width:100px;">
+    </div>
+  </div>
+</div>
+
+{# Solo los recordatorios avisan antes: "en 3 días vas al gimnasio", todos los días, no ayuda. #}
+<div class="field-group" id="rec-aviso{{ suf }}" style="display:none;">
+  <label>Avisar antes</label>
+  {% set av = (ev.aviso_dias or 0) if ev else 0 %}
+  <div class="freq-options">
+    {% for val, txt in [('0','No'), ('2','2 días antes'), ('7','7 días antes')] %}
+    <label class="freq-opt">
+      <input type="radio" name="aviso" value="{{ val }}"
+             {% if av == val | int %}checked{% endif %} onchange="recAviso(this.value, '{{ suf }}')">
+      <span>{{ txt }}</span>
+    </label>
+    {% endfor %}
+    <label class="freq-opt">
+      <input type="radio" name="aviso" value="otro"
+             {% if av and av not in [2, 7] %}checked{% endif %}
+             onchange="recAviso(this.value, '{{ suf }}')">
+      <span>Otro</span>
+    </label>
+  </div>
+  <div id="rec-aviso-otro{{ suf }}" class="freq-detail"
+       {% if not (av and av not in [2, 7]) %}style="display:none;"{% endif %}>
+    <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+      <input type="number" name="aviso_otro" value="{{ av if av and av not in [2, 7] else 3 }}"
+             min="1" max="365" style="width:70px;">
+      <span>días antes</span>
+    </div>
+  </div>
+</div>
+{%- endmacro %}

@@ -139,7 +139,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 747 tests, ~67s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 750 tests, ~67s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -554,6 +554,14 @@ recordatorios con `applicable = 0`.
   cambia al editar. Las nueve bolitas repetidas en cada fila eran la mitad del ruido.
 - **El tipo de un grupo no se edita**: moverlo de sección arrastraría todo lo que tiene adentro
   (sus rutinas perderían el porcentaje, o al revés) y no se vio la necesidad.
+- ⚠️ **Los campos de una rutina viven en el macro `campos_rutina`** (`_macros.html`), compartido
+  por el alta y la edición, porque **nacieron divergiendo**: el formulario de edición se quedó sin
+  ellos y, como el navegador no manda lo que el formulario no tiene, guardar cualquier cambio
+  —hasta el color— le borraba a la rutina el grupo, el tipo, la antelación y el año de nacimiento.
+  Un formulario que pierde datos que no estás editando es peor que uno incompleto. El macro recibe
+  un sufijo para los ids (vacío en el alta, `-<id>` en cada edición) y el JS lo usa para saber
+  sobre qué formulario trabaja; **el "template" del cumpleaños busca dentro de SU formulario**, o
+  tocaría los radios del alta.
 
 ### La frecuencia `yearly`
 ⚠️ **Se repite por MES-DÍA, no por días transcurridos.** El cumpleaños se venía modelando con

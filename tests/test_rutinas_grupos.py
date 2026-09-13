@@ -576,3 +576,55 @@ def test_sin_nada_para_arreglar_no_hay_aviso(client):
 def test_una_rutina_ya_anual_no_se_vuelve_a_ofrecer(client):
     _alta(client, title="Cumple de Pablo", rtype="yearly", donde=_donde(_grupo_cumples()))
     assert 'class="rec-sugerencia"' not in client.get("/recurring").data.decode()
+
+
+# ── Editar no puede perder lo que no estás editando ──────────────────────────
+
+def test_editar_una_rutina_no_le_borra_el_grupo(client):
+    """⚠️ El formulario de edición nació sin los campos nuevos, así que guardar cualquier cambio
+    —el color, el nombre— sacaba la rutina de su grupo, la volvía Rutina y le borraba la
+    antelación y el año de nacimiento. Un formulario que pierde datos que no estás editando es
+    peor que uno incompleto."""
+    grupo = _grupo_cumples()
+    _alta(client, title="Cumple de Pablo", rtype="yearly", start_date="1992-05-05",
+          donde=_donde(grupo), edad="34", aviso="7")
+    ev = db.get_recurring_events()[-1]
+
+    # Editar cambiándole SOLO el color.
+    client.post(f"/recurring/{ev['id']}/edit",
+                data={"title": "Cumple de Pablo", "color": "#a855f7", "rtype": "yearly",
+                      "start_date": "1992-05-05", "donde": _donde(grupo), "edad": "34",
+                      "aviso": "7"},
+                follow_redirects=True)
+    de_nuevo = db.get_recurring_events()[-1]
+    assert de_nuevo["color"] == "#a855f7"
+    assert de_nuevo["group_id"] == grupo["id"]
+    assert de_nuevo["tipo"] == "recordatorio"
+    assert de_nuevo["aviso_dias"] == 7
+    assert de_nuevo["birth_year"] == date.today().year - 34
+
+
+def test_se_puede_cambiar_de_grupo_editando(client):
+    """La pregunta del usuario: cómo se le pone un grupo a una rutina que no lo tiene."""
+    client.post("/recurring/grupo/add", data={"name": "Salud", "tipo": "rutina"},
+                follow_redirects=True)
+    salud = [g for g in db.get_event_groups() if g["name"] == "Salud"][0]
+    _alta(client, title="Caminadora 20 mins", donde="sin:rutina")
+    ev = db.get_recurring_events()[-1]
+    assert ev["group_id"] is None
+
+    client.post(f"/recurring/{ev['id']}/edit",
+                data={"title": "Caminadora 20 mins", "color": "#6366f1", "rtype": "daily",
+                      "start_date": "2026-06-11", "donde": _donde(salud)},
+                follow_redirects=True)
+    assert db.get_recurring_events()[-1]["group_id"] == salud["id"]
+
+
+def test_el_formulario_de_edicion_trae_los_campos_nuevos(client):
+    """Si no los trae, el navegador no los manda y se pierden solos."""
+    _alta(client, title="Caminadora", donde="sin:rutina")
+    ev = db.get_recurring_events()[-1]
+    html = client.get("/recurring").data.decode()
+    assert f'name="donde"' in html
+    # Uno por formulario: el de alta y el de esta rutina.
+    assert html.count('name="donde"') >= 2
