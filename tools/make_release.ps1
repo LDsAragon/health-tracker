@@ -38,9 +38,16 @@ if (-not (Test-Path "$root\dist\Bitacora\Bitacora.exe")) {
 $zip = "$root\dist\Bitacora-Windows-$fecha.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 
-$contenido = @("$root\dist\Bitacora", "$root\docs\LEEME.txt")
-if (Test-Path "$root\docs\Bitacora-Manual.pdf") { $contenido += "$root\docs\Bitacora-Manual.pdf" }
-Compress-Archive -Path $contenido -DestinationPath $zip
+# El LEEME y el manual van DENTRO de la carpeta Bitacora, no sueltos al lado.
+# No es cosmetico: la auto-actualizacion espeja la carpeta Bitacora del zip sobre la carpeta
+# del .exe (updater.apply_update -> robocopy /MIR), asi que todo lo que quede afuera NUNCA se
+# actualiza. Antes el manual y el LEEME se quedaban con la version del dia que descomprimiste,
+# para siempre. Es lo que ya venia haciendo bien el tarball de Linux.
+Copy-Item "$root\docs\LEEME.txt" "$root\dist\Bitacora\LEEME.txt" -Force
+if (Test-Path "$root\docs\Bitacora-Manual.pdf") {
+    Copy-Item "$root\docs\Bitacora-Manual.pdf" "$root\dist\Bitacora\Bitacora-Manual.pdf" -Force
+}
+Compress-Archive -Path "$root\dist\Bitacora" -DestinationPath $zip
 
 Write-Output "OK: $zip ($([math]::Round((Get-Item $zip).Length/1MB, 1)) MB)"
-Write-Output "Contiene: carpeta Bitacora (la app), LEEME.txt y el manual PDF."
+Write-Output "Contiene: la carpeta Bitacora con la app, LEEME.txt y el manual PDF adentro."

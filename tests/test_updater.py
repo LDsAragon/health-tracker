@@ -155,3 +155,28 @@ def test_launch_win_loguea_antes_de_lanzar(monkeypatch, tmp_path):
     monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: object())
     updater._launch_win(tmp_path / "src", tmp_path / "dst", 1234)
     assert "lanzando actualizador" in (tmp_path / "Bitacora" / "update.log").read_text(encoding="utf-8")
+
+
+# ── Lo que se distribuye tiene que estar donde el updater lo alcanza ─────────
+
+def _script(nombre):
+    import pathlib
+    return (pathlib.Path(__file__).resolve().parent.parent / "tools" / nombre
+            ).read_text(encoding="utf-8")
+
+
+def test_el_manual_y_el_leeme_van_dentro_de_la_carpeta_que_se_espeja():
+    """⚠️ `apply_update()` toma `extracted/Bitacora` y la espeja sobre la carpeta del ejecutable.
+    Todo lo que el paquete deje FUERA de esa carpeta no se actualiza nunca: el manual y el LEEME
+    se quedaban con la versión del día que descomprimiste, para siempre. El tarball de Linux ya
+    lo hacía bien; el zip de Windows los dejaba sueltos al lado.
+    """
+    ps = _script("make_release.ps1")
+    assert 'Copy-Item "$root\docs\LEEME.txt" "$root\dist\Bitacora\LEEME.txt"' in ps
+    assert '"$root\dist\Bitacora\Bitacora-Manual.pdf"' in ps
+    # Y el zip lleva esa carpeta y nada más suelto al lado.
+    assert 'Compress-Archive -Path "$root\dist\Bitacora"' in ps
+
+    sh = _script("make_release_linux.sh")
+    assert 'cp docs/LEEME-Linux.txt "$APP/LEEME.txt"' in sh
+    assert 'cp docs/Bitacora-Manual.pdf "$APP/"' in sh

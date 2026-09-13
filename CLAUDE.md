@@ -183,8 +183,16 @@ armaba se quedaba sin versión y el updater no corría.
 
 **Windows** — PyInstaller (`.\hacer.ps1 build` → `tools\make_release.ps1`):
 Ojo: `Bitacora.exe` debe estar cerrada antes del build (`make_release.ps1` aborta si detecta el
-proceso). El zip lleva la carpeta `Bitacora`, `docs/LEEME.txt` y `docs/Bitacora-Manual.pdf`; el PDF
-se regenera aparte con `.\hacer.ps1 manual` (Edge headless) cuando cambia `docs/manual.html`.
+proceso). El zip lleva **una sola carpeta, `Bitacora`**, con el `LEEME.txt` y el
+`Bitacora-Manual.pdf` **adentro**; el PDF se regenera aparte con `.\hacer.ps1 manual` (Edge
+headless) cuando cambia `docs/manual.html`.
+
+⚠️ **Todo lo que se distribuya va DENTRO de esa carpeta.** `apply_update()` toma
+`extracted/Bitacora` y la espeja sobre la carpeta del ejecutable (`robocopy /MIR`), así que lo que
+quede afuera **no se actualiza nunca**: el manual y el LEEME se quedaban con la versión del día en
+que descomprimiste. El tarball de Linux ya lo hacía bien.
+`test_el_manual_y_el_leeme_van_dentro_de_la_carpeta_que_se_espeja` lo fija para las dos
+plataformas.
 
 ⚠️ **El entry point del build es `main.py`, no el paquete**, y `--add-data` deja `templates/` y
 `static/` en la **raíz** del bundle (`bitacora/templates;templates`) porque ahí las busca la rama
