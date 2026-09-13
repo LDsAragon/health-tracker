@@ -45,6 +45,7 @@ def recurring_view():
     hoy = date.today()
     return render_template("recurring.html",
                            secciones=_secciones(events, grupos),
+                           sugerencias=services.sugerencias_de_arreglo(events, hoy),
                            grupos=grupos,
                            stats=db.get_completion_stats(events),
                            edades={e["id"]: services.edad_en(e.get("birth_year"), hoy.year)
@@ -147,6 +148,29 @@ def recurring_delete(event_id):
 @bp.route("/recurring/<int:event_id>/visibility", methods=["POST"])
 def recurring_visibility(event_id):
     db.set_recurring_visibility(event_id, request.form.get("show") == "1")
+    return redirect(url_for("recurring.recurring_view"))
+
+
+@bp.route("/recurring/<int:event_id>/arreglar-frecuencia", methods=["POST"])
+def recurring_arreglar(event_id):
+    """Pasa una rutina de "cada ~365 días" a la frecuencia anual de verdad.
+
+    ⚠️ Solo se llega acá desde el botón del aviso: la migración no convierte nada sola. Y se
+    cambia **lo mínimo** —la frecuencia, y el grupo solo si el usuario aceptó esa parte—: el
+    `start_date` ya tiene el mes y el día correctos, que es de donde sale la fecha buena.
+    """
+    ev = next((e for e in db.get_recurring_events() if e["id"] == event_id), None)
+    if not ev:
+        return redirect(url_for("recurring.recurring_view"))
+
+    datos = dict(ev)
+    datos["recurrence"] = "yearly"
+    if request.form.get("a_cumpleanos") == "1":
+        grupo = next((g for g in db.get_event_groups() if g["especial"] == "cumpleanos"), None)
+        if grupo:
+            datos["group_id"] = grupo["id"]
+            datos["tipo"] = "recordatorio"
+    db.update_recurring_event(event_id, datos)
     return redirect(url_for("recurring.recurring_view"))
 
 

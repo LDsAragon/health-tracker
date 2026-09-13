@@ -159,3 +159,53 @@ def anio_de_nacimiento(anio_txt: str, edad_txt: str, hoy) -> int | None:
 def edad_en(birth_year, anio: int):
     """Los años que cumple en `anio`, o None si no se guardó el año de nacimiento."""
     return anio - birth_year if birth_year else None
+
+
+# ── Rutinas guardadas con una frecuencia que se corre ────────────────────────
+
+def _corrimiento(start, anio: int, cada: int) -> int:
+    """Cuántos días corrió ya respecto de su fecha original, en `anio`. Negativo = se adelantó."""
+    from datetime import date as _date, timedelta
+
+    d = start
+    while d.year < anio:
+        d += timedelta(days=cada)
+    try:
+        original = _date(anio, start.month, start.day)
+    except ValueError:                      # 29 de febrero en un año no bisiesto
+        original = _date(anio, start.month, 28)
+    return (d - original).days
+
+
+def sugerencias_de_arreglo(events, hoy) -> list:
+    """Rutinas modeladas como "cada ~365 días", que es lo que hace que la fecha se corra.
+
+    ⚠️ La detección es **explícita y acotada** —`every:N` con N entre 360 y 366— y no mira nunca
+    el contenido para adivinar intenciones. Nada se reescribe acá: esto solo arma lo que la
+    pantalla le va a **ofrecer** al usuario, que decide con un clic. Es la misma regla que los
+    renombres de campos.
+
+    El grupo de cumpleaños solo se sugiere si el título lo dice: un "cada 365 días" puede ser
+    perfectamente un chequeo médico, y meterlo en Cumpleaños sería inventar.
+    """
+    from datetime import date as _date
+
+    out = []
+    for ev in events:
+        rec = ev.get("recurrence", "")
+        if not rec.startswith("every:"):
+            continue
+        try:
+            n = int(rec.split(":")[1])
+        except (IndexError, ValueError):
+            continue
+        if not 360 <= n <= 366:
+            continue
+        start = _date.fromisoformat(ev["start_date"])
+        out.append({
+            "ev": ev,
+            "dias": n,
+            "corrido": _corrimiento(start, hoy.year, n),
+            "parece_cumple": "cumple" in (ev.get("title") or "").lower(),
+        })
+    return out

@@ -1191,3 +1191,18 @@ select.journal-cat-select {
 .rec-grupo-nuevo > button { color: var(--muted); }
 
 #rec-filtro { width: 100%; max-width: 320px; margin-bottom: 4px; }
+
+/* El aviso de una rutina que se va a correr de fecha. Es informativo y accionable, no un error:
+   amarillo, no rojo — nada está roto todavía. */
+.rec-sugerencia {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(234, 179, 8, .35);
+  border-left: 3px solid #eab308;
+  border-radius: var(--r);
+  background: rgba(234, 179, 8, .08);
+}
+
+.rec-sug-titulo { font-weight: 600; margin: 0 0 8px; }
+.rec-sug-texto { font-size: 13px; line-height: 1.5; margin: 0 0 6px; color: var(--text); }
+.rec-sug-acciones { display: flex; gap: 8px; align-items: center; margin-top: 10px; }

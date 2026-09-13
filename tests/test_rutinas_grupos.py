@@ -479,3 +479,100 @@ def test_la_pantalla_ya_no_tiene_el_panel_de_grupos(client):
     html = client.get("/recurring").data.decode()
     assert "rec-grupos-body" not in html
     assert "+ Nuevo grupo" in html
+
+
+# ── La sugerencia sobre datos que ya existen ─────────────────────────────────
+
+def _vieja(client, titulo="Cumple del pablo", cada=364, desde="2023-05-05"):
+    """Una rutina como las que hay en las bases instaladas: el cumpleaños por días."""
+    db.add_recurring_event({"title": titulo, "color": "#6366f1",
+                            "recurrence": f"every:{cada}", "start_date": desde})
+    return db.get_recurring_events()[-1]
+
+
+def test_detecta_lo_que_se_va_a_correr_de_fecha(test_db):
+    from bitacora import services
+    db.add_recurring_event({"title": "Cumple del pablo", "color": "#6366f1",
+                            "recurrence": "every:364", "start_date": "2023-05-05"})
+    db.add_recurring_event({"title": "Caminadora", "color": "#6366f1",
+                            "recurrence": "every:2", "start_date": "2026-06-11"})
+    sug = services.sugerencias_de_arreglo(db.get_recurring_events(), date(2026, 9, 13))
+    assert [s["ev"]["title"] for s in sug] == ["Cumple del pablo"]
+    assert sug[0]["corrido"] == -4          # este año le cae el 1 de mayo, no el 5
+
+
+@pytest.mark.parametrize("cada,detecta", [(2, False), (30, False), (359, False), (360, True),
+                                          (364, True), (365, True), (366, True), (367, False)])
+def test_la_deteccion_es_acotada(test_db, cada, detecta):
+    """⚠️ Solo `every:N` con N cerca del año. Nada de mirar el contenido para adivinar
+    intenciones: es la misma regla que los renombres."""
+    from bitacora import services
+    db.add_recurring_event({"title": "algo", "color": "#6366f1", "recurrence": f"every:{cada}",
+                            "start_date": "2020-01-01"})
+    sug = services.sugerencias_de_arreglo(db.get_recurring_events(), date(2026, 9, 13))
+    assert bool(sug) is detecta
+
+
+def test_el_grupo_de_cumpleanos_solo_se_sugiere_si_el_titulo_lo_dice(test_db):
+    """Un "cada 365 días" puede ser un chequeo médico: meterlo en Cumpleaños sería inventar."""
+    from bitacora import services
+    db.add_recurring_event({"title": "Chequeo médico", "color": "#6366f1",
+                            "recurrence": "every:365", "start_date": "2024-03-10"})
+    sug = services.sugerencias_de_arreglo(db.get_recurring_events(), date(2026, 9, 13))
+    assert sug[0]["parece_cumple"] is False
+
+
+def test_arreglar_deja_la_fecha_quieta(client):
+    """El `start_date` ya tenía el mes y el día correctos: de ahí sale la fecha buena."""
+    ev = _vieja(client)
+    client.post(f"/recurring/{ev['id']}/arreglar-frecuencia", data={"a_cumpleanos": "1"},
+                follow_redirects=True)
+    de_nuevo = db.get_recurring_events()[-1]
+    assert de_nuevo["recurrence"] == "yearly"
+    assert de_nuevo["tipo"] == "recordatorio"
+    assert de_nuevo["group_id"] == _grupo_cumples()["id"]
+    for anio in (2026, 2030, 2078):
+        assert db.event_applies(de_nuevo, date(anio, 5, 5))
+
+
+def test_arreglar_no_toca_lo_que_no_hace_falta(client):
+    """Cambia la frecuencia y nada más: el título, el color, el desde y el hasta quedan."""
+    db.add_recurring_event({"title": "Cumple del pablo", "color": "#eab308",
+                            "recurrence": "every:364", "start_date": "2023-05-05",
+                            "end_date": "2078-05-06"})
+    antes = db.get_recurring_events()[-1]
+    client.post(f"/recurring/{antes['id']}/arreglar-frecuencia", data={"a_cumpleanos": "1"},
+                follow_redirects=True)
+    despues = db.get_recurring_events()[-1]
+    for campo in ("title", "color", "start_date", "end_date"):
+        assert despues[campo] == antes[campo], campo
+
+
+def test_arreglar_sin_cumpleanos_solo_cambia_la_frecuencia(client):
+    """Un chequeo anual se arregla igual, pero no se muda a Recordatorios."""
+    db.add_recurring_event({"title": "Chequeo médico", "color": "#6366f1",
+                            "recurrence": "every:365", "start_date": "2024-03-10"})
+    ev = db.get_recurring_events()[-1]
+    client.post(f"/recurring/{ev['id']}/arreglar-frecuencia", data={}, follow_redirects=True)
+    despues = db.get_recurring_events()[-1]
+    assert despues["recurrence"] == "yearly"
+    assert despues["tipo"] == "rutina" and despues["group_id"] is None
+
+
+def test_la_pantalla_ofrece_el_arreglo(client):
+    _vieja(client)
+    html = client.get("/recurring").data.decode()
+    assert "se va a correr de fecha" in html
+    assert "Arreglarla" in html
+    assert "Dejarla como está" in html
+
+
+def test_sin_nada_para_arreglar_no_hay_aviso(client):
+    db.add_recurring_event({"title": "Caminadora", "color": "#6366f1", "recurrence": "daily",
+                            "start_date": "2026-01-01"})
+    assert 'class="rec-sugerencia"' not in client.get("/recurring").data.decode()
+
+
+def test_una_rutina_ya_anual_no_se_vuelve_a_ofrecer(client):
+    _alta(client, title="Cumple de Pablo", rtype="yearly", donde=_donde(_grupo_cumples()))
+    assert 'class="rec-sugerencia"' not in client.get("/recurring").data.decode()

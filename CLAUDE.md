@@ -139,7 +139,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 730 tests, ~53s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 747 tests, ~67s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -585,10 +585,25 @@ recordatorios con `applicable = 0`.
   `day_events`, así que un recordatorio a tres días —lo único que había para mostrar— quedaba
   invisible.
 
-### Lo que la migración NO hace
+### Lo que la migración NO hace, y lo que la pantalla OFRECE
 Las rutinas que ya existían quedan **exactamente como estaban** (Rutina, sin grupo, misma
 frecuencia), incluido el cumpleaños mal modelado. Convertirlo es un clic del usuario en la
 pantalla, no una heurística en la migración: es la misma regla que los renombres de campos.
+
+Lo que sí hace la pantalla es **ofrecerlo**, con un aviso por rutina
+(`services.sugerencias_de_arreglo`):
+
+- **La detección es acotada y no mira el contenido**: `every:N` con N entre 360 y 366. Lo único
+  que se deduce del título es si sugerir además el grupo de cumpleaños —un "cada 365 días" puede
+  ser un chequeo médico, y mudarlo a Cumpleaños sería inventar—.
+- El aviso dice **qué** está mal, **por qué** importa (con la fecha concreta a la que ya se
+  corrió) y **exactamente qué** va a cambiar. Es amarillo y no rojo: nada está roto todavía.
+- `POST /recurring/<id>/arreglar-frecuencia` cambia **lo mínimo**: la frecuencia a `yearly`, y el
+  grupo solo si el usuario aceptó esa parte. El `start_date` ya tiene el mes y el día correctos
+  —de ahí sale la fecha buena—, así que no se toca, ni el título, ni el color, ni el `end_date`.
+- **"Dejarla como está" va a `localStorage` por `uid`**: es una preferencia de vista y no un dato,
+  así que no ensucia el esquema ni viaja en el sync. Por `uid` y no por `id`, que es local a cada
+  base.
 
 ## Confirmaciones: ninguna es del navegador
 

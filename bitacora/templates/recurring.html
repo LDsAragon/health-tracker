@@ -11,6 +11,45 @@
   <p class="page-sub">Cosas que querés recordar hacer con cierta frecuencia (o un día puntual). Aparecen en el calendario en los días que les toca.</p>
 </div>
 
+{# ── Lo que la app detectó y OFRECE arreglar ───────────────────────────────
+   Nada se reescribe sin el botón: la migración no tocó ningún dato. El aviso dice qué está mal,
+   por qué importa y exactamente qué va a cambiar. Se puede descartar por rutina, y eso queda en
+   este navegador (es una preferencia de vista, no un dato). #}
+{% if sugerencias %}
+{% set MESES_S = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+                  'septiembre','octubre','noviembre','diciembre'] %}
+{% for sug in sugerencias %}
+{% set ev = sug.ev %}
+<div class="rec-sugerencia" data-uid="{{ ev.uid }}" id="sug-{{ ev.id }}">
+  <p class="rec-sug-titulo">
+    ⚠️ «{{ ev.title }}» se va a correr de fecha
+  </p>
+  <p class="rec-sug-texto">
+    Está guardada como <b>cada {{ sug.dias }} días</b>, y un año tiene 365 o 366: cada vuelta se
+    adelanta un día.
+    {% if sug.corrido %}
+    Este año cae el <b>{{ (ev.start_date[8:10] | int) + sug.corrido }} de
+    {{ MESES_S[ev.start_date[5:7] | int - 1] }}</b> en vez del
+    {{ ev.start_date[8:10] | int }}.
+    {% endif %}
+  </p>
+  <p class="rec-sug-texto">
+    → Pasarla a <b>Una vez al año</b>, cada
+    <b>{{ ev.start_date[8:10] | int }} de {{ MESES_S[ev.start_date[5:7] | int - 1] }}</b>{%
+    if sug.parece_cumple %}, dentro de <b>Recordatorios · Cumpleaños</b>{% endif %}.
+  </p>
+  <div class="rec-sug-acciones">
+    <form method="POST" action="{{ url_for('recurring.recurring_arreglar', event_id=ev.id) }}">
+      {% if sug.parece_cumple %}<input type="hidden" name="a_cumpleanos" value="1">{% endif %}
+      <button type="submit" class="btn-primary">Arreglarla</button>
+    </form>
+    <button type="button" class="btn-cancel"
+            onclick="descartarSugerencia('{{ ev.uid }}')">Dejarla como está</button>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
 <!-- FORM -->
 <div class="rec-form-wrap">
   <form method="POST" action="{{ url_for('recurring.recurring_add') }}" class="rec-form" id="rec-add-form">
@@ -464,6 +503,27 @@ function recDonde() {
     }
   }
 }
+
+// ── Los avisos de "esto se va a correr de fecha" ────────────────────────────
+// Descartarlos es una preferencia de vista, no un dato: va a localStorage y por uid, que es lo
+// único estable entre máquinas (el id es local a cada base).
+function descartarSugerencia(uid) {
+  try {
+    const vistas = JSON.parse(localStorage.getItem('recSugOcultas') || '[]');
+    if (!vistas.includes(uid)) vistas.push(uid);
+    localStorage.setItem('recSugOcultas', JSON.stringify(vistas));
+  } catch (e) { /* modo privado */ }
+  const caja = document.querySelector('.rec-sugerencia[data-uid="' + uid + '"]');
+  if (caja) caja.hidden = true;
+}
+
+(function ocultarSugerenciasDescartadas() {
+  let vistas = [];
+  try { vistas = JSON.parse(localStorage.getItem('recSugOcultas') || '[]'); } catch (e) { return; }
+  document.querySelectorAll('.rec-sugerencia').forEach(function (c) {
+    if (vistas.includes(c.dataset.uid)) c.hidden = true;
+  });
+})();
 
 // ── Grupos, desde su propia sección ─────────────────────────────────────────
 function editarGrupo(id) {
