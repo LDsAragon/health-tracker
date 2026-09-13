@@ -139,7 +139,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 750 tests, ~67s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 753 tests, ~67s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -204,6 +204,16 @@ El tarball incluye `tools/linux/instalar.sh` (detecta apt/dnf/pacman) y `tools/l
 (launcher con env vars, ejecuta `main.py`). Copia `main.py` + el paquete `bitacora/` entero, sin
 lista de módulos: una lista explícita se desactualiza sola (`updater.py` faltó desde `v2026-06-25`
 y la app de Linux ni arrancaba, y por eso el CI verifica que el tarball importe).
+
+⚠️ **El tag se elige ANTES de compilar.** `publish_release.ps1` resuelve el sufijo y se lo pasa
+al build (`make_release.ps1 -Version $tag`), o el `.exe` publicado llevaría un tag distinto al de
+su propio release. Y **sin `-Version` —un build local— se estampa el sufijo que le tocaría al
+publicarse**, sacado de los tags (`git tag -l`, con un `fetch` de mejor esfuerzo): antes ponía
+`v<fecha>` a secas, que es el tag de la **primera** release del día, así que el `.exe` se hacía
+pasar por una versión publicada que no era la que tenía adentro y el updater le ofrecía
+"actualizar" a algo con **menos** código del recién compilado. Con el sufijo siguiente queda por
+encima de todo lo publicado (`available: False`) y coincide con el tag que va a llevar cuando se
+publique. Lo fijan tres tests en `tests/test_updater.py`.
 
 **Publicar a GitHub Releases** (ambas plataformas): `.\hacer.ps1 publicar`.
 ⚠️ **Sin `-Tag`, el script busca el primer sufijo libre del día** (`.1`, `.2`, …) y avisa cuál

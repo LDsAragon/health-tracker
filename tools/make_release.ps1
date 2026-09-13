@@ -20,7 +20,31 @@ if ($corriendo.Count) {
 $fecha = Get-Date -Format yyyy-MM-dd
 # _version.py se genera ANTES del build para que PyInstaller lo bundlee en _internal/.
 # No se commitea (está en .gitignore): es un artefacto del build.
-$ver = if ($Version) { $Version } else { "v$fecha" }
+#
+# Con -Version manda el que pasa publish_release.ps1, que elige el tag ANTES de compilar para
+# que el .exe publicado se identifique con su propio release.
+#
+# Sin -Version esto es un build local, y estampaba "v<fecha>" a secas: el mismo tag que la
+# PRIMERA release del dia. O sea que el .exe se hacia pasar por una version publicada que no es
+# la que tiene adentro, y el updater le ofrecia "actualizar" a algo con menos codigo del que
+# acabas de compilar. Se usa el sufijo que le tocaria al publicarse: queda por encima de todo lo
+# publicado (el updater no ofrece nada) y coincide con el tag que va a llevar cuando se publique.
+if ($Version) {
+    $ver = $Version
+} else {
+    # Mejor esfuerzo: sin red o sin remoto seguimos con los tags que haya localmente. El tag lo
+    # crea `gh release create`, asi que sin este fetch los locales quedan un paso atras.
+    git fetch --tags --quiet 2>$null | Out-Null
+    $usados = @(git tag -l "v$fecha*")
+    $ver = "v$fecha"
+    $n = 0
+    while ($usados -contains $ver) {
+        $n++
+        if ($n -gt 99) { Write-Error "mas de 99 tags hoy: pasa -Version a mano"; exit 1 }
+        $ver = "v$fecha.$n"
+    }
+    Write-Output "Build local: se estampa $ver (el sufijo que le tocaria al publicar)"
+}
 'VERSION = "{0}"' -f $ver | Set-Content -Path "$root\_version.py" -Encoding UTF8
 
 Write-Output "Compilando Bitacora.exe..."

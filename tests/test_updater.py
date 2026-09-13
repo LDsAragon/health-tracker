@@ -180,3 +180,35 @@ def test_el_manual_y_el_leeme_van_dentro_de_la_carpeta_que_se_espeja():
     sh = _script("make_release_linux.sh")
     assert 'cp docs/LEEME-Linux.txt "$APP/LEEME.txt"' in sh
     assert 'cp docs/Bitacora-Manual.pdf "$APP/"' in sh
+
+
+# ── El tag que estampa un build local ───────────────────────────────────────
+
+def test_un_build_local_no_se_hace_pasar_por_una_release(monkeypatch):
+    """⚠️ `make_release.ps1` sin `-Version` estampaba `v<fecha>` a secas, que es el tag de la
+    PRIMERA release del día. El .exe se hacía pasar por una versión publicada que no era la que
+    tenía adentro, y el updater le ofrecía "actualizar" a algo con **menos** código del recién
+    compilado. Ahora usa el sufijo que le tocaría al publicarse.
+    """
+    ps = _script("make_release.ps1")
+    assert 'git tag -l "v$fecha*"' in ps, "no calcula el sufijo a partir de los tags"
+    assert "$usados -contains $ver" in ps
+    # Y la rama de -Version sigue mandando: es la que usa publish_release.ps1 para que el .exe
+    # publicado se identifique con su propio release.
+    assert "if ($Version) {" in ps
+
+
+def test_publish_elige_el_tag_ANTES_de_compilar():
+    """Si compilara primero, el .exe publicado llevaría un tag distinto al de su release."""
+    ps = _script("publish_release.ps1")
+    i_tag = ps.index("$tag = \"v$fecha.$n\"")
+    i_build = ps.index("make_release.ps1 -Version $tag")
+    assert i_tag < i_build
+
+
+def test_un_build_local_ordena_por_encima_de_lo_publicado():
+    """La consecuencia de todo esto, en la comparación que hace el updater."""
+    from bitacora.escritorio.updater import _version_tuple
+    ultima = _version_tuple("v2026-09-13.7")
+    assert _version_tuple("v2026-09-13") < ultima      # el viejo: ofrecía actualizar
+    assert _version_tuple("v2026-09-13.8") > ultima    # el nuevo: no ofrece nada
