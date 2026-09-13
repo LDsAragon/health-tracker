@@ -139,7 +139,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 760 tests, ~63s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 761 tests, ~63s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -155,6 +155,18 @@ Smoke tests fuera de pytest, porque necesitan display o ventana real — todos v
 | `desktop` | migración de primer arranque (headless) |
 | `descargas` | descargas en GTK (solo Linux) |
 | `captura` | screenshot en WebKitGTK, para bugs de rendering que no se ven en Windows |
+
+⚠️ **Los smokes se corren en las DOS plataformas**, y en Linux con el venv de WSL
+(`venv-linux/bin/python tools/<smoke>.py`, con `PYWEBVIEW_GUI=gtk` y
+`WEBKIT_DISABLE_DMABUF_RENDERER=1`). `smoke_desktop` aislaba solo con `LOCALAPPDATA` —la variable
+de Windows— así que en Linux apuntaba a la carpeta de datos **real**; lo frenó su propio assert,
+que está justamente para eso. Ahora fija las dos variables.
+
+⚠️ **Lo del empaquetado Linux se verifica sobre una instalación de verdad**, armada desde el
+tarball (`tar -xzf dist/Bitacora-linux-*.tar.gz -C $(mktemp -d)` y `./instalar.sh` con un `HOME`
+temporal), nunca sobre el repo: es lo único que reproduce que allá la app corre **desde el
+código**. Así salieron dos bugs que el repo no mostraba — el updater copiando a
+`bitacora/escritorio/` y el `.desktop` apuntando a un icono que se había mudado al paquete.
 
 ## Comandos: `hacer.ps1`
 

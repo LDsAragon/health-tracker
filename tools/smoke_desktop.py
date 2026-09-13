@@ -1,7 +1,8 @@
 """Smoke test headless del arranque de escritorio: migración de primer arranque + app servida.
 
-Usa un LOCALAPPDATA temporal para no tocar el real. No abre la ventana.
+Usa una carpeta de datos temporal para no tocar la real. No abre la ventana.
 Correr: venv/Scripts/python tools/smoke_desktop.py
+        (en Linux: venv-linux/bin/python tools/smoke_desktop.py)
 """
 import os
 import sys
@@ -9,7 +10,11 @@ import tempfile
 from pathlib import Path
 
 tmp = Path(tempfile.mkdtemp(prefix="ht-smoke-"))
+# ⚠️ Las DOS variables: `APP_DIR` sale de `LOCALAPPDATA` en Windows y de `XDG_DATA_HOME` en
+# Linux. Con una sola, en la otra plataforma este smoke apuntaba a la carpeta de datos REAL —lo
+# frenó el assert de abajo, que está justamente para eso.
 os.environ["LOCALAPPDATA"] = str(tmp)
+os.environ["XDG_DATA_HOME"] = str(tmp)
 
 root = Path(__file__).resolve().parent.parent
 os.chdir(root)

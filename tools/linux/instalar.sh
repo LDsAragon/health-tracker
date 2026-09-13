@@ -50,7 +50,9 @@ Type=Application
 Name=Bitácora
 Comment=Calendario personal de hábitos, registros y emociones
 Exec=$PWD/bitacora.sh
-Icon=$PWD/static/icon.png
+# El icono vive DENTRO del paquete desde que el codigo se mudo a bitacora/ (sep 2026): con la
+# ruta vieja el lanzador del menu quedaba sin icono, y en silencio.
+Icon=$PWD/bitacora/static/icon.png
 Terminal=false
 Categories=Office;Utility;
 EOF

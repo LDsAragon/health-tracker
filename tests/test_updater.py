@@ -264,3 +264,16 @@ def test_el_arranque_busca_la_base_vieja_en_la_raiz():
     al paquete. Si apuntara a `escritorio/`, no la encontraría nunca."""
     from bitacora.escritorio import main as escritorio_main
     assert escritorio_main.base_dir is updater.base_dir
+
+
+def test_el_lanzador_de_linux_apunta_a_un_icono_que_existe():
+    """⚠️ El `.desktop` que deja `instalar.sh` apuntaba a `static/icon.png`, y el icono se mudó a
+    `bitacora/static/` cuando el código pasó al paquete: el lanzador del menú quedaba sin icono,
+    en silencio. Se compara contra el archivo real del repo, que es lo que el tarball copia."""
+    import pathlib
+    raiz = pathlib.Path(__file__).resolve().parent.parent
+    sh = _script("linux/instalar.sh")
+    relativa = [l.split("=", 1)[1].replace("$PWD/", "").strip()
+                for l in sh.splitlines() if l.startswith("Icon=")]
+    assert len(relativa) == 1, relativa
+    assert (raiz / relativa[0]).exists(), f"{relativa[0]} no existe en el repo"
