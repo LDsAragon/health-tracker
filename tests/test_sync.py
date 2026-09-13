@@ -426,3 +426,78 @@ def test_la_previa_sin_paquete_vuelve_a_datos(equipo_web):
     cliente, _ = equipo_web
     r = cliente.get("/sync/previa")
     assert r.status_code == 302 and "/export" in r.headers["Location"]
+
+
+# ── Grupos de rutinas ────────────────────────────────────────────────────────
+
+def _grupo_cumples():
+    return [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
+
+
+def test_los_grupos_viajan_con_sus_rutinas(dos_equipos):
+    pc, lap, paq, usar = dos_equipos
+    usar(pc)
+    gid = db.add_event_group({"name": "Salud", "color": "#22c55e", "tipo": "rutina"})
+    db.add_recurring_event({"title": "Caminadora", "color": "#6366f1", "recurrence": "daily",
+                            "start_date": "2026-01-01", "group_id": gid})
+    _exportar(pc, paq, usar)
+    usar(lap)
+    sync.aplicar(paq)
+
+    grupos = {g["id"]: g["name"] for g in db.get_event_groups()}
+    ev = [e for e in db.get_recurring_events() if e["title"] == "Caminadora"][0]
+    assert grupos[ev["group_id"]] == "Salud"
+
+
+def test_una_rutina_SIN_grupo_no_se_pierde(dos_equipos):
+    """⚠️ La trampa de la referencia opcional.
+
+    El mecanismo de `PADRES` hace un INNER JOIN y exige que el padre exista, así que aplicado a
+    `group_id` —que puede ser NULL— se habría salteado cada rutina sin grupo, o sea que
+    sincronizar **borraría rutinas**. Por eso `group_id` va por `PADRES_OPCIONALES`.
+    """
+    pc, lap, paq, usar = dos_equipos
+    usar(pc)
+    db.add_recurring_event({"title": "Sin grupo", "color": "#6366f1", "recurrence": "daily",
+                            "start_date": "2026-01-01"})
+    _exportar(pc, paq, usar)
+    usar(lap)
+    sync.aplicar(paq)
+
+    ev = [e for e in db.get_recurring_events() if e["title"] == "Sin grupo"]
+    assert len(ev) == 1
+    assert ev[0]["group_id"] is None
+
+
+def test_el_grupo_de_fabrica_no_se_duplica_al_sincronizar(dos_equipos):
+    """Lo crea cada instalación por su cuenta: sin identidad fija quedarían dos "Cumpleaños"."""
+    pc, lap, paq, usar = dos_equipos
+    usar(pc)
+    db.update_event_group(_grupo_cumples()["id"],
+                          {"name": "Cumples de la familia", "color": "#ec4899",
+                           "tipo": "recordatorio"})
+    _marcar(pc, "recurring_groups", "especial", "cumpleanos", "2030-01-01 00:00:00.000")
+    _exportar(pc, paq, usar)
+    usar(lap)
+    sync.aplicar(paq)
+
+    cumples = [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"]
+    assert len(cumples) == 1
+    assert cumples[0]["name"] == "Cumples de la familia"
+
+
+def test_un_cumpleanos_llega_entero(dos_equipos):
+    pc, lap, paq, usar = dos_equipos
+    usar(pc)
+    db.add_recurring_event({"title": "Cumple de Pablo", "color": "#ec4899", "recurrence": "yearly",
+                            "start_date": "1992-05-05", "tipo": "recordatorio",
+                            "group_id": _grupo_cumples()["id"], "birth_year": 1992,
+                            "aviso_dias": 7})
+    _exportar(pc, paq, usar)
+    usar(lap)
+    sync.aplicar(paq)
+
+    ev = [e for e in db.get_recurring_events() if e["title"] == "Cumple de Pablo"][0]
+    assert (ev["tipo"], ev["recurrence"], ev["birth_year"], ev["aviso_dias"]) == \
+           ("recordatorio", "yearly", 1992, 7)
+    assert ev["group_id"] == _grupo_cumples()["id"]

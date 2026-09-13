@@ -7,7 +7,7 @@ from .conn import get_db, _columns
 #  2. el import de sincronización va a poder rechazar un archivo incompatible.
 # ⚠️ AL AGREGAR UNA MIGRACIÓN HAY QUE SUBIRLA. Si no, las DBs ya instaladas se saltean el
 # paso y nunca reciben la columna nueva.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Tablas que participan de la sincronización entre dispositivos. `settings` queda afuera a
 # propósito: mezcla preferencias de la persona (formato de fecha) con las del dispositivo
@@ -15,7 +15,7 @@ SCHEMA_VERSION = 2
 # tracker original (entries, goals, custom_events, event_logs) tampoco entran: siguen vivas
 # con datos en las DBs instaladas pero la app ya no las usa.
 SYNCABLE = ("notes", "recurring_events", "completions", "journal_categories",
-            "journal_entries", "todos", "charts")
+            "journal_entries", "todos", "charts", "recurring_groups")
 
 SCHEMA = """
     CREATE TABLE IF NOT EXISTS notes (
@@ -32,6 +32,19 @@ SCHEMA = """
         recurrence  TEXT NOT NULL,
         start_date  TEXT NOT NULL,
         active      INTEGER DEFAULT 1
+    );
+    /* Los grupos de la pantalla de Rutinas: las secciones que se pliegan. `tipo` separa lo que
+       se mide (rutina) de lo que avisa (recordatorio), y `especial` enciende el comportamiento
+       propio de un grupo — hoy solo 'cumpleanos' (la edad, el icono, la frecuencia anual por
+       default). Es un campo de texto y no un booleano `es_cumpleanos` para que el próximo caso
+       especial no pida otra columna. */
+    CREATE TABLE IF NOT EXISTS recurring_groups (
+        id       INTEGER PRIMARY KEY AUTOINCREMENT,
+        name     TEXT NOT NULL,
+        color    TEXT DEFAULT '#6366f1',
+        tipo     TEXT NOT NULL DEFAULT 'rutina',
+        especial TEXT DEFAULT '',
+        position INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS completions (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -105,6 +118,13 @@ MIGRATIONS = [
     ("charts",           "tag_filter",       "ALTER TABLE charts ADD COLUMN tag_filter TEXT DEFAULT ''"),
     # Visor de tareas (sep 2026): cuando se cerro la tarea
     ("todos",            "done_at",          "ALTER TABLE todos ADD COLUMN done_at TEXT DEFAULT ''"),
+    # Rutinas vs. recordatorios (sep 2026). Los defaults dejan todo lo que ya existe como estaba:
+    # una rutina sin grupo, sin edad y sin aviso previo.
+    ("recurring_events", "tipo",       "ALTER TABLE recurring_events ADD COLUMN tipo TEXT DEFAULT 'rutina'"),
+    ("recurring_events", "group_id",   "ALTER TABLE recurring_events ADD COLUMN group_id INTEGER"),
+    # El AÑO de nacimiento y no la edad: la edad se desactualiza sola, el año no.
+    ("recurring_events", "birth_year", "ALTER TABLE recurring_events ADD COLUMN birth_year INTEGER"),
+    ("recurring_events", "aviso_dias", "ALTER TABLE recurring_events ADD COLUMN aviso_dias INTEGER DEFAULT 0"),
 ]
 
 # Identidad para sincronizar (sep 2026). Generadas y no escritas a mano: 14 entradas idénticas
@@ -169,6 +189,31 @@ TRIGGERS = "".join(f"""
 """ for t in SYNCABLE)
 
 
+# El único grupo que trae la app. Se busca por `especial` y no por nombre, así renombrarlo o
+# cambiarle el color no lo duplica en la próxima migración. Tampoco se puede borrar
+# (`delete_event_group` lo impide): es el que enciende el comportamiento de los cumpleaños.
+#
+# ⚠️ Nace con un uid FIJO, y por eso se escribe a mano en vez de dejárselo al trigger. Como lo
+# crea cada instalación por su cuenta, dos máquinas generarían dos uid distintos para el mismo
+# grupo de fábrica y al sincronizar quedarían **dos "Cumpleaños"**. Con la identidad fija el
+# merge los reconoce como la misma fila. El trigger no lo pisa: solo actúa con el uid vacío.
+UID_CUMPLEANOS = "00000000000000000000000000000001"
+
+# ⚠️ El `updated_at` también es fijo, y antiguo. Con `strftime('now')` cada instalación crearía el
+# mismo grupo con una marca distinta y el merge haría un update inútil en cada sync —pisando, por
+# ejemplo, el renombre de la otra máquina—. Con una marca igual y vieja, las dos empiezan
+# empatadas y solo gana quien lo edite de verdad. Y no se deja vacío porque toda fila
+# sincronizable tiene que tener uid y updated_at (`test_toda_tabla_sincronizable_...`).
+MARCA_SEED = "2000-01-01 00:00:00.000"
+
+SEED = f"""
+    INSERT INTO recurring_groups (name, color, tipo, especial, position, uid, updated_at)
+    SELECT 'Cumpleaños', '#ec4899', 'recordatorio', 'cumpleanos', 0,
+           '{UID_CUMPLEANOS}', '{MARCA_SEED}'
+    WHERE NOT EXISTS (SELECT 1 FROM recurring_groups WHERE especial = 'cumpleanos');
+"""
+
+
 def init_db():
     """Crea/migra el esquema. Idempotente: corre en cada request (app.before_request).
 
@@ -203,4 +248,7 @@ def init_db():
                         for t in SYNCABLE for suf in ("uid", "upd", "del"))
         drops += "DROP TRIGGER IF EXISTS settings_ins; DROP TRIGGER IF EXISTS settings_upd;"
         conn.executescript(drops + UID_INDEX + TRIGGERS + TRIGGERS_SETTINGS)
+        # 4) El grupo de fábrica, DESPUÉS de los triggers para que nazca con su uid y pueda
+        # sincronizar como cualquier otra fila.
+        conn.executescript(SEED)
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")

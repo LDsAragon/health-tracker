@@ -13,7 +13,8 @@ from .events import (
     get_recurring_events, add_recurring_event, update_recurring_event,
     delete_recurring_event, end_recurring_event, set_recurring_visibility,
     event_applies, get_completion, complete_event, uncomplete_event,
-    get_completions_range, get_completion_stats,
+    get_completions_range, get_completion_stats, proxima_fecha, avisos_proximos,
+    get_event_groups, add_event_group, update_event_group, delete_event_group,
 )
 from .journal import (
     get_journal_categories, add_journal_category, update_journal_category,

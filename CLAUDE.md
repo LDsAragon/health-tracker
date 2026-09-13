@@ -139,7 +139,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 672 tests, ~51s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 703 tests, ~59s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -297,7 +297,7 @@ El merge se resuelve en SQL con `ATTACH`, en este orden y con estas reglas:
   y el aplicar no viaja ninguna ruta por el formulario.
 
 ### Cimientos del sync
-Las 7 tablas de `SYNCABLE` tienen `uid` (las PK autoincrementales colisionan entre dispositivos) y
+Las 8 tablas de `SYNCABLE` tienen `uid` (las PK autoincrementales colisionan entre dispositivos) y
 `updated_at`, más la tabla `deletions` para tombstones. Todo se llena con **triggers**, así que
 ninguno de los 33 puntos de escritura de `database/*.py` los conoce.
 
@@ -405,7 +405,7 @@ Las dos ventanas poletean `GET /refresco` cada 3 s (`static/js/refresco.js`, inc
 `base.html` **y** en `widget.html`, que es plantilla propia). Si el token cambió, recargan.
 
 `db.token_datos()` sale de **datos commiteados**: la ruta de la base + un `MAX()` de los
-`updated_at` de las 7 tablas de `SYNCABLE` (los llenan los triggers del sync), del `deleted_at` de
+`updated_at` de las 8 tablas de `SYNCABLE` (los llenan los triggers del sync), del `deleted_at` de
 `deletions` y del `updated_at` de `settings`. Una sola consulta con subselects, armada desde
 `SYNCABLE` para que no pueda quedar desfasada del esquema. Cubre gratis lo que no es un INSERT
 normal: `reset_db()` deja los máximos vacíos y restaurar un backup trae otros `updated_at`.
@@ -513,6 +513,53 @@ cargar— hasta que el usuario lo notó usando la app. Tres piezas, y las tres h
 - **Tests en `tests/test_refresco.py`**, que corren siempre y sin dependencias: que **toda**
   pantalla cargue `refresco.js` y traiga el token, que ninguna quede impedida de refrescarse por
   el `autofocus`, y los dos tripwires (`defaultValue` y el aviso).
+
+## Rutinas y recordatorios
+
+> **Una rutina se mide. Un recordatorio avisa.**
+
+Es la distinción que ordena la pantalla, y la frase va **en la pantalla**: la rutina es algo que
+querés hacer seguido y te importa cuánto lo cumplís (de ahí el "Últimos 30 días: 12/15"); el
+recordatorio es algo que pasa ese día y no querés que se te escape. El recordatorio **se tilda**
+—"saludé a mi amigo"— pero **no tiene porcentaje**, porque no significaría nada. Sale de
+`recurring_events.tipo` (`rutina` | `recordatorio`), y `get_completion_stats()` devuelve los
+recordatorios con `applicable = 0`.
+
+- **Los grupos** (`recurring_groups`) son las secciones plegables de la pantalla y los crea el
+  usuario, dentro de cada tipo. `especial` es lo que enciende el comportamiento propio de un grupo
+  —hoy solo `cumpleanos`, que trae la edad y la frecuencia anual por default—; es texto y no un
+  booleano `es_cumpleanos` para que el próximo caso especial no pida otra columna.
+- ⚠️ **El grupo Cumpleaños nace con `uid` y `updated_at` FIJOS** (`UID_CUMPLEANOS`,
+  `MARCA_SEED`). Lo crea cada instalación por su cuenta: con un uid al azar, dos máquinas
+  generarían dos grupos distintos y sincronizar dejaría **dos "Cumpleaños"**. Y la marca fija y
+  vieja evita el otro extremo — con `strftime('now')` cada sync haría un update inútil que podría
+  pisar el renombre de la otra máquina. Empatados, solo gana quien lo edite de verdad.
+- ⚠️ **`group_id` va en `PADRES_OPCIONALES`, no en `PADRES`.** El mecanismo de `PADRES` hace un
+  INNER JOIN y además exige que el padre exista, así que aplicado a una FK que puede ser NULL
+  **borraría al sincronizar toda rutina sin grupo**. La versión opcional traduce con un subselect
+  que da NULL si el grupo no está: la rutina entra igual, en "Sin grupo".
+- **Borrar un grupo nunca borra sus rutinas** (quedan sin grupo), y un grupo `especial` no se
+  puede borrar.
+
+### La frecuencia `yearly`
+⚠️ **Se repite por MES-DÍA, no por días transcurridos.** El cumpleaños se venía modelando con
+`every:364`, y 364 no es un año: se corre un día por año. El "Cumple del pablo" del 5 de mayo de
+2023 ya caía **el 1 de mayo en 2026**, el 26 de abril en 2030 y en **febrero** para 2078.
+`test_el_viejo_every_364_si_se_corre` deja el contraste fijado para que no vuelva como
+"optimización".
+
+- El **29 de febrero se festeja el 28** en años no bisiestos: desaparecer tres de cada cuatro años
+  es peor que correrlo un día. `_bisiesto()` contempla los siglos (1900 y 2100 no lo son).
+- `proxima_fecha()` busca día a día hasta un año y medio en vez de tener una fórmula por
+  frecuencia — es justamente en una fórmula así donde se coló el error de los 364 días.
+- **La antelación vive aparte** (`avisos_proximos()`): "¿aplica hoy?" y "¿cuánto falta?" son dos
+  preguntas distintas, y mezclarlas haría que un recordatorio con aviso apareciera como si el día
+  fuera hoy. El que cae hoy **no** es un aviso: ese sale por el camino normal.
+
+### Lo que la migración NO hace
+Las rutinas que ya existían quedan **exactamente como estaban** (Rutina, sin grupo, misma
+frecuencia), incluido el cumpleaños mal modelado. Convertirlo es un clic del usuario en la
+pantalla, no una heurística en la migración: es la misma regla que los renombres de campos.
 
 ## Confirmaciones: ninguna es del navegador
 

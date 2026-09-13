@@ -28,8 +28,18 @@ PADRES = {
     "completions": ("event_id", "recurring_events"),
 }
 
+# Lo mismo, pero cuando la referencia PUEDE estar vacía: una rutina sin grupo es válida.
+# ⚠️ No se puede usar `PADRES` para esto. Ese camino hace un INNER JOIN y además exige que el
+# padre exista (`_where_altas`), así que una rutina sin grupo —o con un grupo que la otra máquina
+# no tiene— se saltearía y **se perdería**. Perder una rutina porque alguien reordenó una pantalla
+# sería absurdo: acá la referencia se traduce con un subselect que da NULL cuando no hay grupo o
+# no llegó, y la rutina entra igual, en "Sin grupo".
+PADRES_OPCIONALES = {
+    "recurring_events": ("group_id", "recurring_groups"),
+}
+
 # Padres antes que hijos: un hijo necesita que su padre ya exista para traducir la referencia.
-ORDEN = ("journal_categories", "recurring_events", "notes", "todos",
+ORDEN = ("journal_categories", "recurring_groups", "recurring_events", "notes", "todos",
          "journal_entries", "charts", "completions")
 
 
@@ -114,6 +124,28 @@ def _join_padre(tabla) -> str:
     return f"JOIN remoto.{padre} rp ON rp.id = r.{fk}"
 
 
+def _id_padre_opcional(tabla) -> str:
+    """Traduce una referencia que puede estar vacía, sin join: da NULL si no hay padre o si el
+    padre no llegó a esta máquina, y ahí la fila queda sin grupo en vez de perderse."""
+    fk, padre = PADRES_OPCIONALES[tabla]
+    return (f"(SELECT l.id FROM main.{padre} l WHERE l.uid ="
+            f" (SELECT rp.uid FROM remoto.{padre} rp WHERE rp.id = r.{fk}))")
+
+
+def _traductor(tabla):
+    """Cómo se escribe cada columna en el SELECT/SET: las FK se traducen, el resto va tal cual."""
+    fk = PADRES[tabla][0] if tabla in PADRES else None
+    fk_opc = PADRES_OPCIONALES[tabla][0] if tabla in PADRES_OPCIONALES else None
+
+    def como(col):
+        if fk and col == fk:
+            return _id_padre(tabla)
+        if fk_opc and col == fk_opc:
+            return _id_padre_opcional(tabla)
+        return f"r.{col}"
+    return como
+
+
 def _where_altas(tabla) -> str:
     w = ["COALESCE(r.uid,'') != ''",
          f"r.uid NOT IN (SELECT uid FROM main.{tabla})",
@@ -144,9 +176,9 @@ def _where_bajas(tabla) -> str:
 
 def _sql_altas(c, tabla) -> str:
     cols = _columnas(c, tabla)
-    fk = PADRES[tabla][0] if tabla in PADRES else None
-    join = _join_padre(tabla) if fk else ""
-    sel = ", ".join(_id_padre(tabla) if x == fk else f"r.{x}" for x in cols)
+    join = _join_padre(tabla) if tabla in PADRES else ""
+    como = _traductor(tabla)
+    sel = ", ".join(como(x) for x in cols)
     return (f"INSERT INTO {tabla} ({', '.join(cols)}) SELECT {sel}"
             f" FROM remoto.{tabla} r {join} WHERE {_where_altas(tabla)}")
 
@@ -155,11 +187,12 @@ def _sql_updates(c, tabla) -> str:
     """UPDATE ... FROM (SQLite >= 3.33). Copia el updated_at remoto tal cual: por eso el
     trigger de UPDATE lleva la guarda `WHEN NEW.updated_at = OLD.updated_at`."""
     cols = [x for x in _columnas(c, tabla) if x != "uid"]
-    fk = PADRES[tabla][0] if tabla in PADRES else None
-    sets = ", ".join(f"{x} = {_id_padre(tabla)}" if x == fk else f"{x} = r.{x}" for x in cols)
+    como = _traductor(tabla)
+    sets = ", ".join(f"{x} = {como(x)}" for x in cols)
     origen = f"remoto.{tabla} r"
     extra = ""
-    if fk:
+    if tabla in PADRES:
+        fk = PADRES[tabla][0]
         origen += f", remoto.{PADRES[tabla][1]} rp"
         extra = f" AND rp.id = r.{fk}"
     return (f"UPDATE {tabla} SET {sets} FROM {origen} WHERE {tabla}.uid = r.uid"
