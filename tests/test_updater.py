@@ -4,6 +4,7 @@ Nunca se le pega a la API real de GitHub: se parchea urllib.request.urlopen.
 """
 import io
 import json
+import sys
 
 import pytest
 
@@ -121,7 +122,15 @@ def test_force_check_no_pisa_una_descarga_en_curso(estado_limpio):
 
 
 # ── Lanzamiento del actualizador externo (Windows) ───────────────────────────
+# ⚠️ `subprocess.CREATE_NO_WINDOW` solo existe en Windows, así que en Linux estos dos no fallaban
+# por comportamiento sino por plataforma — y tuvieron el CI (ubuntu-latest) en rojo durante días,
+# que es lo mismo que no tener CI.
 
+solo_windows = pytest.mark.skipif(sys.platform != "win32",
+                                  reason="prueba el lanzamiento del actualizador en Windows")
+
+
+@solo_windows
 def test_launch_win_no_usa_detached_process(monkeypatch, tmp_path):
     """DETACHED_PROCESS deja a powershell.exe sin consola: sale 0 sin correr el script.
 
@@ -147,6 +156,7 @@ def test_launch_win_no_usa_detached_process(monkeypatch, tmp_path):
     assert "powershell" in capturado["args"][0]
 
 
+@solo_windows
 def test_launch_win_loguea_antes_de_lanzar(monkeypatch, tmp_path):
     """Sin este rastro, un fallo de lanzamiento no deja ninguna pista."""
     import subprocess
@@ -172,10 +182,10 @@ def test_el_manual_y_el_leeme_van_dentro_de_la_carpeta_que_se_espeja():
     lo hacía bien; el zip de Windows los dejaba sueltos al lado.
     """
     ps = _script("make_release.ps1")
-    assert 'Copy-Item "$root\docs\LEEME.txt" "$root\dist\Bitacora\LEEME.txt"' in ps
-    assert '"$root\dist\Bitacora\Bitacora-Manual.pdf"' in ps
+    assert r'Copy-Item "$root\docs\LEEME.txt" "$root\dist\Bitacora\LEEME.txt"' in ps
+    assert r'"$root\dist\Bitacora\Bitacora-Manual.pdf"' in ps
     # Y el zip lleva esa carpeta y nada más suelto al lado.
-    assert 'Compress-Archive -Path "$root\dist\Bitacora"' in ps
+    assert r'Compress-Archive -Path "$root\dist\Bitacora"' in ps
 
     sh = _script("make_release_linux.sh")
     assert 'cp docs/LEEME-Linux.txt "$APP/LEEME.txt"' in sh

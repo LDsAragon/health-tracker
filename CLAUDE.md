@@ -224,6 +224,20 @@ nadie. La rama que reemplaza sigue existiendo, pero solo se llega pasando `-Tag`
 
 **CI**: `.github/workflows/ci.yml` — pytest + tarball Linux como artifact, corre en push/PR a main.
 
+⚠️ **El CI corre en `ubuntu-latest` y estuvo en rojo doce corridas seguidas sin que nadie lo
+notara**, que es lo mismo que no tener CI. Dos causas, y las dos son la misma clase de error —un
+test que falla por **plataforma** y no por comportamiento—:
+- `subprocess.CREATE_NO_WINDOW` no existe fuera de Windows: los dos tests del actualizador de
+  Windows llevan `skipif`.
+- El CI **no instala `requirements-desktop.txt`** (pywebview necesita GTK/WebKit del sistema), así
+  que los tests de la capa de ventana se saltean con `importorskip`.
+Por eso el comando lleva **`-ra`**: sin él los salteados son invisibles y nadie se enteraría de
+que un día se saltea media suite. Antes de dar por buena una corrida, mirar cuántos se saltearon.
+
+**Correr la suite en Linux**: `wsl -d Ubuntu-24.04 --cd <repo> -- venv-linux/bin/python -m pytest
+tests/ -q -ra` (pide `venv-linux/bin/pip install pytest` la primera vez). Ahí sí está pywebview,
+así que solo se saltean los dos de Windows.
+
 ## Tareas y tareas atrasadas
 
 Una tarea pertenece a **un** día (`todos.todo_date`) y **nunca se mueve sola**: si queda sin cerrar

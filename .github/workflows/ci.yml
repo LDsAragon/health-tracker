@@ -15,7 +15,13 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt pytest
-      - run: pytest -q
+      # ⚠️ `-ra` para que los tests SALTEADOS se vean en el log. Acá no se instala
+      # `requirements-desktop.txt` (pywebview necesita GTK/WebKit del sistema), así que los de la
+      # capa de ventana se saltean solos con `importorskip`; sin `-ra` eso sería invisible y
+      # nadie notaría si un día se saltea media suite. Y los dos del actualizador de Windows
+      # tienen `skipif`: sin eso rompían acá por plataforma —no por comportamiento— y tuvieron
+      # este CI en rojo durante días, que es lo mismo que no tener CI.
+      - run: pytest -q -ra
 
   tarball-linux:
     runs-on: ubuntu-latest

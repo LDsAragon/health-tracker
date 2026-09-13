@@ -189,7 +189,8 @@ class _VentanaViva:
 def test_volver_no_navega_si_la_ventana_sigue_viva(monkeypatch):
     """Lo que se pidió: que vuelva LA MISMA. Un load_url("/") te sacaría del día que estabas
     mirando. En Windows `show()` es Show() + Activate(), así que alcanza para traerla al frente."""
-    import webview
+    #  explícito: pytest avisa que su default ante un ImportError va a cambiar.
+    webview = pytest.importorskip("webview", exc_type=ImportError)
     from bitacora.escritorio import widget
     v = _VentanaViva()
     monkeypatch.setattr(widget, "_principal", v)
@@ -204,7 +205,8 @@ def test_volver_no_navega_si_la_ventana_sigue_viva(monkeypatch):
 def test_volver_no_desmaximiza_una_ventana_maximizada(monkeypatch):
     """`restore()` fuerza WindowState=Normal. Llamarlo a ciegas le sacaba el maximizado a una
     ventana que estaba maximizada y visible."""
-    import webview
+    #  explícito: pytest avisa que su default ante un ImportError va a cambiar.
+    webview = pytest.importorskip("webview", exc_type=ImportError)
     from bitacora.escritorio import widget
     v = _VentanaViva()
     monkeypatch.setattr(widget, "_principal", v)
@@ -216,7 +218,8 @@ def test_volver_no_desmaximiza_una_ventana_maximizada(monkeypatch):
 
 
 def test_volver_desminimiza_solo_si_estaba_minimizada(monkeypatch):
-    import webview
+    #  explícito: pytest avisa que su default ante un ImportError va a cambiar.
+    webview = pytest.importorskip("webview", exc_type=ImportError)
     from bitacora.escritorio import widget
     v = _VentanaViva()
     monkeypatch.setattr(widget, "_principal", v)
@@ -263,7 +266,8 @@ def test_el_estado_de_minimizado_se_sigue_por_eventos(monkeypatch):
 def test_volver_crea_una_ventana_si_no_quedaba_ninguna(monkeypatch):
     """Cerraste la grande y seguiste con el widget: ahí sí hay que crear una, y empieza en el
     inicio porque no hay nada que preservar."""
-    import webview
+    #  explícito: pytest avisa que su default ante un ImportError va a cambiar.
+    webview = pytest.importorskip("webview", exc_type=ImportError)
     from bitacora.escritorio import widget
     creadas = []
     monkeypatch.setattr(widget, "_principal", None)
