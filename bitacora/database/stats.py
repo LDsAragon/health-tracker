@@ -204,3 +204,110 @@ def build_series(cat_id, field_label, ftype, start, end):
         dist = option_distribution(cat_id, field_label, start, end)
         return {"kind": "bar", "labels": list(dist), "data": list(dist.values())}
     return {"kind": "line", "labels": [], "data": []}
+
+
+# ── El resumen de lo que ya anotás ───────────────────────────────────────────
+
+def resumen(start: str, end: str) -> dict:
+    """Qué anotaste en el período, sin que haya que configurar nada.
+
+    Es la respuesta al problema más grave de la pantalla: sin campos marcados con 📈 no mostraba
+    **nada**, aunque hubieras anotado todos los días durante meses.
+
+    Se arma con las funciones de rango que ya existen (`get_notes_range`,
+    `get_todo_counts_range`, `get_journal_entries_range`): no hace falta SQL nuevo.
+    """
+    from .notes import get_notes_range
+    from .todos import get_todo_counts_range
+
+    notas = get_notes_range(start, end)
+    tareas = get_todo_counts_range(start, end)
+    especiales = get_journal_entries_range(start, end)
+
+    d0, d1 = date.fromisoformat(start), date.fromisoformat(end)
+    dias = (d1 - d0).days + 1
+    # "Un día con algo anotado" incluye cualquier cosa: una nota, una tarea o una nota especial.
+    # Tildar una rutina no cuenta como anotar — es cumplir algo que ya estaba planeado.
+    con_algo = set(notas) | set(especiales) | {d for d, c in tareas.items() if c["total"]}
+
+    return {
+        "dias": dias,
+        "notas": sum(len(v) for v in notas.values()),
+        "especiales": sum(len(v) for v in especiales.values()),
+        "tareas_total": sum(c["total"] for c in tareas.values()),
+        "tareas_hechas": sum(c["done"] for c in tareas.values()),
+        "dias_con_algo": len(con_algo),
+    }
+
+
+def _periodo_anterior(start: str, end: str) -> tuple:
+    """El período de igual largo que termina justo antes de `start`."""
+    d0, d1 = date.fromisoformat(start), date.fromisoformat(end)
+    largo = (d1 - d0).days + 1
+    fin = d0 - timedelta(days=1)
+    return (fin - timedelta(days=largo - 1)).isoformat(), fin.isoformat()
+
+
+def resumen_comparado(start: str, end: str) -> dict:
+    """El resumen del período + el del anterior de igual largo, con la diferencia de cada número.
+
+    ⚠️ Un delta contra un período **sin datos** no es una mejora: si antes no usabas la app, un
+    "▲ +23" es ruido que además se lee como un logro. Cuando el período anterior está vacío, el
+    delta viaja como `None` y la pantalla muestra un guion.
+    """
+    actual = resumen(start, end)
+    previo = resumen(*_periodo_anterior(start, end))
+    hubo_antes = any(previo[k] for k in ("notas", "especiales", "tareas_total"))
+    deltas = {k: (actual[k] - previo[k] if hubo_antes else None)
+              for k in actual if k != "dias"}
+    return {"actual": actual, "previo": previo, "deltas": deltas, "hubo_antes": hubo_antes}
+
+
+# ── La rueda de emociones ────────────────────────────────────────────────────
+
+def _emociones_de(raw) -> list:
+    """[(rueda, base)] de un valor de rueda. `""` si no hay nada.
+
+    El campo guarda texto: `"Alegre > Contento"`, varias separadas por `" | "`, y las de la rueda
+    de Ekman con el prefijo `ek::`. Se cuenta por **emoción base** —el primer nivel— que es la
+    que tiene color y la que se entiende de un vistazo; los niveles de abajo son matices y
+    contarlos por separado dispersaría todo en frecuencia 1.
+    """
+    out = []
+    for trozo in (raw or "").split("|"):
+        emo = trozo.strip()
+        if not emo:
+            continue
+        rueda = "ekman" if emo.startswith("ek::") else "willcox"
+        base = (emo[4:] if rueda == "ekman" else emo).split(" > ")[0].strip()
+        if base:
+            out.append((rueda, base))
+    return out
+
+
+def emociones_frecuentes(start: str, end: str) -> dict:
+    """{rueda: [{emocion, veces}]} + en cuántos días se registró alguna.
+
+    Es la feature más rica de la app y Estadísticas no la miraba.
+    """
+    cats = get_journal_categories()
+    campos = {c["id"]: [f["label"] for f in c.get("fields", [])
+                        if f.get("type") == "emotion-wheel"]
+              for c in cats}
+    campos = {k: v for k, v in campos.items() if v}
+    if not campos:
+        return {"ruedas": {}, "dias": 0}
+
+    conteo = {"willcox": {}, "ekman": {}}
+    dias = set()
+    for d_str, lst in get_journal_entries_range(start, end).items():
+        for e in lst:
+            for label in campos.get(e["category_id"], ()):
+                for rueda, base in _emociones_de(e["values"].get(label)):
+                    conteo[rueda][base] = conteo[rueda].get(base, 0) + 1
+                    dias.add(d_str)
+
+    ruedas = {r: [{"emocion": k, "veces": v}
+                  for k, v in sorted(c.items(), key=lambda kv: (-kv[1], kv[0]))]
+              for r, c in conteo.items() if c}
+    return {"ruedas": ruedas, "dias": len(dias)}

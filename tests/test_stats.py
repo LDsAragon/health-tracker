@@ -186,3 +186,140 @@ def test_charts_crud_via_ruta(client):
     assert len(charts) == 1 and charts[0]["field_label"] == "Peso" and charts[0]["range_days"] == 180
     client.post(f"/estadisticas/grafico/{charts[0]['id']}/delete")
     assert db.get_charts() == []
+
+
+# ── El resumen de lo que ya anotás ───────────────────────────────────────────
+
+def test_el_resumen_cuenta_lo_que_hay_sin_configurar_nada(test_db):
+    """⚠️ El problema que vino a resolver: sin campos marcados con 📈, la pantalla no mostraba
+    **nada** aunque hubieras anotado todos los días durante meses."""
+    db.add_note("2026-06-02", "una")
+    db.add_note("2026-06-02", "otra")
+    db.add_note("2026-06-05", "tercera")
+    db.add_todo("2026-06-03", "hacer algo")
+    db.add_todo("2026-06-03", "y otra cosa")
+    db.toggle_todo(db.get_todos_for_date("2026-06-03")[0]["id"])
+    cid = _cat(test_db, [{"label": "Ánimo", "type": "escala"}])
+    _entry(cid, "2026-06-04", {"Ánimo": "4"})
+
+    r = db.resumen("2026-06-01", "2026-06-30")
+    assert r["notas"] == 3
+    assert r["especiales"] == 1
+    assert r["tareas_total"] == 2 and r["tareas_hechas"] == 1
+    assert r["dias"] == 30
+    assert r["dias_con_algo"] == 4          # 2, 3, 4 y 5 de junio
+
+
+def test_tildar_una_rutina_no_cuenta_como_anotar(test_db):
+    """Cumplir algo que ya estaba planeado no es lo mismo que registrar algo: si contara, la
+    constancia diría "30 de 30 días" solo por tener una rutina diaria."""
+    db.add_recurring_event({"title": "Caminadora", "color": "#6366f1", "recurrence": "daily",
+                            "start_date": "2026-06-01"})
+    ev = db.get_recurring_events()[0]["id"]
+    for d in range(1, 11):
+        db.complete_event(ev, f"2026-06-{d:02d}")
+    assert db.resumen("2026-06-01", "2026-06-30")["dias_con_algo"] == 0
+
+
+def test_una_tarea_sin_cerrar_igual_cuenta_como_dia_anotado(test_db):
+    db.add_todo("2026-06-07", "pendiente")
+    r = db.resumen("2026-06-01", "2026-06-30")
+    assert r["dias_con_algo"] == 1 and r["tareas_hechas"] == 0
+
+
+def test_el_resumen_de_una_base_vacia_no_explota(test_db):
+    r = db.resumen("2026-06-01", "2026-06-30")
+    assert r == {"dias": 30, "notas": 0, "especiales": 0, "tareas_total": 0,
+                 "tareas_hechas": 0, "dias_con_algo": 0}
+
+
+# ── La comparación con el período anterior ───────────────────────────────────
+
+def test_el_periodo_anterior_es_de_igual_largo_y_pegado(test_db):
+    from bitacora.database.stats import _periodo_anterior
+    assert _periodo_anterior("2026-06-01", "2026-06-30") == ("2026-05-02", "2026-05-31")
+    assert _periodo_anterior("2026-06-13", "2026-06-13") == ("2026-06-12", "2026-06-12")
+
+
+def test_la_comparacion_dice_cuanto_subio_o_bajo(test_db):
+    for d in ("2026-05-10", "2026-05-11"):
+        db.add_note(d, "del mes pasado")
+    for d in ("2026-06-10", "2026-06-11", "2026-06-12", "2026-06-13", "2026-06-14"):
+        db.add_note(d, "de este mes")
+
+    c = db.resumen_comparado("2026-06-01", "2026-06-30")
+    assert c["actual"]["notas"] == 5
+    assert c["previo"]["notas"] == 2
+    assert c["deltas"]["notas"] == 3
+
+
+def test_sin_datos_antes_no_hay_delta(test_db):
+    """⚠️ Un "▲ +23" contra un período vacío no es una mejora: es ruido, y encima se lee como un
+    logro. Ahí el delta viaja como None y la pantalla muestra un guion."""
+    db.add_note("2026-06-10", "la primera nota de mi vida")
+    c = db.resumen_comparado("2026-06-01", "2026-06-30")
+    assert c["hubo_antes"] is False
+    assert all(v is None for v in c["deltas"].values())
+
+
+def test_con_datos_antes_si_hay_delta_aunque_baje(test_db):
+    db.add_note("2026-05-10", "antes")
+    c = db.resumen_comparado("2026-06-01", "2026-06-30")
+    assert c["hubo_antes"] is True
+    assert c["deltas"]["notas"] == -1
+
+
+# ── La rueda de emociones ────────────────────────────────────────────────────
+
+def _cat_rueda(test_db):
+    return _cat(test_db, [{"label": "¿Qué sentí?", "type": "emotion-wheel"}])
+
+
+def test_cuenta_las_emociones_por_base(test_db):
+    """Se cuenta el primer nivel: los de abajo son matices y contarlos aparte dispersaría todo
+    en frecuencia 1."""
+    cid = _cat_rueda(test_db)
+    _entry(cid, "2026-06-01", {"¿Qué sentí?": "Alegre > Contento"})
+    _entry(cid, "2026-06-02", {"¿Qué sentí?": "Alegre > Feliz"})
+    _entry(cid, "2026-06-03", {"¿Qué sentí?": "Triste > Solo"})
+
+    e = db.emociones_frecuentes("2026-06-01", "2026-06-30")
+    assert e["ruedas"]["willcox"] == [{"emocion": "Alegre", "veces": 2},
+                                      {"emocion": "Triste", "veces": 1}]
+    assert e["dias"] == 3
+
+
+def test_las_dos_ruedas_no_se_mezclan(test_db):
+    """⚠️ Willcox y Ekman son taxonomías distintas: sumar "Ira" con "Enojado" sería inventar una
+    equivalencia que nadie definió."""
+    cid = _cat_rueda(test_db)
+    _entry(cid, "2026-06-01", {"¿Qué sentí?": "Enojado > Furioso | ek::Ira > Furia"})
+    e = db.emociones_frecuentes("2026-06-01", "2026-06-30")
+    assert e["ruedas"]["willcox"] == [{"emocion": "Enojado", "veces": 1}]
+    assert e["ruedas"]["ekman"] == [{"emocion": "Ira", "veces": 1}]
+    assert e["dias"] == 1                    # el mismo día, no dos
+
+
+def test_varias_emociones_el_mismo_dia_cuentan_todas(test_db):
+    cid = _cat_rueda(test_db)
+    _entry(cid, "2026-06-01", {"¿Qué sentí?": "Alegre > Feliz | Apacible > Sereno"})
+    e = db.emociones_frecuentes("2026-06-01", "2026-06-30")
+    assert sum(x["veces"] for x in e["ruedas"]["willcox"]) == 2
+    assert e["dias"] == 1
+
+
+def test_sin_campos_de_rueda_no_hay_nada_que_contar(test_db):
+    _cat(test_db, [{"label": "Peso", "type": "numero"}])
+    assert db.emociones_frecuentes("2026-06-01", "2026-06-30") == {"ruedas": {}, "dias": 0}
+
+
+def test_los_colores_de_las_emociones_estan_en_un_solo_lugar():
+    """Estaban como literales dentro de `day.html`, y Estadísticas necesita los mismos: un color
+    por emoción tiene que ser el mismo en las dos pantallas."""
+    import pathlib
+
+    from bitacora.appconfig import EMOTION_COLORS
+    assert set(EMOTION_COLORS) == {"willcox", "ekman"}
+    day = (pathlib.Path(__file__).resolve().parent.parent / "bitacora" / "templates"
+           / "day.html").read_text(encoding="utf-8")
+    assert "'Enojado':'#e8643c'" not in day, "volvieron los colores copiados a day.html"

@@ -57,3 +57,18 @@ PET_ART = {
     "cat": "  /\\_/\\ \n ( ^.^ )\n  > ♥ < ",
     "dog": "  ∩   ∩\n ( ^ᴥ^ )\n  >  ω <",
 }
+
+
+# Colores de las emociones, por rueda. Estaban como literales dentro de `day.html`, y
+# Estadísticas los necesita para el mismo dato: un color por emoción base tiene que ser el mismo
+# en las dos pantallas o serían dos cosas distintas con el mismo nombre.
+#
+# ⚠️ Las dos ruedas van SEPARADAS a propósito: Willcox y Ekman son taxonomías distintas, y
+# mapear "Ira" con "Enojado" sería inventar una equivalencia que nadie definió.
+EMOTION_COLORS = {
+    "willcox": {"Enojado": "#e8643c", "Asustado": "#8e7cc3", "Alegre": "#e79ab0",
+                "Poderoso": "#e8b93f", "Apacible": "#6cab6c", "Triste": "#5b8fc7"},
+    "ekman":   {"Ira": "#e2403b", "Miedo": "#7c5cbf", "Tristeza": "#3b6fb5",
+                "Asco": "#4f9d69", "Disfrute": "#e6b53c"},
+}
+EMOTION_FALLBACK = "#8892a4"
