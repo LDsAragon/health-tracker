@@ -101,7 +101,6 @@
   <div class="day-card-journal">
     <h3 class="day-section-title">📊 Notas especiales</h3>
 
-    {% if journal_entries %}
     <div class="day-journal-list">
       {% for entry in journal_entries %}
       <div class="day-journal-entry" id="jentry-{{ entry.id }}" style="--c: {{ entry.category_color }};">
@@ -253,7 +252,6 @@
       </div>
       {% endfor %}
     </div>
-    {% endif %}
 
     <!-- Agregar nuevo registro -->
     {% if journal_cats %}

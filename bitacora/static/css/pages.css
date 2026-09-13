@@ -338,18 +338,21 @@ select.journal-cat-select {
 .todo-add-form { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
 .todo-add-form input[type="text"] { flex: 1 1 140px; min-width: 0; }
 
+/* Notas especiales: mismas bandas de ancho completo que las notas rápidas (título con borde
+   arriba y abajo, lista con su padding, pie con borde arriba). Antes era una caja con padding
+   propia y un título plano adentro, y las dos secciones se veían distintas. El borde de arriba
+   lo trae ahora el título; el padding, cada banda. */
 .day-card-journal {
-  border-top: 1px solid var(--border);
-  padding: 14px 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
 .day-journal-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1;                /* el mismo aire que .day-card-notes */
+  padding: 16px 20px;
 }
 
 .day-journal-entry {
@@ -591,7 +594,7 @@ select.journal-cat-select {
 
 .day-journal-add-wrap {
   border-top: 1px solid var(--border);
-  padding-top: 10px;
+  padding: 14px 20px;     /* igual que .day-card-footer-wrap */
 }
 
 .day-journal-add-toggle {

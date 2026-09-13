@@ -121,10 +121,18 @@ body.day-redimensionando:has(.day-alto-grip.arrastrando) { cursor: row-resize; }
 }
 
 /* Reordenar secciones de la card: notas rápidas suben al hueco de los objetivos */
-.day-qn-title        { order: 2; padding: 14px 20px 12px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+/* La banda del título la comparten las dos secciones; el `order` es solo de las rápidas,
+   que son hijas directas de la card (las especiales viven dentro de .day-card-journal). */
+.day-qn-title,
+.day-card-journal > .day-section-title {
+  padding: 14px 20px 12px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.day-qn-title        { order: 2; }
 .day-card-notes      { order: 3; }
 .day-card-footer-wrap { order: 4; }
-.day-card-journal    { order: 5; }
+.day-card-journal    { order: 5; flex: 1; }   /* el mismo espacio que las rápidas */
 
 @media (max-width: 1100px) {
   .day-layout { grid-template-columns: 1fr; }

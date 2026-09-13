@@ -497,3 +497,13 @@ def test_categoria_campo_chart_flag(client):
     fields = db.get_journal_categories()[0]["fields"]
     assert fields[0].get("chart") is True
     assert "chart" not in fields[1]
+
+
+def test_la_lista_de_especiales_se_renderiza_vacia(client, test_db):
+    """Las dos secciones del día tienen que verse iguales, y el que da el aire es el contenedor
+    de la lista. Estaba detrás de un `if journal_entries`, así que en un día sin notas especiales
+    el título quedaba pegado al "+ Agregar" mientras el de notas rápidas mantenía su espacio.
+    """
+    _add_cat(test_db)
+    html = client.get(f"/day/{DATE}").data.decode()
+    assert 'class="day-journal-list"' in html
