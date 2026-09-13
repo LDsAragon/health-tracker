@@ -16,4 +16,4 @@ venv-linux/bin/pip install --quiet -r requirements-desktop.txt
 
 echo
 echo "Listo. Para abrir la ventana:  venv-linux/bin/python main.py"
-echo "(la DB vive en ~/.local/share/Bitacora/health.db)"
+echo "(la DB vive en ~/.local/share/Bitacora/perfiles/<perfil>/health.db)"

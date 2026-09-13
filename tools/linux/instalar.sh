@@ -57,4 +57,4 @@ EOF
 
 echo
 echo "Listo. Buscá \"Bitácora\" en el menú de aplicaciones, o corré ./bitacora.sh"
-echo "(tus datos quedan en ~/.local/share/Bitacora/health.db)"
+echo "(tus datos quedan en ~/.local/share/Bitacora/perfiles/<perfil>/health.db)"

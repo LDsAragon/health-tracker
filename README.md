@@ -9,10 +9,16 @@ Calendario personal de hábitos, registros y emociones. App de escritorio para W
 - **Rutinas** — actividades que querés marcar día a día (ejercicio, medicación, sueño, lo que sea). Podés definir en qué días aplican y cuáles son obligatorias.
 - **Notas rápidas** — texto libre con color opcional, tipo post-it.
 - **Notas especiales** — formularios con campos a medida: texto, escala (numérica o con tus propias etiquetas), sí/no, opciones, número, duración, rango horario y rueda de emociones.
-- **To-dos** — tareas con fecha; se pueden mover entre días.
+- **Tareas** — con fecha propia; se mueven entre días, y hay un visor aparte con las que quedaron sin cerrar.
 - **Estadísticas** — resumen de tiempo por actividad en la semana, el mes o los últimos 90 días, gráficos a medida y adherencia de rutinas.
 
 Se ve como calendario mensual o como semana, y hay buscador de notas y 8 temas para elegir.
+
+También tiene:
+
+- **Widget de escritorio** — un panel chico que queda siempre encima, con las tareas del día, un mes compacto y un campo para anotar. Sobrevive a cerrar la ventana grande, y las dos se ponen al día solas.
+- **Perfiles** — varias bitácoras en la misma computadora, cada una con su propia base y sus propios backups.
+- **Sincronizar dos computadoras** — se exporta un archivo, se importa en la otra y se ve una vista previa antes de combinar. Sigue sin haber nube: el archivo lo llevás vos.
 
 Los datos viven en una base SQLite local. No hay servidor, no hay nube.
 
@@ -30,7 +36,9 @@ Bajá la versión más reciente desde [Releases](https://github.com/LDsAragon/he
 3. **Si Windows muestra "Windows protegió tu equipo"** (pantalla azul de SmartScreen): tocá **Más información** → **Ejecutar de todas formas**. Pasa porque la app no está firmada digitalmente; es normal.
 4. Para un acceso directo: clic derecho sobre `Bitacora.exe` → Enviar a → Escritorio.
 
-Tus datos se guardan en `%LOCALAPPDATA%\Bitacora\health.db` (independiente de dónde tengas la app).
+Tus datos se guardan en `%LOCALAPPDATA%\Bitacora\perfiles\<perfil>\health.db`, independiente de dónde tengas la app.
+
+Si Bitácora ya está abierta, volver a abrirla no lanza una segunda: vuelve la que tenías, en el día que estabas mirando.
 
 ### Linux
 
@@ -47,7 +55,7 @@ cd ~/Bitacora
 
 Después buscá **Bitácora** en el menú de aplicaciones, o corré `./bitacora.sh` desde la carpeta.
 
-Tus datos se guardan en `~/.local/share/Bitacora/health.db`.
+Tus datos se guardan en `~/.local/share/Bitacora/perfiles/<perfil>/health.db`.
 
 ---
 
@@ -83,4 +91,6 @@ cd ~/Bitacora
 
 ## Manual de uso
 
-El manual completo en PDF viene incluido en el zip/tar.gz del release (`Bitacora-Manual.pdf`).
+El manual completo en PDF viene incluido en el release, dentro de la carpeta `Bitacora`
+(`Bitacora-Manual.pdf`), junto al `LEEME.txt`. Van ahí adentro a propósito: la auto-actualización
+reemplaza esa carpeta, así que el manual se actualiza con la app.
