@@ -139,7 +139,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 655 tests, ~34s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 672 tests, ~51s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -545,9 +545,16 @@ cada formulario **declara** lo suyo:
 - Las tres frases de borrado (`BORRAR DATOS` / `BORRAR PERFIL` / `BORRAR TODOS LOS PERFILES`) son
   **otra** barrera y siguen igual: el botón nace `disabled` y lo habilita escribir la frase. El
   modal es el segundo paso, no el reemplazo.
+- **Un aviso de validación NO es una confirmación**: va **inline, al lado de lo que falta
+  completar**, no en un modal. Los dos casos son iguales y comparten `.form-error`: el
+  `#weekday-error` de Rutinas y el `#jday-cat-error` del alta de nota especial del día. ⚠️ Los dos
+  existen porque el valor viaja en un `<input type="hidden">` (los días de la semana, la categoría
+  elegida con chips) y **a un hidden no le aplica `required`**: la validación es a mano, y por eso
+  es fácil que vuelva como diálogo. El del día era un `alert('Seleccioná una categoría.')`.
 - `test_confirmar.py` es el tripwire de que no vuelva un `confirm()`, `alert()` o `prompt()` a
-  ninguna plantilla. Lee las plantillas y no las rutas, así cubre los 16 sin tener que armar dos
-  perfiles, un gráfico y una previa de sync para que aparezcan los botones.
+  ninguna plantilla **ni a ningún `.js`**. Lee los archivos y no las rutas, así cubre los 16 sin
+  tener que armar dos perfiles, un gráfico y una previa de sync para que aparezcan los botones.
+  Es estricto a propósito: salta hasta con un `alert()` escrito dentro de un comentario.
 
 ## Color por defecto de las notas rápidas
 

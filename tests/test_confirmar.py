@@ -14,6 +14,9 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 PLANTILLAS = sorted((RAIZ / "bitacora" / "templates").glob("*.html"))
+# `confirmar.js` queda afuera: es el que implementa el reemplazo y nombra lo que reemplazó.
+SCRIPTS = [p for p in sorted((RAIZ / "bitacora" / "static" / "js").glob("*.js"))
+           if p.name != "confirmar.js"]
 
 
 def _texto(p):
@@ -33,6 +36,33 @@ def test_ninguna_plantilla_usa_los_dialogos_del_navegador(plantilla):
     culpables = [l.strip()[:70] for l in codigo
                  if re.search(r"(?<![\w.])(confirm|alert|prompt)\s*\(", l)]
     assert culpables == [], f"{plantilla.name} usa un diálogo del navegador: {culpables}"
+
+
+@pytest.mark.parametrize("script", SCRIPTS, ids=lambda p: p.name)
+def test_ningun_script_usa_los_dialogos_del_navegador(script):
+    """El JS también: quedaba un `alert('Seleccioná una categoría.')` en `day.js`. Una validación
+    de formulario va **inline, al lado de lo que falta completar** (como el `#weekday-error` de
+    Rutinas), no en un diálogo — y menos en uno que el usuario lee como del navegador.
+    """
+    codigo = [l for l in _texto(script).splitlines() if not l.strip().startswith(("//", "*", "/*"))]
+    culpables = [l.strip()[:70] for l in codigo
+                 if re.search(r"(?<![\w.])(confirm|alert|prompt)\s*\(", l)]
+    assert culpables == [], f"{script.name} usa un diálogo del navegador: {culpables}"
+
+
+def test_la_categoria_de_una_nota_especial_se_valida_inline(client):
+    """⚠️ La categoría se elige con chips y viaja en un `<input type="hidden">`, y a un hidden no
+    le aplica `required`: la validación es a mano y por eso es fácil que vuelva como diálogo.
+    """
+    import json
+
+    from bitacora import database as db
+    db.add_journal_category({"name": "Emociones", "color": "#6366f1", "show_in_calendar": 1,
+                             "fields_json": json.dumps([{"label": "Qué sentí", "type": "text",
+                                                         "placeholder": ""}])})
+    html = client.get("/day/2026-06-10").data.decode()
+    assert 'id="jday-cat-error"' in html
+    assert "Elegí una categoría" in html
 
 
 # ── La guarda que evita borrar sin preguntar ─────────────────────────────────

@@ -284,6 +284,11 @@
               {% endfor %}
             </div>
             <input type="hidden" name="category_id" id="jday-cat">
+            {# La categoría se elige con chips y viaja en un hidden, y a un hidden HTML5 no le
+               aplica `required`: por eso la validación es a mano. Antes era un diálogo del
+               navegador, que en la ventana salía como "127.0.0.1:xxxxx dice". Mismo patrón que
+               el #weekday-error de Rutinas. #}
+            <p id="jday-cat-error" class="form-error" style="display:none;">Elegí una categoría.</p>
           </div>
           <div id="jday-fields"></div>
           <div class="field-group" style="margin-top:8px;">

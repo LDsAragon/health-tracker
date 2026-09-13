@@ -131,6 +131,8 @@ function selectJCat(btn) {
   document.querySelectorAll('#jday-cat-chips .jcat-chip').forEach(b =>
     b.classList.toggle('jcat-chip-sel', b === btn));
   document.getElementById('jday-cat').value = btn.dataset.id;
+  const error = document.getElementById('jday-cat-error');
+  if (error) error.style.display = 'none';
   updateDayFields(btn.dataset.id);
 }
 function filterJCats(q) {
@@ -178,7 +180,17 @@ function collectValues(containerId) {
 
 function prepareNewValues() {
   const catId = document.getElementById('jday-cat').value;
-  if (!catId) { alert('Seleccioná una categoría.'); return false; }
+  const error = document.getElementById('jday-cat-error');
+  if (!catId) {
+    // Inline y no un diálogo: es una validación de formulario, y el mensaje tiene que quedar al
+    // lado de lo que falta completar. Mismo patrón que el #weekday-error de Rutinas.
+    if (error) {
+      error.style.display = 'block';
+      document.getElementById('jday-cat-chips').scrollIntoView({ block: 'nearest' });
+    }
+    return false;
+  }
+  if (error) error.style.display = 'none';
   document.getElementById('jday-values-json').value = collectValues('jday-fields');
   return true;
 }
