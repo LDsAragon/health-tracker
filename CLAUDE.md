@@ -136,7 +136,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 531 tests, ~30s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 534 tests, ~31s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -544,6 +544,17 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
   espacio que se gana al ensanchar. El tope del arrastre sale de la pantalla
   (`(ancho - card - gaps) / 2`, hasta 900) y no es un número fijo: en un monitor de 2560 da ~856
   por lado, y con el 560 fijo que tenía quedaba media pantalla sin usar.
+- ⚠️ **Los paneles del día se arrastran a lo ancho Y a lo alto**, con un helper compartido en
+  `day.js` (`arrastrable({grip, eje, variable, pref, ...})`) que usan los tres agarres. El ancho es
+  uno solo para los dos paneles; **el alto es de cada uno**, porque tienen contenidos muy distintos.
+  Con un alto fijo el panel pasa a ser columna flex y **scrollea la lista**, no el panel: así el
+  título y el "Agregar una tarea" quedan siempre a la vista. El hijo que scrollea necesita
+  `min-height: 0` — un item flex no se encoge por debajo de su contenido y sin eso el `overflow-y`
+  no actúa nunca.
+  ⚠️ **El tope del alto va en el JS, no como `max-height` en el CSS**: un `max-height` también
+  aplicaría en modo automático y a alguien con treinta tareas le aparecería un scroll interno que
+  hoy no tiene. Y el tope es `alto de ventana − 40` porque `.day-side` es `position: sticky`: un
+  panel más alto que la ventana deja de quedarse pegado.
 - ⚠️ **El ancho del panel de tareas del día se arrastra** (`.day-side-grip`, lo maneja `day.js`,
   queda en `localStorage`; doble clic resetea). Las columnas laterales toman el ancho pedido
   (`--day-side`, 300px) y la del medio absorbe con `minmax(0, 1fr)`. **Antes eran `1fr` con la del

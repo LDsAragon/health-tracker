@@ -28,6 +28,11 @@
   {# Arrastrar para cambiar el ancho del panel; doble clic lo devuelve al default. Lo maneja
      day.js y el ancho queda en localStorage. #}
   <div class="day-side-grip" id="day-side-grip" title="Arrastrá para cambiar el ancho (doble clic para volver al normal)"></div>
+  {# El de abajo cambia el ALTO. Los data-* los lee day.js: así los dos paneles usan el mismo
+     helper sin que el JS sepa de cuál se trata. #}
+  <div class="day-alto-grip" data-var="--day-alto-tareas" data-pref="day_alto_tareas"
+       data-panel=".day-card-todos"
+       title="Arrastrá para cambiar el alto (doble clic para volver al normal)"></div>
   <div class="day-card-todos">
     <h3 class="day-section-title">📋 Lista de tareas</h3>
 
@@ -384,6 +389,9 @@
 <!-- Panel lateral derecho: rutinas y eventos agendados -->
 {% if day_events %}
 <aside class="day-side day-side-right">
+  <div class="day-alto-grip" data-var="--day-alto-rutinas" data-pref="day_alto_rutinas"
+       data-panel=".day-card-events-panel"
+       title="Arrastrá para cambiar el alto (doble clic para volver al normal)"></div>
   <div class="day-card-events-panel">
     <h3 class="day-section-title">📅 Rutinas y eventos</h3>
     <div class="day-card-events">

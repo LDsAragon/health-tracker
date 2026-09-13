@@ -886,3 +886,32 @@ def test_borrar_el_perfil_desde_ajustes_vuelve_a_ajustes(client, tmp_path, monke
     r = client.post("/perfiles/borrar", data={"slug": profs.activo()["slug"],
                                               "confirm_text": "BORRAR PERFIL"})
     assert "/ajustes" in r.headers["Location"]
+
+
+# ── Paneles del día redimensionables ────────────────────────────────────────
+# Lo sustancial (arrastrar, el scroll interno, el tope) es de navegador; acá solo se fija que el
+# marcado esté, que es lo que el JS necesita para cablearse.
+
+def test_el_dia_trae_los_tres_agarres(client):
+    """Uno de ancho —compartido por los dos paneles— y uno de alto por panel."""
+    db.add_recurring_event(EV_BASE | {"title": "Rutina"})
+    html = client.get(f"/day/{DATE}").data.decode()
+    assert 'id="day-side-grip"' in html                       # el ancho
+    assert html.count('class="day-alto-grip"') == 2           # un alto por panel
+
+
+def test_cada_agarre_de_alto_dice_su_variable_y_su_clave(client):
+    """day.js se cablea con los data-*: si faltan, el agarre queda muerto y en silencio."""
+    db.add_recurring_event(EV_BASE | {"title": "Rutina"})
+    html = client.get(f"/day/{DATE}").data.decode()
+    for var, pref, panel in (("--day-alto-tareas", "day_alto_tareas", ".day-card-todos"),
+                             ("--day-alto-rutinas", "day_alto_rutinas", ".day-card-events-panel")):
+        assert f'data-var="{var}"' in html
+        assert f'data-pref="{pref}"' in html
+        assert f'data-panel="{panel}"' in html
+
+
+def test_sin_rutinas_solo_esta_el_agarre_de_tareas(client):
+    """El panel derecho no se renderiza si no hay eventos ese día."""
+    html = client.get(f"/day/{DATE}").data.decode()
+    assert html.count('class="day-alto-grip"') == 1

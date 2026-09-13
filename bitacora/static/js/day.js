@@ -204,80 +204,113 @@ window.addEventListener('DOMContentLoaded', function () {
 });
 
 
-// ── Ancho del panel de tareas, arrastrable ───────────────────────────────────
-// La columna lateral toma este ancho y la del medio absorbe (ver day.css), así el arrastre es
-// 1:1 con el mouse y lo que se guarda es lo que se vuelve a aplicar.
+// ── Paneles del día: ancho y alto arrastrables ───────────────────────────────
+// Un solo helper para los tres agarres (el ancho, y el alto de cada panel). Tres copias de esto
+// serían tres copias de la misma trampa, la del "pedido vs. medido" que está anotada abajo.
 (function () {
-  const PREF = 'day_side_width';
+  /**
+   * Cablea un agarre.
+   *   grip      el elemento que se arrastra
+   *   eje       'x' | 'y'
+   *   variable  la custom property que se setea en :root
+   *   pref      la clave de localStorage
+   *   minimo    px
+   *   maximo()  tope, calculado en el momento (depende del tamaño de la ventana)
+   *   medir()   el tamaño actual, para arrancar el arrastre si no hay valor pedido
+   */
+  function arrastrable({ grip, eje, variable, pref, minimo, maximo, medir }) {
+    if (!grip) return;
+    const raiz = document.documentElement.style;
+
+    // ⚠️ Se guarda el valor PEDIDO y no el medido. Midiendo, cada recarga lo encogía un poco
+    // (402 → 354 → 306...): el tamaño real puede ser menor que el pedido si no hay lugar, y
+    // guardar ese valor lo iba achicando en cada vuelta.
+    let pedido = null;
+
+    const acotar = (v) => Math.min(maximo(), Math.max(minimo, Math.round(v)));
+
+    function aplicar(v) {
+      pedido = acotar(v);
+      raiz.setProperty(variable, pedido + 'px');
+    }
+
+    try {
+      const v = parseInt(localStorage.getItem(pref), 10);
+      if (Number.isFinite(v)) aplicar(v);
+    } catch (e) { /* modo privado */ }
+
+    let arrastrando = false, origen = 0, inicial = 0;
+    const coord = (e) => (eje === 'x' ? e.clientX : e.clientY);
+
+    grip.addEventListener('pointerdown', (e) => {
+      arrastrando = true;
+      origen = coord(e);
+      inicial = pedido || medir();
+      grip.classList.add('arrastrando');
+      document.body.classList.add('day-redimensionando');
+      // Capturar el puntero: sin esto, al salirse del agarre el arrastre se corta. Tira si el
+      // pointerId no está activo (un evento sintético), y ahí el arrastre igual funciona.
+      try { grip.setPointerCapture(e.pointerId); } catch (err) { /* sin captura */ }
+      e.preventDefault();
+    });
+
+    grip.addEventListener('pointermove', (e) => {
+      if (arrastrando) aplicar(inicial + (coord(e) - origen));
+    });
+
+    function terminar() {
+      if (!arrastrando) return;
+      arrastrando = false;
+      grip.classList.remove('arrastrando');
+      document.body.classList.remove('day-redimensionando');
+      try { localStorage.setItem(pref, String(pedido)); } catch (e) { /* modo privado */ }
+    }
+    grip.addEventListener('pointerup', terminar);
+    grip.addEventListener('pointercancel', terminar);
+
+    grip.addEventListener('dblclick', () => {
+      pedido = null;
+      raiz.removeProperty(variable);          // vuelve al default del CSS
+      try { localStorage.removeItem(pref); } catch (e) { /* modo privado */ }
+    });
+
+    // Al achicar la ventana, re-acotar sin pisar lo elegido: un tamaño de un monitor grande no
+    // puede romper el layout en una ventana chica, pero al volver a agrandarla tiene que volver.
+    window.addEventListener('resize', () => {
+      if (pedido !== null) raiz.setProperty(variable, acotar(pedido) + 'px');
+    });
+  }
+
+  // ── El ancho, compartido por los dos paneles ──────────────────────────────
   // El tope sale de la pantalla y no es un número fijo: el conjunto mide 2 paneles + la card
   // (760) + los gaps, así que lo que sobra se reparte entre los dos lados. En un monitor de
-  // 2560 eso da ~870 por lado; con un 560 fijo quedaba media pantalla sin usar.
-  const MINIMO = 200, TOPE = 900, CARD = 760, GAPS = 40;
-
-  function maximo() {
-    const cabe = (document.documentElement.clientWidth - 48 - CARD - GAPS) / 2;
-    return Math.max(MINIMO, Math.min(TOPE, Math.floor(cabe)));
-  }
-
-  const grip = document.getElementById('day-side-grip');
-  const panel = grip && grip.closest('.day-side');
-  if (!panel) return;
-
-  // ⚠️ Se guarda el ancho PEDIDO y no el medido. Midiendo, cada recarga lo encogía un poco
-  // (402 → 354 → 306...): el ancho real puede ser menor que el pedido si no hay lugar, y
-  // guardar ese valor lo iba achicando en cada vuelta.
-  let pedido = null;
-
-  function aplicar(w) {
-    pedido = Math.min(maximo(), Math.max(MINIMO, Math.round(w)));
-    document.documentElement.style.setProperty('--day-side', pedido + 'px');
-  }
-
-  try {
-    const v = parseInt(localStorage.getItem(PREF), 10);
-    if (Number.isFinite(v)) aplicar(v);
-  } catch (e) { /* modo privado */ }
-
-  let arrastrando = false, x0 = 0, w0 = 0;
-
-  grip.addEventListener('pointerdown', (e) => {
-    arrastrando = true;
-    x0 = e.clientX;
-    w0 = pedido || panel.getBoundingClientRect().width;
-    grip.classList.add('arrastrando');
-    document.body.classList.add('day-redimensionando');
-    // Capturar el puntero: sin esto, al salirse del agarre el arrastre se corta. Tira si el
-    // pointerId no está activo (un evento sintético), y ahí el arrastre igual funciona.
-    try { grip.setPointerCapture(e.pointerId); } catch (err) { /* sin captura */ }
-    e.preventDefault();
+  // 2560 eso da ~856 por lado; con un 560 fijo quedaba media pantalla sin usar.
+  const ANCHO_MIN = 200, ANCHO_TOPE = 900, CARD = 760, GAPS = 40;
+  const gripAncho = document.getElementById('day-side-grip');
+  const panelIzq = gripAncho && gripAncho.closest('.day-side');
+  arrastrable({
+    grip: gripAncho, eje: 'x', variable: '--day-side', pref: 'day_side_width',
+    minimo: ANCHO_MIN,
+    maximo: () => Math.max(ANCHO_MIN, Math.min(ANCHO_TOPE,
+      Math.floor((document.documentElement.clientWidth - 48 - CARD - GAPS) / 2))),
+    medir: () => panelIzq.getBoundingClientRect().width,
   });
 
-  grip.addEventListener('pointermove', (e) => {
-    if (arrastrando) aplicar(w0 + (e.clientX - x0));
-  });
+  // ── El alto, uno por panel ────────────────────────────────────────────────
+  // ⚠️ El tope va acá y NO como max-height en el CSS: un max-height fijo también aplicaría en
+  // modo automático, y a alguien con treinta tareas le aparecería un scroll interno que hoy no
+  // tiene. Y el tope es la ventana porque .day-side es `position: sticky`: un panel más alto que
+  // la ventana deja de quedarse pegado y se va con el scroll.
+  const ALTO_MIN = 140;
+  const altoMaximo = () => Math.max(ALTO_MIN, document.documentElement.clientHeight - 40);
 
-  function terminar() {
-    if (!arrastrando) return;
-    arrastrando = false;
-    grip.classList.remove('arrastrando');
-    document.body.classList.remove('day-redimensionando');
-    try { localStorage.setItem(PREF, String(pedido)); } catch (e) { /* modo privado */ }
-  }
-  grip.addEventListener('pointerup', terminar);
-  grip.addEventListener('pointercancel', terminar);
-
-  grip.addEventListener('dblclick', () => {
-    pedido = null;
-    document.documentElement.style.removeProperty('--day-side');
-    try { localStorage.removeItem(PREF); } catch (e) { /* modo privado */ }
-  });
-
-  // Al achicar la ventana, re-acotar: un ancho elegido en un monitor grande le comía la card
-  // del medio en una ventana chica. No se guarda el valor acotado, así que al volver a agrandar
-  // la ventana el ancho elegido vuelve.
-  window.addEventListener('resize', () => {
-    if (pedido === null) return;
-    document.documentElement.style.setProperty(
-      '--day-side', Math.min(maximo(), Math.max(MINIMO, pedido)) + 'px');
+  document.querySelectorAll('.day-alto-grip').forEach((grip) => {
+    const panel = grip.closest('.day-side').querySelector(grip.dataset.panel);
+    if (!panel) return;
+    arrastrable({
+      grip, eje: 'y', variable: grip.dataset.var, pref: grip.dataset.pref,
+      minimo: ALTO_MIN, maximo: altoMaximo,
+      medir: () => panel.getBoundingClientRect().height,
+    });
   });
 })();
