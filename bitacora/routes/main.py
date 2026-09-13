@@ -176,14 +176,32 @@ def settings_set():
 
 _CHARTABLE_TYPES = ("numero", "escala", "duracion", "rango", "sino", "opciones")
 
+# El período de la pantalla. "mes" es el mes calendario en curso: la gente piensa en meses, no en
+# ventanas de 30 días, y es el único de largo variable (por eso no es un número).
+PERIODOS = [("mes", "Este mes"), ("30", "30 días"), ("90", "3 meses"),
+            ("180", "6 meses"), ("365", "1 año")]
+
 
 @bp.route("/estadisticas")
 def stats_view():
     today = date.today()
-    range_days = request.args.get("range", "90")
-    range_days = int(range_days) if range_days in ("30", "90", "180", "365") else 90
-    start = (today - timedelta(days=range_days - 1)).isoformat()
-    end   = today.isoformat()
+    # ⚠️ Un SOLO período para toda la pantalla. Antes este selector mandaba sobre los gráficos
+    # automáticos y la adherencia, pero cada gráfico personalizado usaba su `charts.range_days`
+    # guardado: dos tarjetas al lado mostraban ventanas distintas sin decirlo. La columna se
+    # conserva (no se borra nada) pero ya no decide el render.
+    # El default son 30 días y no 90: el resumen de arriba se lee en un mes, que es lo que se mira.
+    periodo = request.args.get("range", "30")
+    if periodo not in dict(PERIODOS):
+        periodo = "30"
+    if periodo == "mes":
+        start = today.replace(day=1).isoformat()
+        range_days = today.day
+        periodo_texto = "en lo que va del mes"
+    else:
+        range_days = int(periodo)
+        start = (today - timedelta(days=range_days - 1)).isoformat()
+        periodo_texto = f"últimos {range_days} días"
+    end = today.isoformat()
 
     cats = db.get_journal_categories()
     fieldinfo = {(c["id"], f["label"]): (f.get("type", "text"), c["name"])
@@ -210,7 +228,7 @@ def stats_view():
         if not infos:
             continue   # categoría/campo borrado
         cname  = infos[0][2]
-        cstart = (today - timedelta(days=ch["range_days"] - 1)).isoformat()
+        cstart = start          # el rango de la pantalla, no el guardado en el gráfico
         grouped = ch["group_field"] or ch["bucket"] not in ("", "day") or len(infos) > 1
         if grouped:
             value_fields = [(l, t) for l, t, _ in infos]
@@ -236,12 +254,23 @@ def stats_view():
 
     events = db.get_recurring_events()
     adh = db.get_completion_stats(events, days=range_days)
-    adherence = [
-        {"title": ev["title"], "color": ev["color"],
-         "done": adh[ev["id"]]["done"], "applicable": adh[ev["id"]]["applicable"],
-         "pct": round(adh[ev["id"]]["done"] / adh[ev["id"]]["applicable"] * 100)}
-        for ev in events if adh[ev["id"]]["applicable"]
-    ]
+    # Misma ventana, terminando el día antes del período: es con qué comparar.
+    # ⚠️ Solo se compara si **entonces marcabas rutinas**. Si no, el período anterior da 0% para
+    # todo y cualquier rutina aparecería con un "▲ +93" que no es una mejora: es la app vacía.
+    previo = db.get_completion_stats(events, days=range_days,
+                                     hasta=date.fromisoformat(start) - timedelta(days=1))
+    habia_rutinas = any(p["done"] for p in previo.values())
+    adherence = []
+    for ev in events:
+        a = adh[ev["id"]]
+        if not a["applicable"]:
+            continue
+        pct = round(a["done"] / a["applicable"] * 100)
+        p = previo[ev["id"]]
+        antes = round(p["done"] / p["applicable"] * 100) if p["applicable"] and habia_rutinas else None
+        adherence.append({"title": ev["title"], "color": ev["color"],
+                          "done": a["done"], "applicable": a["applicable"], "pct": pct,
+                          "delta": None if antes is None else pct - antes})
 
     # Para el constructor: categorías con campos graficables (con tipo, para filtrar
     # numéricos al desglosar) + campos `opciones` (candidatos a "desglosar por")
@@ -254,18 +283,23 @@ def stats_view():
     ]
     builder_cats = [c for c in builder_cats if c["fields"]]
 
-    # Resumen "horas por actividad" (el uso central: cuánto le dediqué a qué)
-    time_summary = [
+    # "Horas por actividad" (el uso central: cuánto le dediqué a qué), ya en el período de la
+    # pantalla. El delta viene en minutos: se formatea acá porque el filtro `dur_fmt` vive en Jinja
+    # y en la plantilla habría que partir el signo del valor.
+    tiempo = [
         {"name": r["name"],
-         "week": dur_fmt_filter(r["week"]) or "—",
-         "month": dur_fmt_filter(r["month"]) or "—",
-         "quarter": dur_fmt_filter(r["quarter"]) or "—"}
-        for r in db.time_summary()
+         "valor": dur_fmt_filter(r["minutos"]) or "—",
+         "delta": r["delta"],
+         "delta_texto": None if not r["delta"] else dur_fmt_filter(abs(r["delta"]))}
+        for r in db.tiempo_comparado(start, end)
     ]
 
     return render_template("stats.html", charts=charts, adherence=adherence,
                            range_days=range_days, builder_cats=builder_cats,
-                           time_summary=time_summary)
+                           periodo=periodo, periodos=PERIODOS, periodo_texto=periodo_texto,
+                           tiempo=tiempo,
+                           resumen=db.resumen_comparado(start, end),
+                           emociones=db.emociones_frecuentes(start, end))
 
 
 @bp.route("/estadisticas/grafico/add", methods=["POST"])

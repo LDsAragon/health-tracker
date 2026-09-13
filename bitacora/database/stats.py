@@ -142,55 +142,6 @@ def grouped_series(cat_id, value_fields, group_label, start, end, bucket="day", 
     }
 
 
-def time_summary(today=None):
-    """Horas por actividad: esta semana / este mes / últimos 90 días.
-
-    El uso central de Estadísticas: "trabajé tantas horas en X, tantas en Y".
-    Una fila por categoría con campos de tiempo (duración/rango, se suman);
-    si la categoría tiene un campo `opciones`, una fila por opción
-    ("Ejercicio · Correr"). Valores en minutos; orden: más tiempo en 90 días.
-    """
-    today = today or date.today()
-    fw = 6 if get_setting("week_start", "mon") == "sun" else 0
-    week_start = today - timedelta(days=(today.weekday() - fw) % 7)
-    month_start = today.replace(day=1)
-    quarter_start = today - timedelta(days=89)
-    start = min(week_start, month_start, quarter_start)
-
-    info = {}
-    for c in get_journal_categories():
-        tf = [(f["label"], f["type"]) for f in c.get("fields", []) if f.get("type") in TIME_TYPES]
-        if tf:
-            gf = next((f["label"] for f in c["fields"] if f.get("type") == "opciones"), "")
-            info[c["id"]] = (c["name"], tf, gf)
-    if not info:
-        return []
-
-    rows = {}
-    entries = get_journal_entries_range(start.isoformat(), today.isoformat())
-    for d_str, lst in entries.items():
-        d = date.fromisoformat(d_str)
-        for e in lst:
-            meta = info.get(e["category_id"])
-            if not meta:
-                continue
-            name, tf, gf = meta
-            vals = [_parse_numeric(ft, e["values"].get(l)) for l, ft in tf]
-            vals = [v for v in vals if v is not None]
-            if not vals:
-                continue
-            v = sum(vals)
-            g = (e["values"].get(gf) or "").strip() if gf else ""
-            r = rows.setdefault(f"{name} · {g}" if g else name, [0, 0, 0])
-            if d >= week_start:
-                r[0] += v
-            if d >= month_start:
-                r[1] += v
-            r[2] += v
-    return [{"name": k, "week": r[0], "month": r[1], "quarter": r[2]}
-            for k, r in sorted(rows.items(), key=lambda kv: -kv[1][2])]
-
-
 def build_series(cat_id, field_label, ftype, start, end):
     """Datos listos para Chart.js: {kind, labels, data}."""
     if ftype in NUMERIC_TYPES:
@@ -262,6 +213,56 @@ def resumen_comparado(start: str, end: str) -> dict:
               for k in actual if k != "dias"}
     return {"actual": actual, "previo": previo, "deltas": deltas, "hubo_antes": hubo_antes}
 
+
+# ── El tiempo por actividad ──────────────────────────────────────────────────
+
+def _tiempo_por_actividad(start: str, end: str) -> dict:
+    """{actividad: minutos} en el período.
+
+    El uso central de Estadísticas: "le dediqué tantas horas a X, tantas a Y". Una clave por
+    categoría con campos de tiempo (duración/rango, se suman); si la categoría tiene un campo
+    `opciones`, una clave por opción ("Ejercicio · Correr").
+    """
+    info = {}
+    for c in get_journal_categories():
+        tf = [(f["label"], f["type"]) for f in c.get("fields", []) if f.get("type") in TIME_TYPES]
+        if tf:
+            gf = next((f["label"] for f in c["fields"] if f.get("type") == "opciones"), "")
+            info[c["id"]] = (c["name"], tf, gf)
+    if not info:
+        return {}
+
+    rows = {}
+    for _d, lst in get_journal_entries_range(start, end).items():
+        for e in lst:
+            meta = info.get(e["category_id"])
+            if not meta:
+                continue
+            name, tf, gf = meta
+            vals = [_parse_numeric(ft, e["values"].get(l)) for l, ft in tf]
+            vals = [v for v in vals if v is not None]
+            if not vals:
+                continue
+            g = (e["values"].get(gf) or "").strip() if gf else ""
+            clave = f"{name} · {g}" if g else name
+            rows[clave] = rows.get(clave, 0) + sum(vals)
+    return rows
+
+
+def tiempo_comparado(start: str, end: str) -> list:
+    """[{name, minutos, previo, delta}] del período, de más tiempo a menos.
+
+    ⚠️ Antes esto eran tres ventanas fijas —esta semana / este mes / últimos 3 meses— **ignorando
+    el selector de rango de la pantalla**, que era la segunda noción de rango del lado del tiempo.
+    Ahora la tabla habla del período elegido y trae la comparación, que es lo que hace que un
+    número de horas signifique algo. El delta es `None` si no hay período anterior con qué
+    comparar, igual que en `resumen_comparado`.
+    """
+    ahora = _tiempo_por_actividad(start, end)
+    previo = _tiempo_por_actividad(*_periodo_anterior(start, end))
+    return [{"name": k, "minutos": v, "previo": previo.get(k, 0),
+             "delta": (v - previo.get(k, 0)) if previo else None}
+            for k, v in sorted(ahora.items(), key=lambda kv: (-kv[1], kv[0]))]
 
 # ── La rueda de emociones ────────────────────────────────────────────────────
 

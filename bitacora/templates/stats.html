@@ -4,29 +4,141 @@
 {% block content %}
 <div class="page-top">
   <h1 class="page-title">📈 Estadísticas</h1>
-  <p class="page-sub">Solo lo que marcaste para graficar. Para sumar más, tildá "📈" en un campo en
-    <a href="{{ url_for('journal.journal_view') }}">Notas especiales</a>.</p>
+  {# El subtítulo decía "solo lo que marcaste para graficar", que era exacto y era el problema:
+     sin nada marcado la pantalla no mostraba nada aunque hubieras anotado todos los días. #}
+  <p class="page-sub">Lo que anotaste, y cómo viene cambiando.</p>
 </div>
 
+{# ⚠️ Un solo período para TODA la pantalla, gráficos personalizados incluidos (antes cada uno
+   usaba el suyo guardado). Cada tarjeta dice de qué período habla. #}
 <div class="stats-range">
-  {% for d, lbl in [(30, '1 mes'), (90, '3 meses'), (180, '6 meses'), (365, '1 año')] %}
-  <a href="{{ url_for('main.stats_view', range=d) }}"
-     class="stats-range-btn {% if range_days == d %}active{% endif %}">{{ lbl }}</a>
+  {% for val, lbl in periodos %}
+  <a href="{{ url_for('main.stats_view', range=val) }}"
+     class="stats-range-btn {% if periodo == val %}active{% endif %}">{{ lbl }}</a>
   {% endfor %}
 </div>
 
-{% if time_summary %}
-<div class="stats-card stats-summary-card">
-  <h3 class="stats-card-title">⏱️ Tiempo por actividad</h3>
+{# ⚠️ El delta es `None` cuando no hay período anterior con qué comparar, y ahí va un guion: un
+   "▲ +23" contra un mes en que no usabas la app no es una mejora, es ruido que se lee como un
+   logro. El verde/rojo sale de `var()` para que ande en los 8 temas. #}
+{% macro delta(v, texto=None) -%}
+{%- if v is none -%}
+<span class="stats-delta stats-delta-nulo" title="No hay período anterior con qué comparar">—</span>
+{%- elif v == 0 -%}
+<span class="stats-delta">igual</span>
+{%- else -%}
+<span class="stats-delta stats-delta-{{ 'sube' if v > 0 else 'baja' }}">{{ '▲' if v > 0 else '▼' }}
+  {{ texto if texto else ('+' ~ v if v > 0 else v) }}</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro ayuda_graficos() -%}
+<span class="page-sub stats-ayuda">Los gráficos salen de los campos de las
+  <a href="{{ url_for('journal.journal_view') }}">notas especiales</a>: tildando "📈" en un campo
+  (peso, ánimo, sueño…) su tendencia aparece acá sola, sin armar nada.</span>
+{%- endmacro %}
+
+<div class="stats-duo">
+  {# Este bloque va SIEMPRE y se arma con lo que ya está en la base: es lo que hace que la
+     pantalla cuente algo el día uno, sin configurar nada. #}
+  <div class="stats-card">
+    <div class="stats-card-head">
+      <h3 class="stats-card-title">🗂️ Lo que anotaste</h3>
+      <span class="stats-card-sub">
+        {% if resumen.hubo_antes %}vs. {{ resumen.actual.dias }} días antes{% else %}{{ periodo_texto }}{% endif %}
+      </span>
+    </div>
+    <table class="stats-resumen">
+      <tr>
+        <th>Notas rápidas</th>
+        <td class="stats-resumen-val">{{ resumen.actual.notas }}</td>
+        <td class="stats-resumen-delta">{{ delta(resumen.deltas.notas) }}</td>
+      </tr>
+      <tr>
+        <th>Notas especiales</th>
+        <td class="stats-resumen-val">{{ resumen.actual.especiales }}</td>
+        <td class="stats-resumen-delta">{{ delta(resumen.deltas.especiales) }}</td>
+      </tr>
+      <tr>
+        <th>Tareas cerradas</th>
+        <td class="stats-resumen-val">{{ resumen.actual.tareas_hechas }}<small>
+          de {{ resumen.actual.tareas_total }}</small></td>
+        <td class="stats-resumen-delta">{{ delta(resumen.deltas.tareas_hechas) }}</td>
+      </tr>
+      <tr>
+        <th>Días con algo anotado</th>
+        <td class="stats-resumen-val">{{ resumen.actual.dias_con_algo }}<small>
+          de {{ resumen.actual.dias }}</small></td>
+        <td class="stats-resumen-delta">{{ delta(resumen.deltas.dias_con_algo) }}</td>
+      </tr>
+    </table>
+    {% if not resumen.actual.dias_con_algo %}
+    <p class="stats-nada">No hay nada anotado en este período.
+      Lo que escribas en <a href="{{ url_for('main.home') }}">el día</a> aparece acá.</p>
+    {% endif %}
+  </div>
+
+  {# ⚠️ Las dos ruedas se cuentan por separado: son taxonomías distintas y sumar "Ira" con
+     "Enojado" sería inventar una equivalencia que nadie definió. #}
+  {% if emociones.ruedas %}
+  <div class="stats-card">
+    <div class="stats-card-head">
+      <h3 class="stats-card-title">🎡 Cómo te sentiste</h3>
+      <span class="stats-card-sub">{{ emociones.dias }} día{{ 's' if emociones.dias != 1 }} con emociones</span>
+    </div>
+    {% for rueda, lista in emociones.ruedas.items() %}
+    {% if emociones.ruedas | length > 1 %}
+    <p class="stats-rueda">{{ 'Rueda de Willcox' if rueda == 'willcox' else 'Atlas of Emotions' }}</p>
+    {% endif %}
+    <div class="stats-emociones">
+      {% for e in lista %}
+      <div class="emo-row" style="--c: {{ emotion_colors[rueda].get(e.emocion, emotion_fallback) }};">
+        <span class="emo-name">{{ e.emocion }}</span>
+        <div class="emo-bar"><div class="emo-fill" style="width: {{ (e.veces / lista[0].veces * 100) | round }}%;"></div></div>
+        <span class="emo-num">{{ e.veces }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% if adherence %}
+<div class="stats-card stats-card-ancha">
+  <div class="stats-card-head">
+    <h3 class="stats-card-title">✅ Adherencia de rutinas</h3>
+    <span class="stats-card-sub">{{ periodo_texto }}</span>
+  </div>
+  <div class="stats-adherence">
+    {% for a in adherence %}
+    <div class="adh-row" style="--c: {{ a.color }};">
+      <span class="adh-name">{{ a.title }}</span>
+      <div class="adh-bar"><div class="adh-fill" style="width: {{ a.pct }}%;"></div></div>
+      <span class="adh-num">{{ a.done }}/{{ a.applicable }} · {{ a.pct }}%</span>
+      <span class="adh-delta">{{ delta(a.delta, texto=(a.delta | abs | string ~ ' pts') if a.delta else None) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if tiempo %}
+<div class="stats-card stats-card-ancha">
+  <div class="stats-card-head">
+    <h3 class="stats-card-title">⏱️ Tiempo por actividad</h3>
+    <span class="stats-card-sub">{{ periodo_texto }}</span>
+  </div>
   <table class="stats-summary">
     <thead>
-      <tr><th>Actividad</th><th>Esta semana</th><th>Este mes</th><th>Últimos 3 meses</th></tr>
+      <tr><th>Actividad</th><th>Tiempo</th><th>vs. período anterior</th></tr>
     </thead>
     <tbody>
-      {% for r in time_summary %}
+      {% for r in tiempo %}
       <tr>
         <td class="stats-summary-name">{{ r.name }}</td>
-        <td>{{ r.week }}</td><td>{{ r.month }}</td><td>{{ r.quarter }}</td>
+        <td>{{ r.valor }}</td>
+        <td>{{ delta(r.delta, texto=r.delta_texto) }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -34,9 +146,34 @@
 </div>
 {% endif %}
 
-{% if not charts and not adherence %}
-<p class="empty-msg">Todavía no hay nada para graficar. Marcá "📈" en un campo de una nota especial
-  (peso, ánimo, sueño, estudio…) y aparecerá acá su tendencia.</p>
+{% if charts %}
+<div class="stats-grid">
+  {% for c in charts %}
+  <div class="stats-card">
+    <div class="stats-card-head">
+      <h3 class="stats-card-title">{{ c.title }}</h3>
+      {# Cada tarjeta dice de qué período habla, ahora que hay uno solo para toda la pantalla. #}
+      <span class="stats-card-sub">{{ periodo_texto }}</span>
+      {% if c.chart_id %}
+      <form method="POST" action="{{ url_for('main.charts_delete', chart_id=c.chart_id) }}"
+            data-confirmar="¿Quitar este gráfico?" data-confirmar-ok="Quitar"
+            onsubmit="return false;" style="display:inline;">
+        <button type="submit" class="btn-delete" title="Quitar gráfico">&#10005;</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if c.data or c.datasets %}<canvas id="chart-{{ loop.index0 }}"></canvas>
+    {% else %}<p class="page-sub" style="margin:0;">Sin datos en este período.</p>{% endif %}
+    {% if c.totals %}
+    <table class="stats-totals">
+      {% for t in c.totals %}
+      <tr><td>{{ t.name }}</td><td class="stats-totals-val">{{ t.value }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
 {% endif %}
 
 {% if builder_cats %}
@@ -61,54 +198,14 @@
     </select>
     <input type="text" name="tag_filter" placeholder="Etiqueta (opcional)" style="max-width:150px;">
     <input type="text" name="title" placeholder="Título (opcional)">
-    <select name="range_days">
-      <option value="30">1 mes</option><option value="90" selected>3 meses</option>
-      <option value="180">6 meses</option><option value="365">1 año</option>
-    </select>
     <button type="submit" class="btn-primary">Agregar</button>
   </form>
+  {{ ayuda_graficos() }}
 </details>
-{% endif %}
-
-{% if charts %}
-<div class="stats-grid">
-  {% for c in charts %}
-  <div class="stats-card">
-    <div class="stats-card-head">
-      <h3 class="stats-card-title">{{ c.title }}</h3>
-      {% if c.chart_id %}
-      <form method="POST" action="{{ url_for('main.charts_delete', chart_id=c.chart_id) }}"
-            data-confirmar="¿Quitar este gráfico?" data-confirmar-ok="Quitar"
-            onsubmit="return false;" style="display:inline;">
-        <button type="submit" class="btn-delete" title="Quitar gráfico">&#10005;</button>
-      </form>
-      {% endif %}
-    </div>
-    {% if c.data or c.datasets %}<canvas id="chart-{{ loop.index0 }}"></canvas>
-    {% else %}<p class="page-sub" style="margin:0;">Sin datos en el rango.</p>{% endif %}
-    {% if c.totals %}
-    <table class="stats-totals">
-      {% for t in c.totals %}
-      <tr><td>{{ t.name }}</td><td class="stats-totals-val">{{ t.value }}</td></tr>
-      {% endfor %}
-    </table>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-{% if adherence %}
-<h2 class="stats-section">Adherencia de rutinas · últimos {{ range_days }} días</h2>
-<div class="stats-adherence">
-  {% for a in adherence %}
-  <div class="adh-row" style="--c: {{ a.color }};">
-    <span class="adh-name">{{ a.title }}</span>
-    <div class="adh-bar"><div class="adh-fill" style="width: {{ a.pct }}%;"></div></div>
-    <span class="adh-num">{{ a.done }}/{{ a.applicable }} · {{ a.pct }}%</span>
-  </div>
-  {% endfor %}
-</div>
+{% else %}
+{# Sin un solo campo graficable no hay constructor, y ahí es justo cuando hace falta la
+   explicación: antes era el estado vacío de toda la pantalla, que ya no existe. #}
+<p class="stats-ayuda-sola">{{ ayuda_graficos() }}</p>
 {% endif %}
 {% endblock %}
 

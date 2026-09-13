@@ -166,9 +166,13 @@ def get_completions_range(start: str, end: str) -> dict:
     return result
 
 
-def get_completion_stats(events: list, days: int = 30) -> dict:
-    """Returns {event_id: {done, applicable}} para los últimos N días."""
-    today = date.today()
+def get_completion_stats(events: list, days: int = 30, hasta: date = None) -> dict:
+    """Returns {event_id: {done, applicable}} para los N días que terminan en `hasta` (hoy).
+
+    `hasta` existe para poder pedir el **período anterior** y comparar: sin eso la adherencia solo
+    sabía decir un porcentaje suelto, que no dice si venís mejorando o cayendo.
+    """
+    today = hasta or date.today()
     start = (today - timedelta(days=days - 1)).isoformat()
     end   = today.isoformat()
 
