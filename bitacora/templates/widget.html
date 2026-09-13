@@ -37,9 +37,14 @@
   {% endfor %}
 </nav>
 
-<main class="w-main">
+<main class="w-main" data-refresco-parcial>
 
 {% if pestana == 'tareas' %}
+  {# ⚠️ La zona envuelve los condicionales y existe siempre, aunque quede vacía. Marcando solo
+     los <ul> se quedaban afuera el "⚠️ Sin cerrar · N", el "Nada anotado para hoy" y el propio
+     aparecer/desaparecer de las listas: el refresco daba la pestaña por al día con el conteo
+     viejo en pantalla. Y si el conjunto de zonas cambia, refresco.js recarga. #}
+  <div data-refresco="tareas">
   {% if atrasadas %}
   <p class="w-titulo w-alerta">⚠️ Sin cerrar · {{ atrasadas | length }}</p>
   <ul class="w-lista">
@@ -71,12 +76,15 @@
   {% else %}
   <p class="w-vacio">Nada anotado para hoy.</p>
   {% endif %}
+  </div>
 
+  {# El formulario queda FUERA de la zona: es donde escribís. #}
   <form method="POST" action="{{ url_for('widget.tarea_agregar') }}" class="w-form">
     <input type="text" name="text" placeholder="Agregar una tarea..." maxlength="200" required>
     <button class="w-btn">+</button>
   </form>
 
+  <div data-refresco="rutinas">
   {% if ver_rutinas and rutinas_hoy %}
   <p class="w-titulo w-titulo-sep">Rutinas</p>
   <ul class="w-lista">
@@ -91,6 +99,7 @@
     {% endfor %}
   </ul>
   {% endif %}
+  </div>
 
 {% elif pestana == 'calendario' %}
   <div class="w-mes">
@@ -98,7 +107,7 @@
     <span>{{ mes_nombre }} {{ anio }}</span>
     <a href="{{ url_for('widget.vista', p='calendario', anio=sig[0], mes=sig[1]) }}" class="w-icono">→</a>
   </div>
-  <table class="w-cal">
+  <table class="w-cal" data-refresco="mes">
     <thead><tr>{% for d in dow %}<th>{{ d }}</th>{% endfor %}</tr></thead>
     <tbody>
       {% for semana in semanas %}

@@ -5,6 +5,7 @@
 {% set DAYS   = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'] %}
 {% block title %}{{ d.day }} de {{ MONTHS[d.month-1] }}{% endblock %}
 {% block main_class %}main-day{% endblock %}
+{% block main_attrs %} data-refresco-parcial{% endblock %}
 
 {% block content %}
 
@@ -36,8 +37,9 @@
   <div class="day-card-todos">
     <h3 class="day-section-title">📋 Lista de tareas</h3>
 
-    {% if todos %}
-    <ul class="todo-list" id="todo-list">
+    {# El <ul> se renderiza aunque no haya tareas: es la zona del refresco (y el contenedor
+       del drag & drop), así que tiene que existir siempre. #}
+    <ul class="todo-list" id="todo-list" data-refresco="tareas">
       {% for t in todos %}
       <li class="todo-item {% if t.done %}todo-done{% endif %}" id="todo-{{ t.id }}" data-id="{{ t.id }}" draggable="true">
         <div class="todo-row" id="todo-row-{{ t.id }}">
@@ -75,7 +77,6 @@
       </li>
       {% endfor %}
     </ul>
-    {% endif %}
 
     <form method="POST" action="{{ url_for('day.todo_add', date_str=date_str) }}" class="todo-add-form">
       <input type="text" name="text" placeholder="Agregar una tarea..." maxlength="200" required>
@@ -101,7 +102,7 @@
   <div class="day-card-journal">
     <h3 class="day-section-title">📊 Notas especiales</h3>
 
-    <div class="day-journal-list">
+    <div class="day-journal-list" data-refresco="especiales">
       {% for entry in journal_entries %}
       <div class="day-journal-entry" id="jentry-{{ entry.id }}" style="--c: {{ entry.category_color }};">
 
@@ -302,7 +303,7 @@
   <h3 class="day-section-title day-qn-title">📝 Notas rápidas</h3>
 
   <!-- Notas -->
-  <div class="day-card-notes">
+  <div class="day-card-notes" data-refresco="notas">
     {% for note in notes %}
     <div class="day-note {% if note.color %}day-note-colored{% endif %}"
          {% if note.color %}style="--c: {{ note.color }};"{% endif %}
@@ -394,7 +395,7 @@
        title="Arrastrá para cambiar el alto (doble clic para volver al normal)"></div>
   <div class="day-card-events-panel">
     <h3 class="day-section-title">📅 Rutinas y eventos</h3>
-    <div class="day-card-events">
+    <div class="day-card-events" data-refresco="rutinas">
       {% for ev in day_events %}
       <div class="day-ev-wrap" id="ev-wrap-{{ ev.id }}">
 

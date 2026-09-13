@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ month_name }} {{ year }}{% endblock %}
 {% block main_class %}main-wide{% endblock %}
+{% block main_attrs %} data-refresco-parcial{% endblock %}
 
 {% block content %}
 <div class="cal-header">
@@ -35,7 +36,7 @@
         {% set day_notes = notes_by_date.get(ds, []) %}
         {% set day_evs   = events_by_date.get(ds, []) %}
 
-        <div class="cal-cell {% if is_today %}is-today{% endif %}">
+        <div class="cal-cell {% if is_today %}is-today{% endif %}" data-refresco="dia-{{ ds }}">
 
           <!-- Área clickeable → vista del día -->
           <a href="{{ url_for('day.day_view', date_str=ds, ref='cal') }}" class="cal-cell-body">

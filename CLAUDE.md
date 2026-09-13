@@ -138,7 +138,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 580 tests, ~33s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 596 tests, ~36s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -448,6 +448,38 @@ así que conviene tener los dos presentes:
   arregla la causa, la acota — convierte "la app es inusable" en "el refresco dejó de andar".
   También se corta tras 5 fallos de red seguidos, que es lo que pasa al cerrar la app.
 
+### Actualizar sin recargar: las zonas `data-refresco`
+El `location.reload()` era la **causa de raíz** de los tres bugs de esta feature: como recargar
+destruye lo que estés escribiendo, había que adivinar si estabas en el medio de algo, y esa
+adivinanza era global (un campo apagaba la ventana entera), callada y permanente. Hoy el refresco
+pide la misma URL y reemplaza el **contenido** de las zonas marcadas. Lo que cambia de fondo es el
+costo de equivocarse: una zona que no se puede tocar queda vieja y **todas las demás se actualizan
+igual**.
+
+- ⚠️ **Se reemplaza el `innerHTML` de la zona, NUNCA el nodo.** Es lo que salva los listeners
+  enganchados al contenedor: el drag & drop de tareas vive en el `<ul id="todo-list">` y resuelve
+  con `closest('.todo-item')`, así que sobrevive a que cambien los `<li>` y muere si se reemplaza
+  el `<ul>`. Los `onclick` inline sobreviven siempre, son atributos.
+- ⚠️ **Lo activa `data-refresco-parcial` en el `<main>`, no la presencia de zonas.** El navbar
+  aporta una zona a todas las pantallas (el contador de atrasadas), así que mirando zonas sueltas
+  `/journal` o `/ajustes` se darían por al día porque ese contador no cambió. **Una pantalla a
+  medio marcar es peor que una sin marcar**: la sin marcar recarga y queda al día.
+- **Una zona en uso se saltea** (tiene el foco adentro, o un campo sucio) y las demás se
+  actualizan. Si algo quedó viejo aparece el aviso, que ahí sí es raro y accionable.
+- **Se recarga** —con la regla del borrador— si la página no está marcada, si falla el fetch, o
+  si **el conjunto de zonas cambió**: eso es un cambio estructural (aparece el panel de rutinas o
+  el de notas especiales del día, que viven dentro de un `if`) y lo granular no lo cubre.
+- **Las zonas envuelven los condicionales y existen siempre** aunque queden vacías. Marcando solo
+  los `<ul>`, en el widget quedaban afuera el "⚠️ Sin cerrar · N" y el "Nada anotado para hoy": la
+  pestaña se daba por al día con el conteo viejo en pantalla. Por lo mismo el `<ul id="todo-list">`
+  del día se renderiza sin tareas.
+- **Re-inicializar lo que viva adentro** va en `window.BITACORA_REINIT` (funciones `(nodo) => {}`).
+  Hoy lo usa una sola cosa: las ruedas de emociones de las notas especiales (`day.js`).
+  `date-es.js` ya estaba listo (`initDateEs(root)`, y su input/change/click son delegados en
+  `document`).
+- Cubiertas: **día, mes, semana y las pestañas de tareas y mes del widget**. El resto recarga, que
+  es lo que hacía siempre.
+
 ### ⚠️ El modo de falla es CALLADO, y por eso hay red de seguridad
 Cuando esto se rompe no hay error ni señal: la ventana se ve perfecta y muestra datos viejos.
 Así vivieron rotas **6 de las 14 pantallas** —todas las que tienen un campo que el JS rellena al
@@ -460,10 +492,14 @@ cargar— hasta que el usuario lo notó usando la app. Tres piezas, y las tres h
   Convierte "la ventana quedó vieja para siempre" en algo que se ve y se resuelve con un clic.
 - **`hacer.ps1 refresco`** (`tools/refresco_audit.mjs`) — recorre las 14 pantallas y prueba de
   punta a punta lo que ningún test de pytest puede: que un cambio hecho en una ventana
-  **aparezca** en la otra. Levanta su propio servidor con base temporal
-  (`tools/servidor_prueba.py`, que aborta si la ruta cayera en el `APP_DIR` real), así que no
-  toca los datos de nadie. Necesita `npm i playwright`, igual que `screenshots_audit.mjs`.
-  Revirtiendo el fix, marca exactamente las 5 pantallas rotas; con él, 14 de 14.
+  **aparezca** en la otra, y que entre **sin pisar un borrador**. Levanta su propio servidor con
+  base temporal (`tools/servidor_prueba.py`, que aborta si la ruta cayera en el `APP_DIR` real),
+  así que no toca los datos de nadie. Necesita `npm i playwright`, igual que
+  `screenshots_audit.mjs`.
+  ⚠️ En una pantalla cubierta el veredicto sale de **comparar el texto de `<main>` contra lo que
+  sirve el servidor**, no de "¿recargó?": es lo único que caza una parte que se quedó fuera de
+  toda zona, que es el fallo callado de este diseño. Y toca una nota **y** una tarea a propósito,
+  porque con un solo tipo de dato quedaban zonas sin ejercitar.
 - **Tests en `tests/test_refresco.py`**, que corren siempre y sin dependencias: que **toda**
   pantalla cargue `refresco.js` y traiga el token, que ninguna quede impedida de refrescarse por
   el `autofocus`, y los dos tripwires (`defaultValue` y el aviso).

@@ -197,11 +197,20 @@ function prepareEditValues(id) {
 }
 
 // Restaurar valores de rueda de emociones en formularios de edición existentes.
-window.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('.emotion-wheel-picker[data-ew-saved]').forEach(p => {
+function restaurarRuedas(raiz) {
+  (raiz || document).querySelectorAll('.emotion-wheel-picker[data-ew-saved]').forEach(p => {
     if (p.dataset.ewSaved) ewRestore(p, p.dataset.ewSaved);
   });
-});
+}
+
+window.addEventListener('DOMContentLoaded', function () { restaurarRuedas(document); });
+
+// ⚠️ Las notas especiales son una zona `data-refresco`: cuando el refresco reemplaza su
+// contenido, las ruedas que vengan adentro llegan sin restaurar. Es el único init por elemento
+// que vive dentro de una zona — el drag & drop de tareas no hace falta porque está enganchado al
+// <ul>, que no se reemplaza.
+window.BITACORA_REINIT = window.BITACORA_REINIT || [];
+window.BITACORA_REINIT.push(restaurarRuedas);
 
 
 // ── Paneles del día: ancho y alto arrastrables ───────────────────────────────

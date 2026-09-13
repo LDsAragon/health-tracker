@@ -202,8 +202,106 @@
     esperandoDesde = 0;
   }
 
+  // ── Actualizar sin recargar ───────────────────────────────────────────────
+  // El `location.reload()` era la causa de raíz de los tres bugs de esta feature: como recargar
+  // destruye lo que estés escribiendo, había que adivinar si estabas en el medio de algo, y esa
+  // adivinanza era global (un campo apagaba la ventana entera), callada y permanente.
+  //
+  // Acá se reemplaza el CONTENIDO de las zonas marcadas con `data-refresco`. Lo que cambia de
+  // fondo es el costo de equivocarse: una zona que no se puede tocar queda vieja, y **todas las
+  // demás se actualizan igual**.
+  //
+  // ⚠️ Se reemplaza el `innerHTML` de la zona, NUNCA el nodo. Es lo que salva los listeners
+  // enganchados al contenedor: el drag & drop de tareas vive en el `<ul id="todo-list">` y
+  // resuelve con `closest('.todo-item')`, así que sobrevive a que cambien los `<li>` y muere si
+  // se reemplaza el `<ul>`. Los `onclick` inline sobreviven siempre, son atributos.
+  const ZONAS = '[data-refresco]';
+
+  function nombreZona(el) { return el.getAttribute('data-refresco'); }
+
+  function zonas(raiz) {
+    const mapa = new Map();
+    (raiz || document).querySelectorAll(ZONAS).forEach(function (el) {
+      mapa.set(nombreZona(el), el);
+    });
+    return mapa;
+  }
+
+  // Una zona está en uso si tenés el cursor adentro o si adentro hay algo escrito sin guardar.
+  function enUso(el) {
+    if (el.contains(document.activeElement) && document.activeElement !== document.body) {
+      return true;
+    }
+    for (const campo of el.querySelectorAll('input, textarea')) {
+      if (esTipeable(campo) && estaSucio(campo)) return true;
+    }
+    return false;
+  }
+
+  // Lo que haya que volver a inicializar sobre el contenido nuevo se registra acá: los listeners
+  // que estaban enganchados a elementos de adentro se fueron con el HTML viejo. Hoy lo usa la
+  // rueda de emociones de las notas especiales (day.js).
+  window.BITACORA_REINIT = window.BITACORA_REINIT || [];
+
+  function reiniciar(el) {
+    (window.BITACORA_REINIT || []).forEach(function (fn) {
+      try { fn(el); } catch (e) { console.warn('Bitácora: falló un re-init del refresco', e); }
+    });
+  }
+
+  // Devuelve true si pudo dejar la página al día (aunque haya salteado alguna zona en uso).
+  // Devuelve false para que el llamador caiga al camino de recargar.
+  function actualizarZonas(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const nuevas = zonas(doc);
+    const actuales = zonas();
+    if (!actuales.size || !nuevas.size) return false;
+
+    // ⚠️ Si el conjunto de zonas cambió, lo que cambió es la ESTRUCTURA de la página (apareció o
+    // desapareció un bloque entero, como el "⚠️ Sin cerrar" del widget). Eso no lo cubre
+    // reemplazar contenido, y no tiene que fingir que sí: se recarga.
+    if (actuales.size !== nuevas.size) return false;
+    for (const nombre of actuales.keys()) if (!nuevas.has(nombre)) return false;
+
+    let quedaronViejas = false;
+    actuales.forEach(function (el, nombre) {
+      const nueva = nuevas.get(nombre);
+      if (el.innerHTML === nueva.innerHTML) return;
+      if (enUso(el)) { quedaronViejas = true; return; }
+      el.innerHTML = nueva.innerHTML;
+      reiniciar(el);
+    });
+
+    if (doc.title) document.title = doc.title;
+    return !quedaronViejas;
+  }
+
   function intentar() {
     if (!pendiente) { sacarAviso(); return; }
+
+    // El camino bueno: actualizar sin tocar lo que estás usando. No pasa por `puedeRecargar`
+    // justamente porque no destruye nada.
+    //
+    // ⚠️ Manda la marca de PÁGINA, no la presencia de zonas: el navbar aporta una zona a todas
+    // las pantallas, así que mirando zonas sueltas /journal o /ajustes se darían por al día
+    // porque el contador de atrasadas no cambió. Una pantalla a medio marcar tiene que recargar.
+    if (document.querySelector('[data-refresco-parcial]')) {
+      fetchOriginal(location.href, { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.text() : null; })
+        .then(function (html) {
+          if (html && actualizarZonas(html)) { pendiente = false; sacarAviso(); return; }
+          // O la estructura cambió, o alguna zona estaba en uso: al camino de siempre.
+          recargarSiSePuede(html === null);
+        })
+        .catch(function () { recargarSiSePuede(true); });
+      return;
+    }
+    recargarSiSePuede(false);
+  }
+
+  // El camino de siempre, que sí destruye la página y por eso tiene que preguntar.
+  function recargarSiSePuede(huboError) {
+    if (huboError) return;              // si falló la red, ya reintentará el poleo
     if (!puedeRecargar()) {
       if (!esperandoDesde) esperandoDesde = Date.now();
       else if (Date.now() - esperandoDesde > AVISO_TRAS) mostrarAviso();

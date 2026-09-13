@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Semana {{ week_label }}{% endblock %}
 {% block main_class %}main-wide{% endblock %}
+{% block main_attrs %} data-refresco-parcial{% endblock %}
 
 {% block content %}
 
@@ -41,7 +42,7 @@
   {% set day_notes = notes_by_date.get(ds, []) %}
   {% set day_evs   = events_by_date.get(ds, []) %}
 
-  <div class="cal-cell todo-dropzone {% if is_today %}is-today{% endif %}" data-date="{{ ds }}">
+  <div class="cal-cell todo-dropzone {% if is_today %}is-today{% endif %}" data-date="{{ ds }}" data-refresco="dia-{{ ds }}">
 
     <a href="{{ url_for('day.day_view', date_str=ds, ref='week') }}" class="cal-cell-body">
       <span class="cal-num {% if is_today %}today-num{% endif %}"><span class="cal-agenda-dow">{{ DOW[d.weekday()] }} </span>{{ d.day }}</span>

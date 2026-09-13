@@ -248,3 +248,77 @@ def test_el_aviso_existe_para_cuando_no_se_puede_aplicar():
     css = (pathlib.Path(__file__).resolve().parent.parent / "bitacora" / "static" / "css" /
            "base.css").read_text(encoding="utf-8")
     assert ".refresco-aviso" in css, "el aviso no tiene estilo y saldría sin formato"
+
+
+# ── Actualizar sin recargar ──────────────────────────────────────────────────
+
+# ⚠️ Las zonas "rutinas" y "especiales" del día NO están acá: sus paneles viven dentro de un
+# `if` (`day_events` y `journal_cats`), así que en un día pelado no existen. Que aparezca un panel
+# entero es un cambio estructural de verdad, y ahí el refresco recarga, que es lo correcto. Las
+# cubren los dos tests de abajo, que crean el dato primero.
+CUBIERTAS = {
+    "/day/2026-06-10":     ["tareas", "notas"],
+    "/calendar/2026/6":    ["dia-2026-06-10"],
+    "/week/2026-06-10":    ["dia-2026-06-10"],
+    "/widget?p=tareas":    ["tareas", "rutinas"],
+    "/widget?p=calendario": ["mes"],
+}
+
+
+@pytest.mark.parametrize("ruta,zonas", list(CUBIERTAS.items()))
+def test_las_pantallas_cubiertas_traen_sus_zonas(client, ruta, zonas):
+    """Sin la marca de página el refresco recarga, y sin las zonas no tiene qué actualizar."""
+    html = client.get(ruta, follow_redirects=True).data.decode()
+    assert "data-refresco-parcial" in html, f"{ruta} perdió la marca de página"
+    for z in zonas:
+        assert f'data-refresco="{z}"' in html, f"{ruta} perdió la zona {z}"
+
+
+def test_la_marca_de_pagina_manda_sobre_las_zonas_sueltas():
+    """⚠️ El navbar aporta una zona a TODAS las pantallas (el contador de atrasadas). Si el
+    refresco se activara por "hay alguna zona", pantallas a medio marcar como /journal o /ajustes
+    se darían por al día porque ese contador no cambió, y mostrarían datos viejos sin decir nada
+    — el mismo fallo callado que este rediseño vino a sacar. Tiene que mirar la marca de página.
+    """
+    assert "data-refresco-parcial" in _refresco_js()
+
+
+@pytest.mark.parametrize("ruta", ["/journal", "/recurring", "/tareas", "/ajustes",
+                                  "/estadisticas", "/export"])
+def test_las_pantallas_no_cubiertas_no_llevan_la_marca(client, ruta):
+    """Una pantalla a medio marcar es peor que una sin marcar: la sin marcar recarga y queda al
+    día. La marca solo se pone cuando TODO lo que cambia está dentro de una zona."""
+    html = client.get(ruta, follow_redirects=True).data.decode()
+    assert "data-refresco-parcial" not in html
+
+
+def test_las_zonas_se_reemplazan_por_dentro():
+    """⚠️ Se cambia el `innerHTML` de la zona, nunca el nodo: el drag & drop de tareas está
+    enganchado al <ul id="todo-list"> y resuelve con closest(), así que sobrevive a que cambien
+    los <li> y muere si se reemplaza el <ul>."""
+    js = _refresco_js()
+    assert "el.innerHTML = nueva.innerHTML" in js
+    assert "replaceWith" not in js and "outerHTML" not in js
+
+
+def test_la_lista_de_tareas_del_dia_existe_siempre(client):
+    """Es zona del refresco y contenedor del drag & drop: si apareciera recién con la primera
+    tarea, el conjunto de zonas cambiaría y habría que recargar."""
+    html = client.get("/day/2026-06-10").data.decode()      # un día sin tareas
+    assert 'id="todo-list"' in html
+
+
+def test_el_dia_con_rutinas_trae_su_zona(client):
+    db.add_recurring_event({"title": "Gimnasio", "color": "#22c55e", "recurrence": "daily",
+                            "start_date": "2020-01-01", "end_date": ""})
+    html = client.get("/day/2026-06-10").data.decode()
+    assert 'data-refresco="rutinas"' in html
+
+
+def test_el_dia_con_notas_especiales_trae_su_zona(client):
+    import json
+    db.add_journal_category({"name": "Emociones", "color": "#6366f1", "show_in_calendar": 1,
+                             "fields_json": json.dumps([{"label": "Qué sentí", "type": "text",
+                                                         "placeholder": ""}])})
+    html = client.get("/day/2026-06-10").data.decode()
+    assert 'data-refresco="especiales"' in html

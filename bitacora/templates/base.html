@@ -44,7 +44,7 @@
       {% if settings.show_todos != 'hide' %}
       <a href="{{ url_for('todos.todos_view') }}"
          class="nav-link {% if request.endpoint and request.endpoint.startswith('todos.') %}active{% endif %}">
-        📋 Tareas{% if overdue_count %}<span class="nav-badge">{{ overdue_count }}</span>{% endif %}
+        📋 Tareas<span data-refresco="atrasadas-nav">{% if overdue_count %}<span class="nav-badge">{{ overdue_count }}</span>{% endif %}</span>
       </a>
       {% endif %}
       {% if settings.show_stats != 'hide' %}
@@ -77,7 +77,10 @@
     </div>
   </div>
 
-  <main class="{% block main_class %}main{% endblock %}">
+  {# `data-refresco-parcial` = esta pantalla tiene marcadas TODAS las zonas que cambian, así
+     que el refresco puede actualizarlas sin recargar. Sin la marca se recarga, que es el
+     camino seguro: una pantalla a medio marcar se creería al día sin estarlo. #}
+  <main class="{% block main_class %}main{% endblock %}"{% block main_attrs %}{% endblock %}>
     {% block content %}{% endblock %}
   </main>
   <script src="{{ url_for('static', filename='js/emotion-wheel.js') }}"></script>
