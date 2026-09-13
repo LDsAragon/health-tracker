@@ -90,7 +90,9 @@ docs/                   # manual.html → Bitacora-Manual.pdf (tools/make_manual
                         #   shipeado en zip/tar.gz); LEEME.txt y LEEME-Linux.txt
 tools/                  # Builds (make_release*.ps1|sh, publish_release.ps1), instalador y
                         #   launcher Linux (linux/), smoke tests, make_icon.py, compare_dbs.py,
-                        #   screenshots_audit.mjs (Playwright, auditoría visual de las pantallas)
+                        #   screenshots_audit.mjs (Playwright, auditoría visual de las pantallas),
+                        #   refresco_audit.mjs (que el refresco entre ventanas ande, pantalla por
+                        #   pantalla) y servidor_prueba.py (la app contra una base temporal)
   andamios/             # `hacer.ps1 nuevo ...`: ajuste.py, campo.py, ruta.py + comun.py
                         #   (leer/escribir/insertar en ancla). Ver § Convenciones
 hacer.ps1               # Un solo lugar para todos los comandos; sin argumentos los lista
@@ -136,7 +138,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 549 tests, ~31s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 580 tests, ~33s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -432,6 +434,11 @@ así que conviene tener los dos presentes:
   rellena la página) y que difiera del snapshot tomado al terminar de cargar (así escribir y
   volver atrás no lo deja sucio hasta la próxima recarga).
   `test_el_borrador_no_se_decide_con_defaultValue` es el tripwire.
+- ⚠️ **Tener el cursor en un campo NO alcanza para ser un borrador**: tiene que haber algo
+  escrito. `/search` enfoca el buscador al entrar, así que con la regla vieja —cualquier campo
+  enfocado bloquea— esa pantalla tampoco se refrescaba nunca. Escribir de verdad lo cubre
+  `estaSucio`, y estar por escribir, el segundo y medio de quietud. Un `<select>` abierto sí
+  sigue bloqueando: recargar una lista desplegada debajo del mouse molesta.
 - ⚠️ **`refresco.js` envuelve `fetch` para ignorar las escrituras PROPIAS de la página.** Sin eso,
   tocar un switch en Ajustes (que guarda al instante) o cerrar el aviso de tareas la recargaba sola
   a los 3 s. Se envuelve en vez de avisar desde cada llamador porque hoy hay cuatro (`ajustes.js`,
@@ -440,6 +447,26 @@ así que conviene tener los dos presentes:
 - **Corta-circuitos**: más de 3 recargas en 30 s y el poleo se corta con un `console.warn`. No
   arregla la causa, la acota — convierte "la app es inusable" en "el refresco dejó de andar".
   También se corta tras 5 fallos de red seguidos, que es lo que pasa al cerrar la app.
+
+### ⚠️ El modo de falla es CALLADO, y por eso hay red de seguridad
+Cuando esto se rompe no hay error ni señal: la ventana se ve perfecta y muestra datos viejos.
+Así vivieron rotas **6 de las 14 pantallas** —todas las que tienen un campo que el JS rellena al
+cargar— hasta que el usuario lo notó usando la app. Tres piezas, y las tres hacen falta:
+
+- **Un aviso en la app.** Si hay un cambio esperando hace más de 10 s que no se puede aplicar,
+  aparece una barrita *"Hay cambios nuevos · Actualizar"* (`barraAviso()` en `refresco.js`,
+  `.refresco-aviso` en **`base.css`** porque la usan los dos árboles de plantillas). El botón
+  recarga aunque haya un borrador: lo pidió el usuario. El corta-circuitos también la muestra.
+  Convierte "la ventana quedó vieja para siempre" en algo que se ve y se resuelve con un clic.
+- **`hacer.ps1 refresco`** (`tools/refresco_audit.mjs`) — recorre las 14 pantallas y prueba de
+  punta a punta lo que ningún test de pytest puede: que un cambio hecho en una ventana
+  **aparezca** en la otra. Levanta su propio servidor con base temporal
+  (`tools/servidor_prueba.py`, que aborta si la ruta cayera en el `APP_DIR` real), así que no
+  toca los datos de nadie. Necesita `npm i playwright`, igual que `screenshots_audit.mjs`.
+  Revirtiendo el fix, marca exactamente las 5 pantallas rotas; con él, 14 de 14.
+- **Tests en `tests/test_refresco.py`**, que corren siempre y sin dependencias: que **toda**
+  pantalla cargue `refresco.js` y traiga el token, que ninguna quede impedida de refrescarse por
+  el `autofocus`, y los dos tripwires (`defaultValue` y el aviso).
 
 ## Color por defecto de las notas rápidas
 

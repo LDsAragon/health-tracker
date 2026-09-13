@@ -192,3 +192,59 @@ def test_el_borrador_no_se_decide_con_defaultValue():
     # Los comentarios sí lo nombran, justamente para explicar por qué no se usa.
     codigo = [l for l in js.splitlines() if not l.strip().startswith("//")]
     assert not [l for l in codigo if "defaultValue" in l]
+
+
+# ── La red de seguridad ──────────────────────────────────────────────────────
+# El modo de falla de esta feature es callado: la ventana se ve perfecta y muestra datos viejos.
+# Se descubrió usando la app, no acá, y afectaba a 6 de las 14 pantallas. Estos tests recorren
+# TODAS y fijan las condiciones que hacen falta para que el refresco pueda siquiera intentarlo.
+
+PANTALLAS = ["/", "/calendar/2026/6", "/week/2026-06-10", "/day/2026-06-10", "/journal",
+             "/recurring", "/estadisticas", "/tareas", "/search", "/ajustes", "/export",
+             "/version", "/widget?p=nota", "/widget?p=tareas", "/widget?p=calendario"]
+
+
+@pytest.mark.parametrize("ruta", PANTALLAS)
+def test_todas_las_pantallas_entran_al_sistema_de_refresco(client, ruta):
+    """Una pantalla sin `refresco.js` o sin token no se refresca, y no hay nada que lo delate."""
+    r = client.get(ruta, follow_redirects=True)
+    html = r.data.decode()
+    assert "js/refresco.js" in html, f"{ruta} no carga refresco.js"
+    assert "window.TOKEN_DATOS" in html, f"{ruta} no trae el token"
+
+
+@pytest.mark.parametrize("ruta", PANTALLAS)
+def test_ninguna_pantalla_nace_impedida_de_refrescarse(client, ruta):
+    """⚠️ `autofocus` deja la ventana con el cursor puesto en un campo desde el arranque.
+
+    Mientras la regla fue "el foco en un campo es un borrador", eso alcanzaba para que la
+    pantalla **no se refrescara nunca** — le pasó a `/search`. Hoy la regla pide además que el
+    campo tenga algo escrito. El test recorre las pantallas para encontrar las que arrancan
+    enfocadas y, si hay alguna, exige que el refresco siga sin bloquear por el foco solo.
+    """
+    import re
+    html = client.get(ruta, follow_redirects=True).data.decode()
+    enfocada = re.search("<(?:input|textarea)[^>]*autofocus", html, re.I)
+    if enfocada:
+        assert "estaSucio(f)" in _refresco_js(), (
+            f"{ruta} arranca con el foco en un campo y el refresco volvió a bloquear por el "
+            f"foco solo: esa pantalla no se va a refrescar nunca")
+
+
+def _refresco_js():
+    import pathlib
+    return (pathlib.Path(__file__).resolve().parent.parent / "bitacora" / "static" / "js" /
+            "refresco.js").read_text(encoding="utf-8")
+
+
+def test_el_aviso_existe_para_cuando_no_se_puede_aplicar():
+    """Si el refresco no puede aplicar un cambio, tiene que verse en la app y no solo en la
+    consola: es lo único que convierte "la ventana quedó vieja para siempre" en algo que el
+    usuario nota y puede resolver con un botón."""
+    js = _refresco_js()
+    assert "refresco-aviso" in js
+    assert "barraAviso" in js
+    import pathlib
+    css = (pathlib.Path(__file__).resolve().parent.parent / "bitacora" / "static" / "css" /
+           "base.css").read_text(encoding="utf-8")
+    assert ".refresco-aviso" in css, "el aviso no tiene estilo y saldría sin formato"

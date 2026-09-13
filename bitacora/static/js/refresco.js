@@ -36,6 +36,9 @@
     console.warn('Bitácora: el refresco recargó ' + recargasRecientes().length +
                  ' veces en ' + (VENTANA / 1000) + ' s. Lo corto para no seguir parpadeando; ' +
                  'el token de /refresco debe estar inestable.');
+    // Se corta el parpadeo, pero la ventana queda sin refrescarse: eso tiene que verse.
+    // `barraAviso` es una declaración, así que está disponible pese a este return temprano.
+    barraAviso('El refresco automático se detuvo');
     return;
   }
 
@@ -129,9 +132,14 @@
 
   function hayBorrador() {
     const f = document.activeElement;
-    // Un <select> abierto no es un borrador, pero recargar debajo del mouse igual molesta; se
-    // espera a que suelte el foco, que es un instante.
-    if (f && (f.isContentEditable || f.tagName === 'SELECT' || esTipeable(f))) return true;
+    // ⚠️ Tener el cursor en un campo NO alcanza: tiene que haber algo escrito. `/search` enfoca
+    // el buscador al entrar, así que con la regla vieja esa pantalla tampoco se refrescaba
+    // nunca. Estar escribiendo de verdad ya lo cubre `estaSucio`, y estar por escribir lo cubre
+    // el segundo y medio de quietud de `puedeRecargar`.
+    // Un <select> abierto sí cuenta: recargar una lista desplegada debajo del mouse molesta, y
+    // se suelta en un instante.
+    if (f && (f.isContentEditable || f.tagName === 'SELECT')) return true;
+    if (f && esTipeable(f) && estaSucio(f)) return true;
     for (const el of document.querySelectorAll('input, textarea')) {
       if (esTipeable(el) && estaSucio(el)) return true;
     }
@@ -158,8 +166,49 @@
     return Date.now() - ultimaInteraccion > QUIETO;
   }
 
+  // ── Que no se pueda aplicar NO puede ser invisible ────────────────────────
+  // El modo de falla de esta feature no es "se rompe", es "se queda callada": la ventana se ve
+  // perfecta y muestra datos viejos. Pasó con los campos de `date-es.js`, que la dejaron sin
+  // refrescarse **nunca**, y no había forma de notarlo desde la app. Si hay un cambio esperando
+  // hace rato, se avisa y se ofrece el botón — que además es la salida manual si la heurística
+  // vuelve a equivocarse.
+  const AVISO_TRAS = 10000;
+  let esperandoDesde = 0;
+  let aviso = null;
+
+  // Declaración y no `const`: el corta-circuitos la usa antes, con un return de por medio.
+  function barraAviso(texto) {
+    const caja = document.createElement('div');
+    caja.className = 'refresco-aviso';
+    const t = document.createElement('span');
+    t.textContent = texto;
+    caja.appendChild(t);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Actualizar';
+    // Lo pide el usuario a mano, así que acá el borrador no manda: es su decisión.
+    btn.addEventListener('click', function () { location.reload(); });
+    caja.appendChild(btn);
+    document.body.appendChild(caja);
+    return caja;
+  }
+
+  function mostrarAviso() {
+    if (!aviso) aviso = barraAviso('Hay cambios nuevos');
+  }
+
+  function sacarAviso() {
+    if (aviso) { aviso.remove(); aviso = null; }
+    esperandoDesde = 0;
+  }
+
   function intentar() {
-    if (!pendiente || !puedeRecargar()) return;
+    if (!pendiente) { sacarAviso(); return; }
+    if (!puedeRecargar()) {
+      if (!esperandoDesde) esperandoDesde = Date.now();
+      else if (Date.now() - esperandoDesde > AVISO_TRAS) mostrarAviso();
+      return;
+    }
     anotarRecarga();
     location.reload();
   }

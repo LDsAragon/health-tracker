@@ -84,6 +84,14 @@ $COMANDOS = [ordered]@{
         d = "Screenshots de todas las pantallas para auditar un cambio de UI (necesita el navegador andando)"
         f = { & node "tools\screenshots_audit.mjs" @Resto }
     }
+    "refresco" = @{
+        d = "Audita que las 14 pantallas se enteren de los cambios de la otra ventana (levanta su propio servidor)"
+        f = { & node "toolsefresco_audit.mjs" @Resto }
+    }
+    "servidor-prueba" = @{
+        d = "Levanta Bitacora contra una base TEMPORAL, para probar sin tocar tus datos"
+        f = { & $py "tools\servidor_prueba.py" @Resto }
+    }
     "icono" = @{
         d = "Regenera bitacora/static/icon.ico y icon.png"
         f = { & $py "tools\make_icon.py" @Resto }

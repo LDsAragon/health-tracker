@@ -129,3 +129,35 @@ a { color: inherit; text-decoration: none; }
   font-size: 11px; font-weight: 600; line-height: 16px; text-align: center;
   color: #fff; background: var(--accent); border-radius: 8px;
 }
+
+/* Aviso de que hay datos nuevos que no se pudieron aplicar solos (ver refresco.js). Va en
+   base.css y no en pages.css porque lo usan los dos árboles de plantillas: la ventana grande
+   y el widget, que no hereda de base.html. */
+.refresco-aviso {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 10px 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+}
+
+.refresco-aviso button {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}

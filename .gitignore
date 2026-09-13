@@ -11,3 +11,6 @@ dist/
 _version.py
 /.playwright-mcp
 /screenshots
+# playwright para las auditorias de navegador; se instala aparte
+/node_modules
+/package-lock.json
