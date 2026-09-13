@@ -163,6 +163,7 @@ Smoke tests fuera de pytest, porque necesitan display o ventana real — todos v
 .\hacer.ps1                          # lista todo con su descripción
 .\hacer.ps1 tests -k ajustes         # los argumentos pasan tal cual
 .\hacer.ps1 smoke instancia
+.\hacer.ps1 refresco                 # audita el refresco entre ventanas (levanta su servidor)
 .\hacer.ps1 build
 .\hacer.ps1 publicar -Aviso "..."
 ```

@@ -29,7 +29,8 @@ borrá la carpeta vieja y extraé de cero) y corré ./instalar.sh de nuevo.
 Tus datos no se tocan: viven fuera de la carpeta de la app.
 
 TUS DATOS
-- Todo se guarda en tu máquina, en ~/.local/share/Bitacora/health.db
+- Todo se guarda en tu máquina, en
+  ~/.local/share/Bitacora/perfiles/<perfil>/health.db
   Sin internet, sin cuentas, sin nube.
 - Hacé copias de seguridad desde la pestaña "Datos" de la app
   (botón "Descargar backup") cada tanto.

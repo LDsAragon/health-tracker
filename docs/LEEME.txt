@@ -24,7 +24,8 @@ archivos y se reabre sola. También podés bajar el zip nuevo y
 descomprimirlo encima de la carpeta: tus datos no se tocan.
 
 TUS DATOS
-- Todo se guarda en tu máquina, en %LOCALAPPDATA%\Bitacora\health.db
+- Todo se guarda en tu máquina, en
+  %LOCALAPPDATA%\Bitacora\perfiles\<perfil>\health.db
   Sin cuentas y sin nube; lo único que sale a internet es el chequeo de
   actualizaciones.
 - Hacé copias de seguridad desde la pestaña "Datos" de la app
