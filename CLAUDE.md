@@ -544,6 +544,14 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
   espacio que se gana al ensanchar. El tope del arrastre sale de la pantalla
   (`(ancho - card - gaps) / 2`, hasta 900) y no es un número fijo: en un monitor de 2560 da ~856
   por lado, y con el 560 fijo que tenía quedaba media pantalla sin usar.
+- ⚠️ **La fila de una tarea (`.todo-row`) envuelve**: el panel es angosto por elección del
+  usuario, y al mínimo las acciones —que son `flex-shrink: 0`— se salían del panel (41px afuera)
+  dejando el texto en 55px, o sea cinco líneas de una palabra. Con `flex-wrap: wrap` bajan a una
+  segunda línea, pegadas a la derecha con `margin-left: auto`. Es la misma solución que el visor
+  `/tareas` ya usaba en su media query de ≤600px.
+  ⚠️ **La base del texto es chica (70px) a propósito**: con una grande (110px) el texto tampoco
+  entraba al lado del asa y el tilde y bajaba a una línea propia — tres líneas por tarea en vez
+  de dos.
 - ⚠️ **Los paneles del día se arrastran a lo ancho Y a lo alto**, con un helper compartido en
   `day.js` (`arrastrable({grip, eje, variable, pref, ...})`) que usan los tres agarres. El ancho es
   uno solo para los dos paneles; **el alto es de cada uno**, porque tienen contenidos muy distintos.
