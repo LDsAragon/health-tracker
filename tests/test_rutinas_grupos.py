@@ -263,9 +263,18 @@ def test_la_edad_no_depende_de_si_el_cumple_ya_paso():
 
 # ── La pantalla ──────────────────────────────────────────────────────────────
 
+def _donde(grupo=None, tipo="rutina"):
+    """El campo "Dónde va": un solo valor que decide el grupo Y el tipo."""
+    return f"g:{grupo['id']}" if grupo else f"sin:{tipo}"
+
+
+def _grupo_cumples():
+    return [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
+
+
 def _alta(client, **campos):
     datos = {"title": "Algo", "color": "#6366f1", "rtype": "daily",
-             "start_date": "2026-05-05", "tipo": "rutina"}
+             "start_date": "2026-05-05", "donde": "sin:rutina"}
     datos.update(campos)
     return client.post("/recurring/add", data=datos, follow_redirects=True)
 
@@ -276,9 +285,9 @@ def test_la_pantalla_separa_rutinas_de_recordatorios(client):
 
 
 def test_se_puede_crear_un_cumpleanos_desde_el_formulario(client):
-    grupo = [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
-    _alta(client, title="Cumple de Pablo", tipo="recordatorio", rtype="yearly",
-          group_id=grupo["id"], edad="34", aviso="7")
+    grupo = _grupo_cumples()
+    _alta(client, title="Cumple de Pablo", rtype="yearly", donde=_donde(grupo),
+          edad="34", aviso="7")
     ev = db.get_recurring_events()[-1]
     assert ev["tipo"] == "recordatorio"
     assert ev["recurrence"] == "yearly"
@@ -288,38 +297,36 @@ def test_se_puede_crear_un_cumpleanos_desde_el_formulario(client):
 
 
 def test_una_rutina_no_guarda_antelacion_aunque_la_manden(client):
-    _alta(client, title="Caminadora", tipo="rutina", aviso="7")
+    _alta(client, title="Caminadora", aviso="7")
     assert db.get_recurring_events()[-1]["aviso_dias"] == 0
 
 
 def test_la_antelacion_otro_acepta_un_numero_libre(client):
-    _alta(client, title="Vence el seguro", tipo="recordatorio", rtype="yearly",
+    _alta(client, title="Vence el seguro", rtype="yearly", donde=_donde(tipo="recordatorio"),
           aviso="otro", aviso_otro="21")
     assert db.get_recurring_events()[-1]["aviso_dias"] == 21
 
 
 def test_una_antelacion_disparatada_se_acota(client):
-    _alta(client, title="x", tipo="recordatorio", aviso="otro", aviso_otro="99999")
+    _alta(client, title="x", donde=_donde(tipo="recordatorio"), aviso="otro",
+          aviso_otro="99999")
     assert db.get_recurring_events()[-1]["aviso_dias"] == 365
 
 
 def test_el_porcentaje_no_se_muestra_en_un_recordatorio(client):
     """⚠️ Lo que empezó todo: el cumpleaños arrastraba un "0 / 15 0%" que no significaba nada."""
-    grupo = [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
-    _alta(client, title="Cumple de Pablo", tipo="recordatorio", rtype="yearly",
-          group_id=grupo["id"])
+    _alta(client, title="Cumple de Pablo", rtype="yearly", donde=_donde(_grupo_cumples()))
     html = client.get("/recurring").data.decode()
     assert "Cumple de Pablo" in html
     assert "Últimos 30 días" not in html          # no hay ninguna rutina todavía
 
-    _alta(client, title="Caminadora", tipo="rutina")
+    _alta(client, title="Caminadora")
     assert "Últimos 30 días" in client.get("/recurring").data.decode()
 
 
 def test_la_pantalla_muestra_la_edad_y_la_antelacion(client):
-    grupo = [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
-    _alta(client, title="Cumple de Pablo", tipo="recordatorio", rtype="yearly",
-          start_date="2026-05-05", group_id=grupo["id"], edad="34", aviso="7")
+    _alta(client, title="Cumple de Pablo", rtype="yearly", start_date="2026-05-05",
+          donde=_donde(_grupo_cumples()), edad="34", aviso="7")
     html = client.get("/recurring").data.decode()
     assert "Cada año, el 5 de mayo" in html
     assert "cumple 34" in html
@@ -329,12 +336,12 @@ def test_la_pantalla_muestra_la_edad_y_la_antelacion(client):
 # ── Los grupos desde la pantalla ─────────────────────────────────────────────
 
 def test_crear_renombrar_y_borrar_un_grupo(client):
-    client.post("/recurring/grupo/add", data={"name": "Salud", "color": "#22c55e",
-                                              "tipo": "rutina"}, follow_redirects=True)
+    client.post("/recurring/grupo/add", data={"name": "Salud", "tipo": "rutina"},
+                follow_redirects=True)
     grupo = [g for g in db.get_event_groups() if g["name"] == "Salud"][0]
 
     client.post(f"/recurring/grupo/{grupo['id']}/edit",
-                data={"name": "Salud y cuerpo", "color": "#22c55e", "tipo": "rutina"},
+                data={"name": "Salud y cuerpo", "color": "#22c55e"},
                 follow_redirects=True)
     assert any(g["name"] == "Salud y cuerpo" for g in db.get_event_groups())
 
@@ -353,11 +360,10 @@ def test_la_pantalla_no_deja_borrar_el_grupo_de_fabrica(client):
 def _cumple_en(client, dias, **extra):
     """Un cumpleaños a N días de hoy, creado por la pantalla."""
     from datetime import timedelta
-    grupo = [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
     cuando = date.today() + timedelta(days=dias)
     datos = {"title": "Cumple de mamá", "color": "#a855f7", "rtype": "yearly",
-             "start_date": cuando.replace(year=1960).isoformat(), "tipo": "recordatorio",
-             "group_id": grupo["id"]}
+             "start_date": cuando.replace(year=1960).isoformat(),
+             "donde": _donde(_grupo_cumples())}
     datos.update(extra)
     client.post("/recurring/add", data=datos, follow_redirects=True)
     return cuando
@@ -414,3 +420,62 @@ def test_una_rutina_sin_grupo_no_rompe_el_join(client):
                             "start_date": "2020-01-01"})
     ev = db.get_recurring_events()[-1]
     assert ev["grupo_especial"] is None and ev["grupo_nombre"] is None
+
+
+# ── Un solo lugar donde se decide grupo y tipo ───────────────────────────────
+
+def test_el_lugar_decide_el_tipo(client):
+    """⚠️ Antes eran dos campos y podían contradecirse: una rutina metida en un grupo de
+    Recordatorios salía en la sección equivocada. Ahora el tipo se deduce del grupo."""
+    _alta(client, title="Vence el seguro", donde=_donde(_grupo_cumples()))
+    assert db.get_recurring_events()[-1]["tipo"] == "recordatorio"
+
+
+def test_sin_grupo_el_lugar_igual_decide_el_tipo(client):
+    _alta(client, title="Trámite", donde="sin:recordatorio")
+    ev = db.get_recurring_events()[-1]
+    assert ev["tipo"] == "recordatorio" and ev["group_id"] is None
+
+
+def test_un_lugar_que_no_existe_cae_en_rutina_sin_grupo(client):
+    """Un `donde` inventado no puede dejar la rutina en un limbo."""
+    _alta(client, title="Algo", donde="g:9999")
+    ev = db.get_recurring_events()[-1]
+    assert ev["tipo"] == "rutina" and ev["group_id"] is None
+
+
+def test_crear_un_grupo_no_pide_color(client):
+    """Las nueve bolitas en cada fila eran la mitad del ruido: el color se elige solo y se
+    cambia después."""
+    from bitacora.appconfig import NOTE_COLORS
+    client.post("/recurring/grupo/add", data={"name": "Salud", "tipo": "rutina"},
+                follow_redirects=True)
+    nuevo = [g for g in db.get_event_groups() if g["name"] == "Salud"][0]
+    assert nuevo["color"] in NOTE_COLORS
+
+
+def test_los_grupos_no_nacen_todos_del_mismo_color(client):
+    for n in ("Salud", "Ejercicio", "Casa"):
+        client.post("/recurring/grupo/add", data={"name": n, "tipo": "rutina"},
+                    follow_redirects=True)
+    colores = [g["color"] for g in db.get_event_groups()]
+    assert len(set(colores)) == len(colores)
+
+
+def test_editar_un_grupo_no_le_cambia_el_tipo(client):
+    """El formulario ya no manda el tipo; si alguien lo mandara, igual no tiene que moverse:
+    arrastraría a todo lo que el grupo tiene adentro."""
+    client.post("/recurring/grupo/add", data={"name": "Salud", "tipo": "rutina"},
+                follow_redirects=True)
+    grupo = [g for g in db.get_event_groups() if g["name"] == "Salud"][0]
+    client.post(f"/recurring/grupo/{grupo['id']}/edit",
+                data={"name": "Salud", "color": "#22c55e", "tipo": "recordatorio"},
+                follow_redirects=True)
+    assert [g for g in db.get_event_groups() if g["name"] == "Salud"][0]["tipo"] == "rutina"
+
+
+def test_la_pantalla_ya_no_tiene_el_panel_de_grupos(client):
+    """Los grupos se administran en su propia sección: el panel los listaba una segunda vez."""
+    html = client.get("/recurring").data.decode()
+    assert "rec-grupos-body" not in html
+    assert "+ Nuevo grupo" in html

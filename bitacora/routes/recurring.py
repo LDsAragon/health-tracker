@@ -81,8 +81,27 @@ def _aviso_from_form(form) -> int:
         return 0
 
 
+def _donde_from_form(form, grupos) -> tuple:
+    """El campo "Dónde va" decide el grupo Y el tipo, que es su razón de ser.
+
+    ⚠️ Antes eran dos campos y podían contradecirse: una rutina dentro de un grupo de
+    Recordatorios aparecía en la sección de Recordatorios pero se comportaba como rutina. Con un
+    solo lugar donde se decide, eso deja de poder pasar.
+
+    El valor es `g:<id>` para un grupo, o `sin:<tipo>` para los que no llevan grupo.
+    """
+    valor = form.get("donde", "sin:rutina")
+    if valor.startswith("g:"):
+        gid = valor[2:]
+        grupo = next((g for g in grupos if str(g["id"]) == gid), None)
+        if grupo:
+            return grupo["id"], grupo["tipo"]
+    tipo = "recordatorio" if valor.endswith(":recordatorio") else "rutina"
+    return None, tipo
+
+
 def _datos_from_form(form) -> dict:
-    tipo = "recordatorio" if form.get("tipo") == "recordatorio" else "rutina"
+    group_id, tipo = _donde_from_form(form, db.get_event_groups())
     return {
         "title":      form.get("title", "").strip(),
         "color":      form.get("color", "#6366f1"),
@@ -90,7 +109,7 @@ def _datos_from_form(form) -> dict:
         "start_date": form.get("start_date", date.today().isoformat()),
         "end_date":   form.get("end_date", "").strip(),
         "tipo":       tipo,
-        "group_id":   form.get("group_id") or None,
+        "group_id":   group_id,
         "birth_year": services.anio_de_nacimiento(form.get("birth_year", ""),
                                                   form.get("edad", ""), date.today()),
         # Solo los recordatorios avisan: "en 3 días vas al gimnasio" todos los días no ayuda.
@@ -133,13 +152,29 @@ def recurring_visibility(event_id):
 
 # ── Grupos ───────────────────────────────────────────────────────────────────
 
+def _color_libre(grupos) -> str:
+    """El primer color de la paleta que ningún grupo esté usando.
+
+    Se elige solo para que crear un grupo sea nombre y nada más: las nueve bolitas en cada fila
+    eran la mitad del ruido de la pantalla, y el color se cambia después al editar.
+    """
+    from bitacora.appconfig import NOTE_COLORS
+    usados = {g["color"] for g in grupos}
+    for c in NOTE_COLORS:
+        if c not in usados:
+            return c
+    return NOTE_COLORS[len(grupos) % len(NOTE_COLORS)]
+
+
 @bp.route("/recurring/grupo/add", methods=["POST"])
 def grupo_add():
+    """El tipo NO viene de un campo: sale de la sección desde la que se creó."""
     nombre = request.form.get("name", "").strip()
     if nombre:
+        grupos = db.get_event_groups()
         db.add_event_group({
             "name":  nombre,
-            "color": request.form.get("color", "#6366f1"),
+            "color": _color_libre(grupos),
             "tipo":  "recordatorio" if request.form.get("tipo") == "recordatorio" else "rutina",
         })
     return redirect(url_for("recurring.recurring_view"))
@@ -147,12 +182,15 @@ def grupo_add():
 
 @bp.route("/recurring/grupo/<int:group_id>/edit", methods=["POST"])
 def grupo_edit(group_id):
+    """Nombre y color. El tipo no se toca: mover un grupo de sección arrastraría todo lo que
+    tiene adentro (sus rutinas perderían el porcentaje, o al revés), y no se vio la necesidad."""
     nombre = request.form.get("name", "").strip()
-    if nombre:
+    actual = next((g for g in db.get_event_groups() if g["id"] == group_id), None)
+    if nombre and actual:
         db.update_event_group(group_id, {
             "name":  nombre,
-            "color": request.form.get("color", "#6366f1"),
-            "tipo":  "recordatorio" if request.form.get("tipo") == "recordatorio" else "rutina",
+            "color": request.form.get("color", actual["color"]),
+            "tipo":  actual["tipo"],
         })
     return redirect(url_for("recurring.recurring_view"))
 

@@ -44,32 +44,25 @@
       </div>
     </div>
 
-    {# Tipo y grupo. El subtítulo de cada tipo va acá y no solo en la lista: es donde se decide,
-       y es la única forma de que la diferencia se entienda sin tener que explicarla aparte. #}
-    <div class="field-row">
-      <div class="field-group">
-        <label>Tipo</label>
-        <div class="freq-options">
-          <label class="freq-opt">
-            <input type="radio" name="tipo" value="rutina" checked onchange="recTipo(this.value)">
-            <span>Rutina <i class="rec-hint">· se mide</i></span>
-          </label>
-          <label class="freq-opt">
-            <input type="radio" name="tipo" value="recordatorio" onchange="recTipo(this.value)">
-            <span>Recordatorio <i class="rec-hint">· avisa</i></span>
-          </label>
-        </div>
-      </div>
-      <div class="field-group">
-        <label>Grupo</label>
-        <select name="group_id" id="rec-grupo" class="journal-cat-select" onchange="recGrupo()">
-          <option value="">Sin grupo</option>
-          {% for g in grupos %}
-          <option value="{{ g.id }}" data-tipo="{{ g.tipo }}"
-                  data-especial="{{ g.especial }}">{{ g.name }}</option>
+    {# ⚠️ Un solo campo para el grupo Y el tipo. Antes eran dos y podían contradecirse: una
+       rutina dentro de un grupo de Recordatorios salía en la sección equivocada. Acá el lugar
+       decide todo, y de paso el formulario tiene un campo menos. #}
+    <div class="field-group">
+      <label>Dónde va</label>
+      <select name="donde" id="rec-donde" class="journal-cat-select" onchange="recDonde()">
+        {% for sec in secciones %}
+        <optgroup label="{{ sec.titulo | upper }} · {{ sec.sub }}">
+          {% for grupo, _evs in sec.bloques %}
+          {% if grupo %}
+          <option value="g:{{ grupo.id }}" data-especial="{{ grupo.especial }}"
+                  data-tipo="{{ grupo.tipo }}">{{ grupo.name }}</option>
+          {% endif %}
           {% endfor %}
-        </select>
-      </div>
+          <option value="sin:{{ sec.tipo }}" data-tipo="{{ sec.tipo }}"
+                  {% if sec.tipo == 'rutina' %}selected{% endif %}>(sin grupo)</option>
+        </optgroup>
+        {% endfor %}
+      </select>
     </div>
 
     {# Solo con un grupo de cumpleaños. Se guarda el AÑO —no se desactualiza— pero se puede
@@ -169,60 +162,6 @@
   </form>
 </div>
 
-{# ── Grupos ───────────────────────────────────────────────────────────────── #}
-<details class="rec-grupos" id="rec-grupos-panel">
-  <summary>Grupos <span class="rec-hint">· las secciones de abajo</span></summary>
-  <div class="rec-grupos-body">
-    <form method="POST" action="{{ url_for('recurring.grupo_add') }}" class="rec-grupo-form">
-      <input type="text" name="name" placeholder="Nombre del grupo" maxlength="40" required>
-      <select name="tipo" class="journal-cat-select">
-        <option value="rutina">en Rutinas</option>
-        <option value="recordatorio">en Recordatorios</option>
-      </select>
-      <div class="color-row">
-        {% for c in note_colors %}
-        <label class="color-opt">
-          <input type="radio" name="color" value="{{ c }}" {% if loop.first %}checked{% endif %}>
-          <span class="color-circle" style="background:{{ c }};"></span>
-        </label>
-        {% endfor %}
-      </div>
-      <button type="submit" class="btn-primary">Crear grupo</button>
-    </form>
-
-    {% for g in grupos %}
-    <form method="POST" action="{{ url_for('recurring.grupo_edit', group_id=g.id) }}"
-          class="rec-grupo-form">
-      <input type="text" name="name" value="{{ g.name }}" maxlength="40" required>
-      <select name="tipo" class="journal-cat-select" {% if g.especial %}disabled{% endif %}>
-        <option value="rutina" {% if g.tipo == 'rutina' %}selected{% endif %}>en Rutinas</option>
-        <option value="recordatorio" {% if g.tipo == 'recordatorio' %}selected{% endif %}>en Recordatorios</option>
-      </select>
-      {# El de fábrica no cambia de tipo: es el que enciende los cumpleaños. El select va
-         deshabilitado, así que el valor viaja por acá. #}
-      {% if g.especial %}<input type="hidden" name="tipo" value="{{ g.tipo }}">{% endif %}
-      <div class="color-row">
-        {% for c in note_colors %}
-        <label class="color-opt">
-          <input type="radio" name="color" value="{{ c }}" {% if g.color == c %}checked{% endif %}>
-          <span class="color-circle" style="background:{{ c }};"></span>
-        </label>
-        {% endfor %}
-      </div>
-      <button type="submit" class="btn-edit">Guardar</button>
-    </form>
-    {% if not g.especial %}
-    <form method="POST" action="{{ url_for('recurring.grupo_delete', group_id=g.id) }}"
-          class="rec-grupo-del"
-          data-confirmar="¿Eliminar el grupo «{{ g.name }}»?&#10;&#10;Lo que tenga adentro no se borra: queda sin grupo."
-          data-confirmar-ok="Eliminar el grupo" onsubmit="return false;">
-      <button type="submit" class="btn-delete-sm">Eliminar «{{ g.name }}»</button>
-    </form>
-    {% endif %}
-    {% endfor %}
-  </div>
-</details>
-
 <!-- LIST -->
 {# El filtro cubre la parte de "búsqueda": con muchas rutinas, plegar y desplegar para encontrar
    una es peor que escribir dos letras. Mismo comportamiento que el filtro de categorías del día. #}
@@ -244,7 +183,41 @@
         {% else %}Sin grupo{% endif %}
       </span>
       <span class="rec-grupo-n">{{ eventos | length }}</span>
+      {% if grupo %}
+      {# ⚠️ `stopPropagation`: un clic acá adentro burbujearía al <summary> y plegaría la sección
+         justo cuando querés editarla. #}
+      <span class="rec-grupo-acciones" onclick="event.stopPropagation();">
+        <button type="button" class="btn-edit" title="Renombrar o cambiarle el color"
+                onclick="editarGrupo({{ grupo.id }})">&#9998;</button>
+        {% if not grupo.especial %}
+        <form method="POST" action="{{ url_for('recurring.grupo_delete', group_id=grupo.id) }}"
+              style="display:inline;"
+              data-confirmar="¿Eliminar el grupo «{{ grupo.name }}»?&#10;&#10;Lo que tenga adentro no se borra: queda sin grupo."
+              data-confirmar-ok="Eliminar el grupo" onsubmit="return false;">
+          <button type="submit" class="btn-delete" title="Eliminar el grupo">&#10005;</button>
+        </form>
+        {% endif %}
+      </span>
+      {% endif %}
     </summary>
+
+  {% if grupo %}
+  <form method="POST" action="{{ url_for('recurring.grupo_edit', group_id=grupo.id) }}"
+        class="rec-grupo-edit" id="rec-grupo-edit-{{ grupo.id }}" style="display:none;">
+    <input type="text" name="name" value="{{ grupo.name }}" maxlength="40" required>
+    <div class="color-row">
+      {% for c in note_colors %}
+      <label class="color-opt">
+        <input type="radio" name="color" value="{{ c }}" {% if grupo.color == c %}checked{% endif %}>
+        <span class="color-circle" style="background:{{ c }};"></span>
+      </label>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn-primary">Guardar</button>
+    <button type="button" class="btn-cancel" onclick="cancelarGrupo({{ grupo.id }})">Cancelar</button>
+  </form>
+  {% endif %}
+
   <div class="rec-list">
   {% for ev in eventos %}
   {% set colors = note_colors %}
@@ -436,6 +409,7 @@
   </div>
   </details>
   {% endfor %}
+
   {% else %}
   <p class="empty-msg">
     {% if sec.tipo == 'rutina' %}Todavía no tenés rutinas. Agregá la primera arriba.
@@ -443,6 +417,19 @@
     {% endif %}
   </p>
   {% endif %}
+
+  {# El tipo del grupo nuevo sale de la sección, no de un campo: por eso el botón vive acá. #}
+  <div class="rec-grupo-nuevo">
+    <button type="button" class="btn-edit" onclick="nuevoGrupo('{{ sec.tipo }}')"
+            id="rec-nuevo-btn-{{ sec.tipo }}">+ Nuevo grupo</button>
+    <form method="POST" action="{{ url_for('recurring.grupo_add') }}"
+          id="rec-nuevo-{{ sec.tipo }}" style="display:none;">
+      <input type="hidden" name="tipo" value="{{ sec.tipo }}">
+      <input type="text" name="name" placeholder="Nombre del grupo" maxlength="40" required>
+      <button type="submit" class="btn-primary">Crear</button>
+      <button type="button" class="btn-cancel" onclick="cancelarNuevoGrupo('{{ sec.tipo }}')">Cancelar</button>
+    </form>
+  </div>
 </section>
 {% endfor %}
 
@@ -456,28 +443,19 @@ function showFreq(val) {
   document.getElementById('freq-yearly').style.display = val === 'yearly' ? 'block' : 'none';
 }
 
-// ── Tipo, grupo y aviso ─────────────────────────────────────────────────────
-// El grupo pertenece a un tipo, así que la lista se filtra: ofrecer "Cumpleaños" para una rutina
-// sería ofrecer algo que después no se puede guardar donde dice.
-function recTipo(tipo) {
-  const sel = document.getElementById('rec-grupo');
-  let cambio = false;
-  Array.from(sel.options).forEach(function (o) {
-    if (!o.value) return;                       // "Sin grupo" sirve para los dos
-    const suyo = o.dataset.tipo === tipo;
-    o.hidden = !suyo;
-    if (!suyo && o.selected) { sel.value = ''; cambio = true; }
-  });
-  document.getElementById('rec-aviso').style.display = tipo === 'recordatorio' ? 'block' : 'none';
-  if (cambio) recGrupo();
-}
+// ── Dónde va, y el aviso ────────────────────────────────────────────────────
+// Un solo campo decide el grupo y el tipo. Elegir un grupo de cumpleaños es el "template":
+// deja la frecuencia anual puesta y pide la edad. Solo empuja la frecuencia si estaba en el
+// default, para no pisar lo que hayas elegido a mano.
+function recDonde() {
+  const sel = document.getElementById('rec-donde');
+  const op = sel.selectedOptions[0];
+  const esCumple = op && op.dataset.especial === 'cumpleanos';
+  const esRecordatorio = op && op.dataset.tipo === 'recordatorio';
 
-// Elegir un grupo de cumpleaños es el "template": deja la frecuencia anual puesta y pide la edad.
-// Solo empuja la frecuencia si estaba en el default, para no pisar lo que hayas elegido a mano.
-function recGrupo() {
-  const sel = document.getElementById('rec-grupo');
-  const esCumple = sel.selectedOptions[0] && sel.selectedOptions[0].dataset.especial === 'cumpleanos';
   document.getElementById('rec-cumple').style.display = esCumple ? 'block' : 'none';
+  document.getElementById('rec-aviso').style.display = esRecordatorio ? 'block' : 'none';
+
   if (esCumple) {
     const actual = document.querySelector('[name="rtype"]:checked');
     if (actual && actual.value === 'daily') {
@@ -485,6 +463,32 @@ function recGrupo() {
       showFreq('yearly');
     }
   }
+}
+
+// ── Grupos, desde su propia sección ─────────────────────────────────────────
+function editarGrupo(id) {
+  const f = document.getElementById('rec-grupo-edit-' + id);
+  f.style.display = f.style.display === 'none' ? 'flex' : 'none';
+  if (f.style.display === 'flex') {
+    f.closest('details').open = true;          // editar algo plegado no se vería
+    f.querySelector('input[name="name"]').focus();
+  }
+}
+
+function cancelarGrupo(id) {
+  document.getElementById('rec-grupo-edit-' + id).style.display = 'none';
+}
+
+function nuevoGrupo(tipo) {
+  document.getElementById('rec-nuevo-btn-' + tipo).style.display = 'none';
+  const f = document.getElementById('rec-nuevo-' + tipo);
+  f.style.display = 'flex';
+  f.querySelector('input[name="name"]').focus();
+}
+
+function cancelarNuevoGrupo(tipo) {
+  document.getElementById('rec-nuevo-' + tipo).style.display = 'none';
+  document.getElementById('rec-nuevo-btn-' + tipo).style.display = '';
 }
 
 function recAviso(val) {
@@ -530,8 +534,7 @@ function showEditFreq(id, val) {
 document.querySelectorAll('.rec-grupo-sec').forEach(function (d) {
   recordarColapsable(d.id, 'recOpen-' + d.id, true);
 });
-recordarColapsable('rec-grupos-panel', 'recGruposOpen', false);
-recTipo('rutina');
+recDonde();
 
 function editRec(id) {
   document.getElementById('rec-view-' + id).style.display = 'none';

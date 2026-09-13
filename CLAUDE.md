@@ -139,7 +139,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 724 tests, ~38s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 730 tests, ~53s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -540,6 +540,20 @@ recordatorios con `applicable = 0`.
   que da NULL si el grupo no está: la rutina entra igual, en "Sin grupo".
 - **Borrar un grupo nunca borra sus rutinas** (quedan sin grupo), y un grupo `especial` no se
   puede borrar.
+- ⚠️ **Un solo campo decide el grupo Y el tipo** (`donde`, con valores `g:<id>` o `sin:<tipo>`).
+  Eran dos campos y podían **contradecirse**: una rutina metida en un grupo de Recordatorios
+  salía en esa sección pero se comportaba como rutina. Con un solo lugar donde se decide, eso
+  deja de poder pasar, y el formulario tiene un campo menos.
+- **Los grupos se administran en su propia sección de la lista**, no en un panel aparte: ese
+  panel los listaba una segunda vez y con cinco grupos ocupaba 982px, con 54 círculos de color y
+  6 selects. El lápiz abre el formulario del grupo ahí mismo (nombre y color), y el "+ Nuevo
+  grupo" vive al final de cada sección — **por eso el tipo no se pregunta: sale de dónde lo
+  creaste**. ⚠️ Las acciones del summary van envueltas en un `stopPropagation`: un clic ahí
+  burbujearía al `<summary>` y plegaría la sección justo cuando querés editarla.
+- **El color de un grupo se elige solo** (`_color_libre`: el primero de la paleta sin usar) y se
+  cambia al editar. Las nueve bolitas repetidas en cada fila eran la mitad del ruido.
+- **El tipo de un grupo no se edita**: moverlo de sección arrastraría todo lo que tiene adentro
+  (sus rutinas perderían el porcentaje, o al revés) y no se vio la necesidad.
 
 ### La frecuencia `yearly`
 ⚠️ **Se repite por MES-DÍA, no por días transcurridos.** El cumpleaños se venía modelando con

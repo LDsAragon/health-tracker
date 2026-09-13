@@ -1158,35 +1158,36 @@ select.journal-cat-select {
 
 .rec-grupo-sec > .rec-list { padding: 10px 0 4px 10px; }
 
-/* El panel de administrar grupos, cerrado por default: se toca poco. */
-.rec-grupos { margin-top: 18px; }
-
-.rec-grupos > summary {
-  cursor: pointer;
-  color: var(--muted);
-  font-size: 13px;
-  user-select: none;
+/* Las acciones de un grupo viven en su propia fila y aparecen al pasar el mouse: estar
+   siempre visibles convertía la lista en una pared de botones. */
+.rec-grupo-acciones {
+  display: flex;
+  gap: 2px;
+  margin-left: 10px;
+  opacity: 0;
+  transition: opacity .15s ease;
 }
 
-.rec-grupos-body {
+.rec-grupo-sec > summary:hover .rec-grupo-acciones,
+.rec-grupo-sec > summary:focus-within .rec-grupo-acciones { opacity: 1; }
+
+.rec-grupo-edit,
+.rec-grupo-nuevo form {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 10px;
-  margin-top: 12px;
-  padding: 14px;
+  flex-wrap: wrap;
+  padding: 10px;
+  margin-top: 6px;
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: var(--surface);
 }
 
-.rec-grupo-form {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+.rec-grupo-edit input[type="text"],
+.rec-grupo-nuevo input[type="text"] { flex: 1 1 160px; min-width: 0; }
 
-.rec-grupo-form input[type="text"] { flex: 1 1 160px; min-width: 0; }
-.rec-grupo-del { margin: -4px 0 6px; }
+.rec-grupo-nuevo { margin: 4px 0 10px; }
+.rec-grupo-nuevo > button { color: var(--muted); }
 
 #rec-filtro { width: 100%; max-width: 320px; margin-bottom: 4px; }
