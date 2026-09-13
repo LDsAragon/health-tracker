@@ -92,15 +92,48 @@
   }
 
   // Nunca recargar encima de algo tipeado: si estás escribiendo una nota rápida en una celda y
-  // el widget dispara un cambio, la recarga te borraría el borrador. `defaultValue` es el valor
-  // con el que el servidor renderizó el campo, así que "sucio" sale del DOM sin snapshot.
+  // el widget dispara un cambio, la recarga te borraría el borrador.
+  //
+  // ⚠️ "Sin tocar" NO se decide comparando contra `defaultValue`, el valor con el que el
+  // servidor renderizó el campo. Cualquier campo que el JS rellene al arrancar difiere de su
+  // defaultValue **para siempre**, y eso deja la ventana marcada como "con borrador" y sin
+  // refrescarse nunca. Ya pasó dos veces: el slider de tamaño de celda del calendario (que se
+  // restaura de localStorage) y los dos campos de `date-es.js`, que dejaron la vista del día
+  // sin enterarse de nada de lo que escribías en el widget.
+  //
+  // Hacen falta las dos condiciones: que el campo haya recibido un `input` de verdad —setear
+  // `.value` desde JS no dispara ese evento, así que lo que rellena la página no cuenta— y que
+  // su contenido difiera del que tenía cuando la página terminó de cargar, para que escribir y
+  // volver atrás no lo deje marcado como sucio hasta la próxima recarga.
+  const inicial = new WeakMap();
+  const tocados = new WeakSet();
+
+  document.addEventListener('input', function (e) { tocados.add(e.target); }, true);
+
+  function anotarValores() {
+    for (const el of document.querySelectorAll('input, textarea')) {
+      if (esTipeable(el)) inicial.set(el, el.value);
+    }
+  }
+
+  // Después del load y una vuelta más: así el snapshot ve lo que dejaron los scripts de la
+  // página, incluso los que corren en su propio handler de load.
+  if (document.readyState === 'complete') setTimeout(anotarValores, 0);
+  else window.addEventListener('load', function () { setTimeout(anotarValores, 0); });
+
+  // Un campo que nace después (agregar un bloque a una nota especial) no está en el snapshot:
+  // ahí la referencia es el vacío, así que uno recién creado no cuenta y uno que llenaste sí.
+  function estaSucio(el) {
+    return tocados.has(el) && el.value !== (inicial.has(el) ? inicial.get(el) : '');
+  }
+
   function hayBorrador() {
     const f = document.activeElement;
     // Un <select> abierto no es un borrador, pero recargar debajo del mouse igual molesta; se
     // espera a que suelte el foco, que es un instante.
     if (f && (f.isContentEditable || f.tagName === 'SELECT' || esTipeable(f))) return true;
     for (const el of document.querySelectorAll('input, textarea')) {
-      if (esTipeable(el) && el.value !== el.defaultValue) return true;
+      if (esTipeable(el) && estaSucio(el)) return true;
     }
     return false;
   }

@@ -136,7 +136,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 534 tests, ~31s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 549 tests, ~31s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -421,10 +421,17 @@ así que conviene tener los dos presentes:
 - **No se recarga encima de lo que estás haciendo**: si la ventana no tiene el foco, recarga ya; si
   lo tiene, espera a que sueltes mouse y teclado 1,5 s. "Tiene el foco" solo no alcanza como regla
   —una ventana enfocada y quieta se quedaría vieja para siempre—.
-- **Ni encima de algo tipeado.** Solo cuentan los campos donde se escribe (`TIPEABLES`): la primera
-  versión miraba cualquier input con `value !== defaultValue` y **el calendario no se refrescaba
-  nunca**, porque el slider de tamaño de celda se restaura de `localStorage` y su value siempre
-  difiere del HTML.
+- **Ni encima de algo tipeado.** Solo cuentan los campos donde se escribe (`TIPEABLES`), y
+  ⚠️ **"sin tocar" NO se decide contra `defaultValue`** —el valor con el que lo renderizó el
+  servidor—. Cualquier campo que el JS rellene al cargar difiere de su `defaultValue` para
+  siempre, así que la ventana queda marcada "con borrador" y **no se refresca nunca**. Costó dos
+  bugs: el slider de tamaño de celda del calendario (se restaura de `localStorage`) y después los
+  dos campos de `date-es.js`, que dejaron **la vista del día** sin enterarse de nada de lo que
+  escribías en el widget. Van las dos condiciones juntas: que el campo haya recibido un evento
+  `input` de verdad (setear `.value` desde JS **no** lo dispara, que es lo que descarta lo que
+  rellena la página) y que difiera del snapshot tomado al terminar de cargar (así escribir y
+  volver atrás no lo deja sucio hasta la próxima recarga).
+  `test_el_borrador_no_se_decide_con_defaultValue` es el tripwire.
 - ⚠️ **`refresco.js` envuelve `fetch` para ignorar las escrituras PROPIAS de la página.** Sin eso,
   tocar un switch en Ajustes (que guarda al instante) o cerrar el aviso de tareas la recargaba sola
   a los 3 s. Se envuelve en vez de avisar desde cada llamador porque hoy hay cuatro (`ajustes.js`,

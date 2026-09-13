@@ -49,6 +49,14 @@ def test_el_token_cambia_al_escribir(client):
 def test_el_token_cambia_al_tildar_una_tarea(client):
     db.add_todo("2026-06-10", "algo")
     tid = db.get_todos_for_date("2026-06-10")[0]["id"]
+    # ⚠️ Es el único caso donde el alta y el cambio caen sobre la MISMA tabla, y `updated_at`
+    # tiene resolución de milisegundos: si las dos operaciones entran en el mismo, el token no
+    # se mueve y el test falla por timing y no por comportamiento (falló así una vez en la suite
+    # completa). Se envejece la fila a mano —el trigger de UPDATE respeta un `updated_at`
+    # explícito, que es como entra el merge del sync— para que la comparación sea determinista.
+    with db.get_db() as conn:
+        conn.execute("UPDATE todos SET updated_at = '2020-01-01 00:00:00.000' WHERE id = ?",
+                     (tid,))
     antes = db.token_datos()
     db.toggle_todo(tid)
     assert db.token_datos() != antes
@@ -166,3 +174,21 @@ def test_el_token_de_la_pagina_es_IGUAL_al_de_la_ruta(client, ruta):
     assert m, "no se encontró window.TOKEN_DATOS"
     del_html = json.loads(m.group(1))          # tal como lo lee el navegador
     assert del_html == client.get("/refresco").data.decode()
+
+
+def test_el_borrador_no_se_decide_con_defaultValue():
+    """⚠️ Tripwire, y va por la tercera vez.
+
+    `value !== defaultValue` marca como "con borrador" **cualquier** campo que el JS rellene al
+    cargar, y una ventana con borrador no se refresca nunca. Pasó con el slider de tamaño de
+    celda del calendario (se restaura de localStorage) y después con los dos campos de
+    `date-es.js`, que dejaron la vista del día sin enterarse de nada de lo que escribías en el
+    widget. La referencia correcta es el snapshot tomado cuando la página terminó de cargar,
+    más el evento `input` —que setear `.value` desde JS no dispara—.
+    """
+    import pathlib
+    js = (pathlib.Path(__file__).resolve().parent.parent / "bitacora" / "static" / "js" /
+          "refresco.js").read_text(encoding="utf-8")
+    # Los comentarios sí lo nombran, justamente para explicar por qué no se usa.
+    codigo = [l for l in js.splitlines() if not l.strip().startswith("//")]
+    assert not [l for l in codigo if "defaultValue" in l]
