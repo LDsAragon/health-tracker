@@ -1095,3 +1095,98 @@ select.journal-cat-select {
   line-height: 1.5;
   white-space: pre-line;
 }
+
+/* ── Rutinas y recordatorios: secciones, grupos y el filtro ───────────────── */
+
+.rec-seccion { margin-top: 26px; }
+
+.rec-seccion-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+/* El "· se mide" / "· avisa": la diferencia entre los dos tipos tiene que leerse en la pantalla,
+   no quedar en la cabeza de quien la programó. */
+.rec-hint { color: var(--muted); font-weight: 400; font-style: normal; }
+
+.rec-grupo-sec { margin-bottom: 10px; }
+
+.rec-grupo-sec > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.rec-grupo-sec > summary::-webkit-details-marker { display: none; }
+.rec-grupo-sec > summary:hover { background: var(--hover); }
+
+/* Mismo indicador que las secciones de Ajustes: una sola flecha que rota. Dos caracteres
+   distintos (▸/▾) se ven como un guión a este tamaño en Segoe UI. */
+.rec-grupo-sec > summary::after {
+  content: '▾';
+  color: var(--muted);
+  font-size: 12px;
+  transition: transform .18s ease;
+}
+
+.rec-grupo-sec[open] > summary::after { transform: rotate(180deg); }
+
+.rec-grupo-nombre {
+  font-weight: 600;
+  border-left: 3px solid var(--c, var(--muted));
+  padding-left: 8px;
+}
+
+.rec-grupo-n {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  min-width: 1.2em;
+  text-align: right;
+}
+
+.rec-grupo-sec > .rec-list { padding: 10px 0 4px 10px; }
+
+/* El panel de administrar grupos, cerrado por default: se toca poco. */
+.rec-grupos { margin-top: 18px; }
+
+.rec-grupos > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  user-select: none;
+}
+
+.rec-grupos-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+
+.rec-grupo-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rec-grupo-form input[type="text"] { flex: 1 1 160px; min-width: 0; }
+.rec-grupo-del { margin: -4px 0 6px; }
+
+#rec-filtro { width: 100%; max-width: 320px; margin-bottom: 4px; }

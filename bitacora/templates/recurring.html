@@ -44,6 +44,50 @@
       </div>
     </div>
 
+    {# Tipo y grupo. El subtítulo de cada tipo va acá y no solo en la lista: es donde se decide,
+       y es la única forma de que la diferencia se entienda sin tener que explicarla aparte. #}
+    <div class="field-row">
+      <div class="field-group">
+        <label>Tipo</label>
+        <div class="freq-options">
+          <label class="freq-opt">
+            <input type="radio" name="tipo" value="rutina" checked onchange="recTipo(this.value)">
+            <span>Rutina <i class="rec-hint">· se mide</i></span>
+          </label>
+          <label class="freq-opt">
+            <input type="radio" name="tipo" value="recordatorio" onchange="recTipo(this.value)">
+            <span>Recordatorio <i class="rec-hint">· avisa</i></span>
+          </label>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Grupo</label>
+        <select name="group_id" id="rec-grupo" class="journal-cat-select" onchange="recGrupo()">
+          <option value="">Sin grupo</option>
+          {% for g in grupos %}
+          <option value="{{ g.id }}" data-tipo="{{ g.tipo }}"
+                  data-especial="{{ g.especial }}">{{ g.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    {# Solo con un grupo de cumpleaños. Se guarda el AÑO —no se desactualiza— pero se puede
+       cargar la edad, que es el caso real: sabés que cumple 34 y no le vas a preguntar el año. #}
+    <div id="rec-cumple" class="freq-detail" style="display:none;">
+      <div class="field-row">
+        <div class="field-group">
+          <label>Año de nacimiento <span style="font-weight:400;">(opcional)</span></label>
+          <input type="number" name="birth_year" min="1900" max="{{ anio_actual }}"
+                 placeholder="1992" style="width:120px;">
+        </div>
+        <div class="field-group">
+          <label>…o cuántos cumple este año</label>
+          <input type="number" name="edad" min="0" max="130" placeholder="34" style="width:100px;">
+        </div>
+      </div>
+    </div>
+
     <div class="field-group">
       <label>Frecuencia</label>
       <div class="freq-options">
@@ -63,6 +107,19 @@
           <input type="radio" name="rtype" value="once" onchange="showFreq(this.value)">
           <span>Una sola vez</span>
         </label>
+        {# ⚠️ Por mes-día, no cada 365 días: así no se corre. Un cumpleaños modelado como
+           "cada 364 días" se adelanta un día por año — el del 5 de mayo caía el 1 a los tres
+           años y en febrero a los cincuenta. #}
+        <label class="freq-opt">
+          <input type="radio" name="rtype" value="yearly" onchange="showFreq(this.value)">
+          <span>Una vez al año</span>
+        </label>
+      </div>
+
+      <div id="freq-yearly" class="freq-detail" style="display:none;">
+        <p class="rec-hint" style="margin:8px 0 0;">
+          Se repite cada año en la misma fecha de <b>Desde</b>.
+        </p>
       </div>
 
       <div id="freq-weekly" class="freq-detail" style="display:none;">
@@ -87,14 +144,109 @@
       </div>
     </div>
 
-    <button type="submit" class="btn-primary">Agregar evento</button>
+    {# Solo los recordatorios avisan antes: "en 3 días vas al gimnasio", todos los días, no
+       ayuda a nadie. #}
+    <div class="field-group" id="rec-aviso" style="display:none;">
+      <label>Avisar antes</label>
+      <div class="freq-options">
+        {% for val, txt in [('0','No'), ('2','2 días antes'), ('7','7 días antes'), ('otro','Otro')] %}
+        <label class="freq-opt">
+          <input type="radio" name="aviso" value="{{ val }}" {% if loop.first %}checked{% endif %}
+                 onchange="recAviso(this.value)">
+          <span>{{ txt }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <div id="rec-aviso-otro" class="freq-detail" style="display:none;">
+        <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+          <input type="number" name="aviso_otro" value="3" min="1" max="365" style="width:70px;">
+          <span>días antes</span>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-primary">Agregar</button>
   </form>
 </div>
 
+{# ── Grupos ───────────────────────────────────────────────────────────────── #}
+<details class="rec-grupos" id="rec-grupos-panel">
+  <summary>Grupos <span class="rec-hint">· las secciones de abajo</span></summary>
+  <div class="rec-grupos-body">
+    <form method="POST" action="{{ url_for('recurring.grupo_add') }}" class="rec-grupo-form">
+      <input type="text" name="name" placeholder="Nombre del grupo" maxlength="40" required>
+      <select name="tipo" class="journal-cat-select">
+        <option value="rutina">en Rutinas</option>
+        <option value="recordatorio">en Recordatorios</option>
+      </select>
+      <div class="color-row">
+        {% for c in note_colors %}
+        <label class="color-opt">
+          <input type="radio" name="color" value="{{ c }}" {% if loop.first %}checked{% endif %}>
+          <span class="color-circle" style="background:{{ c }};"></span>
+        </label>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn-primary">Crear grupo</button>
+    </form>
+
+    {% for g in grupos %}
+    <form method="POST" action="{{ url_for('recurring.grupo_edit', group_id=g.id) }}"
+          class="rec-grupo-form">
+      <input type="text" name="name" value="{{ g.name }}" maxlength="40" required>
+      <select name="tipo" class="journal-cat-select" {% if g.especial %}disabled{% endif %}>
+        <option value="rutina" {% if g.tipo == 'rutina' %}selected{% endif %}>en Rutinas</option>
+        <option value="recordatorio" {% if g.tipo == 'recordatorio' %}selected{% endif %}>en Recordatorios</option>
+      </select>
+      {# El de fábrica no cambia de tipo: es el que enciende los cumpleaños. El select va
+         deshabilitado, así que el valor viaja por acá. #}
+      {% if g.especial %}<input type="hidden" name="tipo" value="{{ g.tipo }}">{% endif %}
+      <div class="color-row">
+        {% for c in note_colors %}
+        <label class="color-opt">
+          <input type="radio" name="color" value="{{ c }}" {% if g.color == c %}checked{% endif %}>
+          <span class="color-circle" style="background:{{ c }};"></span>
+        </label>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn-edit">Guardar</button>
+    </form>
+    {% if not g.especial %}
+    <form method="POST" action="{{ url_for('recurring.grupo_delete', group_id=g.id) }}"
+          class="rec-grupo-del"
+          data-confirmar="¿Eliminar el grupo «{{ g.name }}»?&#10;&#10;Lo que tenga adentro no se borra: queda sin grupo."
+          data-confirmar-ok="Eliminar el grupo" onsubmit="return false;">
+      <button type="submit" class="btn-delete-sm">Eliminar «{{ g.name }}»</button>
+    </form>
+    {% endif %}
+    {% endfor %}
+  </div>
+</details>
+
 <!-- LIST -->
-{% if events %}
-<div class="rec-list">
-  {% for ev in events %}
+{# El filtro cubre la parte de "búsqueda": con muchas rutinas, plegar y desplegar para encontrar
+   una es peor que escribir dos letras. Mismo comportamiento que el filtro de categorías del día. #}
+<input type="text" id="rec-filtro" class="jcat-filter" placeholder="Filtrar por nombre..."
+       autocomplete="off" oninput="filtrarRutinas(this.value)">
+
+{% for sec in secciones %}
+<section class="rec-seccion" data-tipo="{{ sec.tipo }}">
+  <h2 class="rec-seccion-titulo">
+    {{ sec.titulo }} <span class="rec-hint">· {{ sec.sub }}</span>
+  </h2>
+  {% if sec.bloques %}
+  {% for grupo, eventos in sec.bloques %}
+  {% set gid = 'g' ~ grupo.id if grupo else 'sin-' ~ sec.tipo %}
+  <details class="rec-grupo-sec" id="rec-sec-{{ gid }}">
+    <summary>
+      <span class="rec-grupo-nombre" style="--c: {{ grupo.color if grupo else 'var(--muted)' }};">
+        {% if grupo %}{{ grupo.name }}{% if grupo.especial == 'cumpleanos' %} 🎂{% endif %}
+        {% else %}Sin grupo{% endif %}
+      </span>
+      <span class="rec-grupo-n">{{ eventos | length }}</span>
+    </summary>
+  <div class="rec-list">
+  {% for ev in eventos %}
   {% set colors = note_colors %}
   {% set wdays_checked = ev.recurrence.split(':')[1].split(',') if ev.recurrence.startswith('weekly:') else [] %}
 
@@ -116,12 +268,22 @@
             Cada: {% for d in wdays %}{{ day_map.get(d, d) }}{% if not loop.last %}, {% endif %}{% endfor %}
           {% elif ev.recurrence.startswith('every:') %}
             Cada {{ ev.recurrence.split(':')[1] }} días
+          {% elif ev.recurrence == 'yearly' %}
+            {% set MESES_C = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+                              'septiembre','octubre','noviembre','diciembre'] %}
+            Cada año, el {{ ev.start_date[8:10] | int }} de {{ MESES_C[ev.start_date[5:7] | int - 1] }}
           {% endif %}
           {% if ev.recurrence == 'once' %}
             · el {{ ev.start_date | fechacorta }}
+          {% elif ev.recurrence == 'yearly' %}
+            {# La fecha "desde" ya se lee en la regla de arriba; repetirla sería ruido. Lo que sí
+               importa es hasta cuándo, si se puso. #}
+            {% if ev.end_date %} · hasta {{ ev.end_date | fechacorta }}{% endif %}
           {% else %}
             · desde {{ ev.start_date | fechacorta }}{% if ev.end_date %} hasta {{ ev.end_date | fechacorta }}{% endif %}
           {% endif %}
+          {% if edades.get(ev.id) %} · cumple {{ edades[ev.id] }}{% endif %}
+          {% if ev.aviso_dias %} · avisa {{ ev.aviso_dias }} día{{ 's' if ev.aviso_dias != 1 }} antes{% endif %}
         </span>
         {% set s = stats.get(ev.id, {}) %}
         {% if s.applicable %}
@@ -271,23 +433,105 @@
 
   </div>
   {% endfor %}
-</div>
-{% else %}
-<p class="empty-msg">Todavía no tenés eventos recurrentes. Agregá el primero arriba.</p>
-{% endif %}
+  </div>
+  </details>
+  {% endfor %}
+  {% else %}
+  <p class="empty-msg">
+    {% if sec.tipo == 'rutina' %}Todavía no tenés rutinas. Agregá la primera arriba.
+    {% else %}Todavía no tenés recordatorios: un cumpleaños, un vencimiento, un trámite.
+    {% endif %}
+  </p>
+  {% endif %}
+</section>
+{% endfor %}
 
+<script src="{{ url_for('static', filename='js/colapsables.js') }}"></script>
 <script>
 const today = "{{ today }}";
 
 function showFreq(val) {
   document.getElementById('freq-weekly').style.display = val === 'weekly' ? 'block' : 'none';
   document.getElementById('freq-every').style.display  = val === 'every'  ? 'block' : 'none';
+  document.getElementById('freq-yearly').style.display = val === 'yearly' ? 'block' : 'none';
+}
+
+// ── Tipo, grupo y aviso ─────────────────────────────────────────────────────
+// El grupo pertenece a un tipo, así que la lista se filtra: ofrecer "Cumpleaños" para una rutina
+// sería ofrecer algo que después no se puede guardar donde dice.
+function recTipo(tipo) {
+  const sel = document.getElementById('rec-grupo');
+  let cambio = false;
+  Array.from(sel.options).forEach(function (o) {
+    if (!o.value) return;                       // "Sin grupo" sirve para los dos
+    const suyo = o.dataset.tipo === tipo;
+    o.hidden = !suyo;
+    if (!suyo && o.selected) { sel.value = ''; cambio = true; }
+  });
+  document.getElementById('rec-aviso').style.display = tipo === 'recordatorio' ? 'block' : 'none';
+  if (cambio) recGrupo();
+}
+
+// Elegir un grupo de cumpleaños es el "template": deja la frecuencia anual puesta y pide la edad.
+// Solo empuja la frecuencia si estaba en el default, para no pisar lo que hayas elegido a mano.
+function recGrupo() {
+  const sel = document.getElementById('rec-grupo');
+  const esCumple = sel.selectedOptions[0] && sel.selectedOptions[0].dataset.especial === 'cumpleanos';
+  document.getElementById('rec-cumple').style.display = esCumple ? 'block' : 'none';
+  if (esCumple) {
+    const actual = document.querySelector('[name="rtype"]:checked');
+    if (actual && actual.value === 'daily') {
+      document.querySelector('[name="rtype"][value="yearly"]').checked = true;
+      showFreq('yearly');
+    }
+  }
+}
+
+function recAviso(val) {
+  document.getElementById('rec-aviso-otro').style.display = val === 'otro' ? 'block' : 'none';
+}
+
+// ── Filtro por nombre ───────────────────────────────────────────────────────
+// Sin acentos ni mayúsculas, igual que el filtro de categorías del día: buscar "cumple" tiene
+// que encontrar "Cumpleaños".
+function _norm(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function filtrarRutinas(q) {
+  const busca = _norm(q.trim());
+  document.querySelectorAll('.rec-seccion').forEach(function (sec) {
+    let vivosEnSeccion = 0;
+    sec.querySelectorAll('.rec-grupo-sec').forEach(function (grupo) {
+      let vivos = 0;
+      grupo.querySelectorAll('.rec-entry').forEach(function (e) {
+        const nombre = e.querySelector('.rec-title');
+        const ok = !busca || (nombre && _norm(nombre.textContent).includes(busca));
+        e.hidden = !ok;
+        if (ok) vivos++;
+      });
+      grupo.hidden = vivos === 0;
+      // Filtrar y tener que abrir a mano cada grupo sería pelearse con la pantalla.
+      if (busca && vivos) grupo.open = true;
+      vivosEnSeccion += vivos;
+    });
+    const vacio = sec.querySelector('.empty-msg');
+    if (vacio) vacio.hidden = !!busca;
+    sec.hidden = busca !== '' && vivosEnSeccion === 0;
+  });
 }
 
 function showEditFreq(id, val) {
   document.getElementById('ef-weekly-' + id).style.display = val === 'weekly' ? 'block' : 'none';
   document.getElementById('ef-every-'  + id).style.display = val === 'every'  ? 'block' : 'none';
 }
+
+// El estado de cada sección se recuerda, como en Ajustes y el visor de tareas.
+document.querySelectorAll('.rec-grupo-sec').forEach(function (d) {
+  recordarColapsable(d.id, 'recOpen-' + d.id, true);
+});
+recordarColapsable('rec-grupos-panel', 'recGruposOpen', false);
+recTipo('rutina');
 
 function editRec(id) {
   document.getElementById('rec-view-' + id).style.display = 'none';

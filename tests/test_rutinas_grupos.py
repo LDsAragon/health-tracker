@@ -231,3 +231,118 @@ def test_la_version_del_esquema_subio(test_db):
     assert SCHEMA_VERSION >= 3
     with db.get_db() as conn:
         assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
+
+
+# ── El año de nacimiento ─────────────────────────────────────────────────────
+
+def test_se_puede_cargar_el_ano_o_la_edad():
+    """El año es el dato canónico; la edad es el atajo para cuando no lo sabés —el caso que
+    planteó el usuario: "sé que cumple 34 y no le voy a preguntar la fecha de nacimiento"."""
+    from bitacora import services
+    hoy = date(2026, 9, 13)
+    assert services.anio_de_nacimiento("1992", "", hoy) == 1992
+    assert services.anio_de_nacimiento("", "34", hoy) == 1992
+    assert services.anio_de_nacimiento("1990", "34", hoy) == 1990   # el año exacto manda
+    assert services.anio_de_nacimiento("", "", hoy) is None
+
+
+def test_un_ano_o_una_edad_imposibles_no_se_guardan():
+    from bitacora import services
+    hoy = date(2026, 9, 13)
+    for anio, edad in [("ayer", ""), ("", "x"), ("1800", ""), ("2099", ""), ("", "500")]:
+        assert services.anio_de_nacimiento(anio, edad, hoy) is None
+
+
+def test_la_edad_no_depende_de_si_el_cumple_ya_paso():
+    """Se lee como "los que cumple ESTE año". Si dependiera de si ya pasó, el mismo número
+    daría dos años distintos según el día en que lo cargaste."""
+    from bitacora import services
+    assert (services.anio_de_nacimiento("", "34", date(2026, 1, 2)) ==
+            services.anio_de_nacimiento("", "34", date(2026, 12, 30)))
+
+
+# ── La pantalla ──────────────────────────────────────────────────────────────
+
+def _alta(client, **campos):
+    datos = {"title": "Algo", "color": "#6366f1", "rtype": "daily",
+             "start_date": "2026-05-05", "tipo": "rutina"}
+    datos.update(campos)
+    return client.post("/recurring/add", data=datos, follow_redirects=True)
+
+
+def test_la_pantalla_separa_rutinas_de_recordatorios(client):
+    html = client.get("/recurring").data.decode()
+    assert "lo que se mide" in html and "lo que avisa" in html
+
+
+def test_se_puede_crear_un_cumpleanos_desde_el_formulario(client):
+    grupo = [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
+    _alta(client, title="Cumple de Pablo", tipo="recordatorio", rtype="yearly",
+          group_id=grupo["id"], edad="34", aviso="7")
+    ev = db.get_recurring_events()[-1]
+    assert ev["tipo"] == "recordatorio"
+    assert ev["recurrence"] == "yearly"
+    assert ev["group_id"] == grupo["id"]
+    assert ev["birth_year"] == date.today().year - 34
+    assert ev["aviso_dias"] == 7
+
+
+def test_una_rutina_no_guarda_antelacion_aunque_la_manden(client):
+    _alta(client, title="Caminadora", tipo="rutina", aviso="7")
+    assert db.get_recurring_events()[-1]["aviso_dias"] == 0
+
+
+def test_la_antelacion_otro_acepta_un_numero_libre(client):
+    _alta(client, title="Vence el seguro", tipo="recordatorio", rtype="yearly",
+          aviso="otro", aviso_otro="21")
+    assert db.get_recurring_events()[-1]["aviso_dias"] == 21
+
+
+def test_una_antelacion_disparatada_se_acota(client):
+    _alta(client, title="x", tipo="recordatorio", aviso="otro", aviso_otro="99999")
+    assert db.get_recurring_events()[-1]["aviso_dias"] == 365
+
+
+def test_el_porcentaje_no_se_muestra_en_un_recordatorio(client):
+    """⚠️ Lo que empezó todo: el cumpleaños arrastraba un "0 / 15 0%" que no significaba nada."""
+    grupo = [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
+    _alta(client, title="Cumple de Pablo", tipo="recordatorio", rtype="yearly",
+          group_id=grupo["id"])
+    html = client.get("/recurring").data.decode()
+    assert "Cumple de Pablo" in html
+    assert "Últimos 30 días" not in html          # no hay ninguna rutina todavía
+
+    _alta(client, title="Caminadora", tipo="rutina")
+    assert "Últimos 30 días" in client.get("/recurring").data.decode()
+
+
+def test_la_pantalla_muestra_la_edad_y_la_antelacion(client):
+    grupo = [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
+    _alta(client, title="Cumple de Pablo", tipo="recordatorio", rtype="yearly",
+          start_date="2026-05-05", group_id=grupo["id"], edad="34", aviso="7")
+    html = client.get("/recurring").data.decode()
+    assert "Cada año, el 5 de mayo" in html
+    assert "cumple 34" in html
+    assert "avisa 7 días antes" in html
+
+
+# ── Los grupos desde la pantalla ─────────────────────────────────────────────
+
+def test_crear_renombrar_y_borrar_un_grupo(client):
+    client.post("/recurring/grupo/add", data={"name": "Salud", "color": "#22c55e",
+                                              "tipo": "rutina"}, follow_redirects=True)
+    grupo = [g for g in db.get_event_groups() if g["name"] == "Salud"][0]
+
+    client.post(f"/recurring/grupo/{grupo['id']}/edit",
+                data={"name": "Salud y cuerpo", "color": "#22c55e", "tipo": "rutina"},
+                follow_redirects=True)
+    assert any(g["name"] == "Salud y cuerpo" for g in db.get_event_groups())
+
+    client.post(f"/recurring/grupo/{grupo['id']}/delete", follow_redirects=True)
+    assert not any(g["id"] == grupo["id"] for g in db.get_event_groups())
+
+
+def test_la_pantalla_no_deja_borrar_el_grupo_de_fabrica(client):
+    grupo = [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
+    client.post(f"/recurring/grupo/{grupo['id']}/delete", follow_redirects=True)
+    assert any(g["especial"] == "cumpleanos" for g in db.get_event_groups())

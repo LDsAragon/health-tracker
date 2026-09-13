@@ -66,6 +66,11 @@ def main() -> int:
     print("DB:", conn.DB_PATH, flush=True)
     print(f"URL: http://127.0.0.1:{puerto}", flush=True)
     from bitacora.app import app
+    # Jinja cachea las plantillas y su `auto_reload` va atado a `debug`, que acá queda en False.
+    # Sin esto, editar una plantilla no se ve hasta reiniciar el servidor y uno termina
+    # persiguiendo un bug que ya había arreglado.
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
+    app.jinja_env.auto_reload = True
     app.run(host="127.0.0.1", port=puerto, debug=False, use_reloader=False)
     return 0
 

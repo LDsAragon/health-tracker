@@ -125,3 +125,37 @@ def color_sugerido(ajuste: str) -> str:
     if ajuste == "aleatorio":
         return random.choice(NOTE_COLORS)
     return ajuste if ajuste in NOTE_COLORS else ""
+
+
+# ── Cumpleaños: el año de nacimiento ─────────────────────────────────────────
+
+def anio_de_nacimiento(anio_txt: str, edad_txt: str, hoy) -> int | None:
+    """Se guarda el AÑO, pero se puede cargar la edad. Devuelve None si no se sabe ninguno.
+
+    El año es el dato canónico porque no se desactualiza; la edad es el atajo para el caso
+    real que planteó el usuario: *"sé que la persona cumple 34 pero no quiero ir a preguntarle
+    la fecha de nacimiento"*. Si vienen los dos, manda el año — es el dato exacto.
+
+    ⚠️ La edad se lee como "los que cumple ESTE año", no como "los que tiene hoy". Así el
+    resultado no depende de si el cumpleaños ya pasó o no, que es justo lo que haría que el
+    mismo número diera dos años distintos según el día en que lo cargaste.
+    """
+    anio_txt, edad_txt = (anio_txt or "").strip(), (edad_txt or "").strip()
+    if anio_txt:
+        try:
+            anio = int(anio_txt)
+        except ValueError:
+            return None
+        return anio if 1900 <= anio <= hoy.year else None
+    if edad_txt:
+        try:
+            edad = int(edad_txt)
+        except ValueError:
+            return None
+        return hoy.year - edad if 0 <= edad <= 130 else None
+    return None
+
+
+def edad_en(birth_year, anio: int):
+    """Los años que cumple en `anio`, o None si no se guardó el año de nacimiento."""
+    return anio - birth_year if birth_year else None
