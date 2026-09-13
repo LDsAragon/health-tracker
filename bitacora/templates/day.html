@@ -396,7 +396,9 @@
 </div>
 
 <!-- Panel lateral derecho: rutinas y eventos agendados -->
-{% if day_events %}
+{# El panel aparece si hay algo HOY o algo que se viene: un recordatorio a tres días era lo
+   único en pantalla y quedaba invisible porque el aside colgaba solo de day_events. #}
+{% if day_events or avisos %}
 <aside class="day-side day-side-right">
   <div class="day-alto-grip" data-var="--day-alto-rutinas" data-pref="day_alto_rutinas"
        data-panel=".day-card-events-panel"
@@ -411,7 +413,7 @@
         <!-- Hecho: chip tachado + nota + deshacer -->
         <div class="day-chip day-chip-done" style="--c: {{ ev.color }};">
           <span class="day-chip-check">&#10003;</span>
-          <span class="day-chip-title">{{ ev.title }}</span>
+          <span class="day-chip-title">{% if ev.grupo_especial == 'cumpleanos' %}🎂 {% endif %}{{ ev.title }}</span>
           {% if ev.completion_note %}
           <span class="day-chip-note">— {{ ev.completion_note }}</span>
           {% endif %}
@@ -423,7 +425,7 @@
         {% elif ev.skipped %}
         <!-- Salteado: chip gris + nota + deshacer -->
         <div class="day-chip day-chip-skipped">
-          <span class="day-chip-title">{{ ev.title }}</span>
+          <span class="day-chip-title">{% if ev.grupo_especial == 'cumpleanos' %}🎂 {% endif %}{{ ev.title }}</span>
           {% if ev.completion_note %}
           <span class="day-chip-note">— {{ ev.completion_note }}</span>
           {% endif %}
@@ -437,7 +439,7 @@
         <div class="day-chip day-chip-todo" style="--c: {{ ev.color }};"
              onclick="openEvForm({{ ev.id }})" id="ev-chip-{{ ev.id }}">
           <span class="day-chip-circle"></span>
-          <span class="day-chip-title">{{ ev.title }}</span>
+          <span class="day-chip-title">{% if ev.grupo_especial == 'cumpleanos' %}🎂 {% endif %}{{ ev.title }}</span>
           <span class="day-chip-hint">clic para marcar</span>
         </div>
         <form class="day-ev-form" id="ev-form-{{ ev.id }}" style="display:none;">
@@ -455,6 +457,17 @@
         </form>
         {% endif %}
 
+      </div>
+      {% endfor %}
+
+      {# Lo que se viene. Van al final y SIN tilde: todavía no pasó, así que no hay nada que
+         marcar como hecho. Solo aparecen mirando el día de hoy. #}
+      {% for av in avisos %}
+      <div class="day-aviso" style="--c: {{ av.color }};">
+        <span class="day-aviso-cuando">en {{ av.faltan }} día{{ 's' if av.faltan != 1 }}</span>
+        <span class="day-aviso-titulo">{{ av.title }}</span>
+        <a href="{{ url_for('day.day_view', date_str=av.fecha) }}"
+           class="day-aviso-ir" title="Ir a ese día">&#8594;</a>
       </div>
       {% endfor %}
     </div>

@@ -47,6 +47,10 @@ def day_view(date_str):
         for ev in recurring if db.event_applies(ev, d)
     ]
 
+    # ⚠️ "En 3 días" solo significa algo parado en hoy. Mirando el 20 de marzo del año pasado
+    # sería una cuenta contra una fecha que ya pasó, así que los avisos no se muestran ahí.
+    avisos = db.avisos_proximos(recurring, d) if d == date.today() else []
+
     journal_entries = db.get_journal_entries_for_date(date_str)
     journal_cats    = db.get_journal_categories()
     todos           = db.get_todos_for_date(date_str)
@@ -58,7 +62,7 @@ def day_view(date_str):
 
     return render_template(
         "day.html",
-        date_str=date_str, d=d, notes=notes, day_events=day_events,
+        date_str=date_str, d=d, notes=notes, day_events=day_events, avisos=avisos,
         journal_entries=journal_entries, journal_cats=journal_cats, todos=todos,
         prev_day=prev_day, next_day=next_day, ref=ref,
         today=date.today().isoformat(), celebrate=celebrate,

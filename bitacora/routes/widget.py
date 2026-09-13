@@ -52,6 +52,10 @@ def vista():
             [hoy]).get(hoy.isoformat(), [])
             if _setting("widget_rutinas", "show") == "show" else []),
         ver_rutinas=_setting("widget_rutinas", "show") == "show",
+        # Lo que se viene, junto a las rutinas: el widget es el otro lugar donde se mira "qué hay
+        # ahora", así que la antelación tiene el mismo sentido que en el día.
+        avisos=(db.avisos_proximos(db.get_recurring_events(), hoy)
+                if _setting("widget_rutinas", "show") == "show" else []),
         prev=(año - 1, 12) if mes == 1 else (año, mes - 1),
         sig=(año + 1, 1) if mes == 12 else (año, mes + 1),
         fijado=widget.esta_fijado(),

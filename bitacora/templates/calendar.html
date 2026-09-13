@@ -44,7 +44,8 @@
 
             {% for ev in day_evs %}
             <span class="chip {% if ev.done %}chip-done{% elif ev.skipped %}chip-skipped{% endif %}"
-                  {% if not ev.skipped %}style="--c: {{ ev.color }};"{% endif %}>{{ ev.title }}</span>
+                  {% if not ev.skipped %}style="--c: {{ ev.color }};"{% endif %}>{%
+                  if ev.grupo_especial == 'cumpleanos' %}🎂 {% endif %}{{ ev.title }}</span>
             {% endfor %}
 
             {% for note in day_notes %}

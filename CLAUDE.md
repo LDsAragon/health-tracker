@@ -139,7 +139,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 717 tests, ~37s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 724 tests, ~38s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -555,6 +555,21 @@ recordatorios con `applicable = 0`.
 - **La antelación vive aparte** (`avisos_proximos()`): "¿aplica hoy?" y "¿cuánto falta?" son dos
   preguntas distintas, y mezclarlas haría que un recordatorio con aviso apareciera como si el día
   fuera hoy. El que cae hoy **no** es un aviso: ese sale por el camino normal.
+
+### Dónde se ven los recordatorios
+- **En su día**, como cualquier rutina: tildables y con 🎂 si son de un grupo de cumpleaños. El
+  icono sale de `grupo_especial`, que viene en el mismo SELECT de `get_recurring_events()` (LEFT
+  JOIN, porque no tener grupo es válido) para que no haya una consulta por vista.
+- **Lo que se viene** (la antelación) va en el **día de hoy** y en el **widget**, que son los dos
+  lugares donde se mira "qué hay ahora". Aparece sin tilde: todavía no pasó, no hay nada que
+  marcar como hecho.
+- ⚠️ **Solo se muestra parado en HOY.** Mirando el 20 de marzo del año pasado, "en 3 días" sería
+  una cuenta contra una fecha que ya pasó.
+- ⚠️ **La antelación NO va al calendario ni a la semana.** Cada celda dice qué pasa **ese** día, y
+  llenar los tres días previos con el mismo cumpleaños lo ensucia.
+- ⚠️ El panel de rutinas del día cuelga de **`day_events or avisos`**: colgaba solo de
+  `day_events`, así que un recordatorio a tres días —lo único que había para mostrar— quedaba
+  invisible.
 
 ### Lo que la migración NO hace
 Las rutinas que ya existían quedan **exactamente como estaban** (Rutina, sin grupo, misma

@@ -4,9 +4,18 @@ from .conn import get_db
 
 
 def get_recurring_events() -> list:
+    """Las rutinas y recordatorios activos, con el grupo al que pertenecen.
+
+    El `grupo_especial` viene en el mismo SELECT y no en una consulta aparte porque lo necesitan
+    todas las vistas —el día, el calendario, la semana y el widget— para saber si algo es un
+    cumpleaños y mostrarlo como tal. Es un LEFT JOIN: no tener grupo es válido.
+    """
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT * FROM recurring_events WHERE active = 1 ORDER BY id"
+            "SELECT e.*, g.name AS grupo_nombre, g.especial AS grupo_especial"
+            " FROM recurring_events e"
+            " LEFT JOIN recurring_groups g ON g.id = e.group_id"
+            " WHERE e.active = 1 ORDER BY e.id"
         ).fetchall()
     return [dict(r) for r in rows]
 

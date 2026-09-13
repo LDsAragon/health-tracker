@@ -736,3 +736,36 @@ body.day-redimensionando:has(.day-alto-grip.arrastrando) { cursor: row-resize; }
 @keyframes pet-in  { from { opacity:0; transform:scale(.8); } to { opacity:1; transform:scale(1); } }
 @keyframes pet-out { to   { opacity:0; transform:scale(.8); } }
 @keyframes pet-bounce { from { transform:translateY(0); } to { transform:translateY(-8px); } }
+
+/* Lo que se viene: un recordatorio con antelación, en el día de hoy. Sin tilde —todavía no
+   pasó— y más apagado que lo de hoy, para que no compita con lo que sí toca ahora. */
+.day-aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--c, var(--muted));
+  border-radius: 0 var(--r) var(--r) 0;
+  background: var(--hover);
+  font-size: 13px;
+  opacity: .85;
+}
+
+.day-aviso-cuando {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  flex-shrink: 0;
+}
+
+.day-aviso-titulo { overflow-wrap: anywhere; min-width: 0; }
+
+.day-aviso-ir {
+  margin-left: auto;
+  color: var(--muted);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.day-aviso-ir:hover { color: var(--accent); }

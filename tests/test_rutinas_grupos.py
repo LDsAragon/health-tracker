@@ -346,3 +346,71 @@ def test_la_pantalla_no_deja_borrar_el_grupo_de_fabrica(client):
     grupo = [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
     client.post(f"/recurring/grupo/{grupo['id']}/delete", follow_redirects=True)
     assert any(g["especial"] == "cumpleanos" for g in db.get_event_groups())
+
+
+# ── Los recordatorios en el resto de la app ──────────────────────────────────
+
+def _cumple_en(client, dias, **extra):
+    """Un cumpleaños a N días de hoy, creado por la pantalla."""
+    from datetime import timedelta
+    grupo = [g for g in db.get_event_groups() if g["especial"] == "cumpleanos"][0]
+    cuando = date.today() + timedelta(days=dias)
+    datos = {"title": "Cumple de mamá", "color": "#a855f7", "rtype": "yearly",
+             "start_date": cuando.replace(year=1960).isoformat(), "tipo": "recordatorio",
+             "group_id": grupo["id"]}
+    datos.update(extra)
+    client.post("/recurring/add", data=datos, follow_redirects=True)
+    return cuando
+
+
+def test_el_dia_de_hoy_muestra_lo_que_se_viene(client):
+    _cumple_en(client, 3, aviso="7")
+    html = client.get(f"/day/{date.today().isoformat()}").data.decode()
+    assert "day-aviso" in html
+    assert "en 3 días" in html
+
+
+def test_otro_dia_no_muestra_avisos(client):
+    """⚠️ "En 3 días" solo significa algo parado en hoy: mirando un día del año pasado sería
+    una cuenta contra una fecha que ya pasó."""
+    from datetime import timedelta
+    _cumple_en(client, 3, aviso="7")
+    otro = (date.today() + timedelta(days=30)).isoformat()
+    assert "day-aviso" not in client.get(f"/day/{otro}").data.decode()
+
+
+def test_el_widget_muestra_lo_que_se_viene(client):
+    _cumple_en(client, 3, aviso="7")
+    html = client.get("/widget?p=tareas").data.decode()
+    assert "Se viene" in html and "Cumple de mamá" in html
+
+
+def test_el_calendario_muestra_el_cumpleanos_en_su_dia_y_no_antes(client):
+    """⚠️ La antelación NO va al calendario: cada celda dice qué pasa ESE día, y llenar los días
+    previos con el mismo cumpleaños lo ensucia. "Qué se viene" es del día de hoy y del widget."""
+    cuando = _cumple_en(client, 3, aviso="7")
+    html = client.get(f"/calendar/{cuando.year}/{cuando.month}").data.decode()
+    assert "Cumple de mamá" in html
+    assert "day-aviso" not in html
+
+
+def test_un_cumpleanos_se_distingue_en_el_calendario(client):
+    cuando = _cumple_en(client, 0)
+    html = client.get(f"/calendar/{cuando.year}/{cuando.month}").data.decode()
+    assert "🎂" in html
+
+
+def test_las_rutinas_traen_su_grupo(client):
+    """El `grupo_especial` viene en el mismo SELECT: lo necesitan el día, el calendario, la
+    semana y el widget para saber si algo es un cumpleaños."""
+    _cumple_en(client, 0)
+    ev = db.get_recurring_events()[-1]
+    assert ev["grupo_especial"] == "cumpleanos"
+    assert ev["grupo_nombre"] == "Cumpleaños"
+
+
+def test_una_rutina_sin_grupo_no_rompe_el_join(client):
+    db.add_recurring_event({"title": "Caminadora", "color": "#6366f1", "recurrence": "daily",
+                            "start_date": "2020-01-01"})
+    ev = db.get_recurring_events()[-1]
+    assert ev["grupo_especial"] is None and ev["grupo_nombre"] is None

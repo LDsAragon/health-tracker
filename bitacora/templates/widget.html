@@ -94,7 +94,20 @@
         <button class="w-check {% if ev.done %}w-check-on{% endif %}" style="--c: {{ ev.color }};"
                 title="{{ 'Desmarcar' if ev.done else 'Marcar como hecha' }}">{% if ev.done %}✓{% endif %}</button>
       </form>
-      <span class="w-txt">{{ ev.title }}</span>
+      <span class="w-txt">{% if ev.grupo_especial == 'cumpleanos' %}🎂 {% endif %}{{ ev.title }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {# Lo que se viene. Sin tilde: todavía no pasó. #}
+  {% if avisos %}
+  <p class="w-titulo w-titulo-sep">Se viene</p>
+  <ul class="w-lista">
+    {% for av in avisos %}
+    <li class="w-item">
+      <span class="w-aviso-dias">{{ av.faltan }}d</span>
+      <span class="w-txt">{{ av.title }}</span>
     </li>
     {% endfor %}
   </ul>
