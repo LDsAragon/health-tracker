@@ -1,5 +1,16 @@
 """Esquema, migraciones declarativas y triggers de identidad para sincronizar."""
-from .conn import get_db, _columns
+import threading
+
+from .conn import activar_wal, get_db, _columns
+
+# ⚠️ `init_db()` corre en CADA request y en el primer arranque hace todo el setup: crear tablas,
+# las migraciones y un DROP/CREATE de todos los triggers. Sin serializarlo, dos requests que
+# entran juntos —la ventana grande y el widget, que se abre solo— lo ejecutan los dos a la vez y
+# uno muere con "database is locked" o "database schema has changed": **un 500 en la pantalla
+# principal**, 4 de cada 10 arranques. Un lock de hilos alcanza porque las dos ventanas comparten
+# un único proceso; entre procesos distintos queda el `busy_timeout` de `get_db`.
+# El costo es nulo después del primer arranque: la guarda de `user_version` sale antes de entrar.
+_EN_SETUP = threading.Lock()
 
 # Versión del esquema, en PRAGMA user_version. Dos usos:
 #  1. init_db() la usa como guarda: corre en CADA request y sin esto pagaba los COMMIT/fsync
@@ -224,6 +235,18 @@ def init_db():
     with get_db() as conn:
         if conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION:
             return                                      # ya está al día
+    with _EN_SETUP:
+        _setup()
+
+
+def _setup():
+    """El trabajo real, con el lock tomado. Vuelve a mirar la versión: mientras este hilo
+    esperaba, otro pudo haber hecho todo."""
+    with get_db() as conn:
+        if conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION:
+            return
+    activar_wal()                                       # una sola vez; ver conn.activar_wal
+    with get_db() as conn:
         conn.executescript(SCHEMA)                      # 1) tablas e índices
         cols = {}                                       # 2) columnas nuevas
         for table, col, ddl in MIGRATIONS:

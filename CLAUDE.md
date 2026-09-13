@@ -139,7 +139,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 756 tests, ~70s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 760 tests, ~63s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -341,6 +341,18 @@ ninguno de los 33 puntos de escritura de `database/*.py` los conoce.
 - `PRAGMA user_version` (= `SCHEMA_VERSION`) hace de guarda de `init_db()`, que corre en cada
   request: sin eso costaba 5,5 ms por página en vez de 1. **Al agregar una migración hay que subir
   `SCHEMA_VERSION`** o las DBs instaladas se saltean el paso. `reset_db()` la baja a 0.
+- ⚠️ **El setup va serializado con un lock** (`schema._EN_SETUP`), y **el modo WAL se activa una
+  sola vez** (`conn.activar_wal`, desde `init_db`), nunca en `get_db()`. Las dos cosas arreglan el
+  mismo síntoma: **un 500 en la pantalla principal del primer arranque**, 4 de cada 10 veces. En
+  el primer arranque la guarda de `user_version` todavía no está, así que la ventana grande y el
+  widget —que se abre solo— entran juntos y los dos hacen el setup completo: uno moría con
+  "database is locked" (cambiar el journal_mode exige que no haya otra conexión abierta, y SQLite
+  **no** respeta el `busy_timeout` para eso) o con "database schema has changed" (una sentencia
+  invalidada porque el otro hilo está migrando). `get_db()` sí pone un `busy_timeout`, que es lo
+  que cubre dos **procesos** distintos. El lock no cuesta nada después: la guarda sale antes.
+  Lo fijan `test_init_db_soporta_requests_simultaneos_en_una_base_virgen` y dos tripwires — y ⚠️
+  ese test **pasa igual sin el lock**, porque con ocho hilos el que se dispara es el fallo del
+  WAL; el del lock salió con doce y por eso va por tripwire.
 - `updated_at` vacío significa "original, nunca modificada" y ordena antes que cualquier fecha. El
   backfill no lo rellena a propósito: haría ganar al dispositivo que migró último.
 

@@ -554,3 +554,75 @@ def test_reset_deja_la_db_usable(test_db):
     esperados = {f"{t}_{suf}" for t in db.SYNCABLE for suf in ("uid", "upd", "del")}
     esperados |= {"settings_ins", "settings_upd"}
     assert trig == esperados
+
+
+# ── El primer arranque, con dos ventanas a la vez ───────────────────────────
+
+def test_init_db_soporta_requests_simultaneos_en_una_base_virgen(tmp_path, monkeypatch):
+    """⚠️ El 500 en la pantalla principal del primer arranque.
+
+    `init_db()` corre en cada request y en el primer arranque hace todo el setup: crear tablas,
+    las migraciones y un DROP/CREATE de todos los triggers. La ventana grande y el widget —que
+    se abre solo— entran **juntos**, antes de que la guarda de `user_version` esté puesta, así
+    que los dos ejecutaban el setup completo y uno moría con "database is locked" o "database
+    schema has changed". Pasaba 4 de cada 10 arranques.
+
+    Dos cosas lo arreglan y las dos hacen falta: el lock que serializa el setup, y que el modo
+    WAL se ponga una sola vez (cambiarlo exige que no haya otra conexión abierta, y SQLite no
+    respeta el `busy_timeout` para eso).
+    """
+    import threading
+
+    errores = []
+
+    def trabajar():
+        try:
+            db.init_db()
+            with db.get_db() as conn:
+                conn.execute("INSERT INTO notes (note_date, content) VALUES ('2026-06-10', 'x')")
+                conn.execute("SELECT COUNT(*) FROM notes").fetchone()
+        except Exception as exc:                      # noqa: BLE001 - se reporta cualquiera
+            errores.append(f"{type(exc).__name__}: {exc}")
+
+    for i in range(5):
+        monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / f"virgen{i}.db"))
+        hilos = [threading.Thread(target=trabajar) for _ in range(8)]
+        for h in hilos:
+            h.start()
+        for h in hilos:
+            h.join()
+
+    assert errores == [], errores[:3]
+
+
+def test_el_modo_wal_no_se_toca_en_cada_conexion():
+    """Tripwire: volver a poner el `PRAGMA journal_mode=WAL` en `get_db()` trae de vuelta el 500
+    del primer arranque. Va una sola vez, desde `init_db()` (`conn.activar_wal`)."""
+    import inspect
+
+    from bitacora.database import conn as conn_mod
+    fuente = inspect.getsource(conn_mod.get_db)
+    assert "journal_mode" not in fuente
+    assert "busy_timeout" in fuente
+
+
+def test_el_setup_del_esquema_esta_serializado():
+    """Tripwire del lock.
+
+    ⚠️ Esto va aparte del test de concurrencia de arriba a propósito: **ese test pasa igual sin
+    el lock**, porque con ocho hilos el que se dispara es el fallo del WAL. El del lock —"database
+    schema has changed", una sentencia invalidada porque otro hilo está migrando— salió con doce
+    requests exactamente simultáneos, 1 de cada 40 arranques. Reproducirlo en la suite costaría
+    medio minuto por corrida, así que lo que se fija es que el lock siga ahí.
+    """
+    import inspect
+
+    from bitacora.database import schema
+    assert "_EN_SETUP" in inspect.getsource(schema.init_db)
+    assert isinstance(schema._EN_SETUP, type(__import__("threading").Lock()))
+
+
+def test_la_base_igual_termina_en_wal(test_db):
+    """El modo sigue activándose: es lo que hace que leer no bloquee a escribir."""
+    with db.get_db() as conn:
+        assert conn.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"

@@ -49,10 +49,34 @@ def token_datos() -> str:
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    """Conexión a la base. Cada caller abre la suya: nada se cachea (ver § perfiles)."""
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    # Si otra conexión está escribiendo, esperar en vez de fallar en el acto. Sin esto, dos
+    # requests que caen juntos sobre una escritura se pisan.
+    conn.execute("PRAGMA busy_timeout = 10000")
     return conn
+
+
+def activar_wal():
+    """Pone la base en WAL. Se llama UNA vez, desde `init_db()`.
+
+    ⚠️ Antes esto estaba en `get_db()`, o sea en **cada** conexión, y reventaba el primer
+    arranque con **un 500 en la pantalla principal**: cambiar el journal_mode a WAL exige que no
+    haya otra conexión con la base abierta —SQLite devuelve `SQLITE_BUSY` y **no** respeta el
+    `busy_timeout` para esto—, y en el primer arranque la ventana grande y el widget (que se abre
+    solo) entran juntos, antes de que `init_db()` haya puesto la guarda de `user_version`. Pasaba
+    4 de cada 10 arranques.
+
+    El modo es una propiedad del ARCHIVO y persiste entre conexiones, así que alcanza una vez. Si
+    otro lo está haciendo justo ahora, que falle es inofensivo: WAL es una optimización, no un
+    requisito de corrección, y el que ganó ya lo dejó puesto para todos.
+    """
+    with get_db() as conn:
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.OperationalError:
+            pass
 
 
 def _columns(conn, table):
