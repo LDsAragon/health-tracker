@@ -59,7 +59,8 @@
 
   <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px;">
     <form method="POST" action="{{ url_for('sync.aplicar') }}"
-          onsubmit="return confirm('¿Combinar los datos de las dos computadoras?');">
+          data-confirmar="¿Combinar los datos de las dos computadoras?" data-confirmar-ok="Combinar" data-confirmar-suave
+            onsubmit="return false;">
       <input type="hidden" name="back" value="{{ back or '' }}">
       {% if ajeno %}<input type="hidden" name="confirmo_ajeno" value="si">{% endif %}
       <button type="submit" class="btn-primary">

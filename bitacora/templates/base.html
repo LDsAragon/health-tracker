@@ -229,6 +229,21 @@
   </script>
 
   <!-- Modal de tareas sin cerrar -->
+  {# Confirmación con la estética de la app, en vez del `confirm()` del navegador (que en la
+     ventana de escritorio sale encabezado por "127.0.0.1:xxxxx dice"). El texto y el botón los
+     declara cada formulario con `data-confirmar` / `data-confirmar-ok`; lo maneja confirmar.js,
+     que explica por qué esos formularios llevan además un `onsubmit="return false;"`. #}
+  <div id="confirmar-modal" class="update-modal-overlay" style="display:none;">
+    <div class="update-modal-box">
+      <p class="update-modal-title">¿Confirmás?</p>
+      <p id="confirmar-texto" class="confirmar-texto"></p>
+      <div class="todo-modal-actions">
+        <button type="button" id="confirmar-ok" class="btn-delete-sm">Confirmar</button>
+        <button type="button" id="confirmar-no" class="btn-cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="todo-modal" class="update-modal-overlay" style="display:none;">
     <div class="update-modal-box">
       <p class="update-modal-title" id="todo-modal-title">Tareas sin cerrar</p>
@@ -342,6 +357,7 @@
    desaparecen. El valor quedaba distinto del que devuelve /refresco y la página se recargaba
    cada 3 segundos para siempre. Es el mismo `| tojson` que ya usa el contexto del día. #}
 <script>window.TOKEN_DATOS = {{ token_datos | tojson }};</script>
+<script src="{{ url_for('static', filename='js/confirmar.js') }}"></script>
 <script src="{{ url_for('static', filename='js/refresco.js') }}"></script>
 </body>
 </html>

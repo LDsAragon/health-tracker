@@ -147,7 +147,8 @@
         <button type="button" class="btn-edit" onclick="editRec({{ ev.id }})">Editar</button>
         {% if ev.recurrence == 'once' %}
         <form method="POST" action="{{ url_for('recurring.recurring_delete', event_id=ev.id) }}"
-              onsubmit="return confirm('¿Eliminar este evento?');">
+              data-confirmar="¿Eliminar este evento?" data-confirmar-ok="Eliminar"
+            onsubmit="return false;">
           <input type="hidden" name="mode" value="all">
           <button type="submit" class="btn-delete-sm">Eliminar</button>
         </form>
@@ -161,12 +162,14 @@
     <div class="rec-del-panel" id="rec-del-{{ ev.id }}" style="display:none;">
       <span class="rec-del-q">¿Qué borramos?</span>
       <form method="POST" action="{{ url_for('recurring.recurring_delete', event_id=ev.id) }}"
-            onsubmit="return confirm('Cortar a futuro: se conserva el historial pasado. ¿Confirmás?');">
+            data-confirmar="Cortar a futuro: se conserva el historial pasado. ¿Confirmás?" data-confirmar-ok="Borrar los futuros"
+            onsubmit="return false;">
         <input type="hidden" name="mode" value="future">
         <button type="submit" class="btn-edit">Borrar futuros (conservar historial)</button>
       </form>
       <form method="POST" action="{{ url_for('recurring.recurring_delete', event_id=ev.id) }}"
-            onsubmit="return confirm('Borrar TODO, incluido el historial. ¿Confirmás?');">
+            data-confirmar="Borrar TODO, incluido el historial. ¿Confirmás?" data-confirmar-ok="Borrar todo"
+            onsubmit="return false;">
         <input type="hidden" name="mode" value="all">
         <button type="submit" class="btn-delete-sm">Borrar todo</button>
       </form>

@@ -117,7 +117,8 @@
       </div>
       <button class="btn-edit" onclick="editJCat({{ cat.id }})">Editar</button>
       <form method="POST" action="{{ url_for('journal.journal_category_delete', cat_id=cat.id) }}"
-            onsubmit="return confirm('¿Eliminar esta categoría y todas sus notas?');"
+            data-confirmar="¿Eliminar esta categoría y todas sus notas?" data-confirmar-ok="Eliminar"
+            onsubmit="return false;"
             style="display:inline;">
         <input type="hidden" name="back" value="{{ back or '' }}">
         <button type="submit" class="btn-delete-sm">Eliminar</button>

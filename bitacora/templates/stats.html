@@ -78,7 +78,8 @@
       <h3 class="stats-card-title">{{ c.title }}</h3>
       {% if c.chart_id %}
       <form method="POST" action="{{ url_for('main.charts_delete', chart_id=c.chart_id) }}"
-            onsubmit="return confirm('¿Quitar este gráfico?');" style="display:inline;">
+            data-confirmar="¿Quitar este gráfico?" data-confirmar-ok="Quitar"
+            onsubmit="return false;" style="display:inline;">
         <button type="submit" class="btn-delete" title="Quitar gráfico">&#10005;</button>
       </form>
       {% endif %}

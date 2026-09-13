@@ -54,7 +54,8 @@
             <button type="button" class="btn-edit" onclick="editTodo({{ t.id }})" title="Editar">&#9998;</button>
             <button type="button" class="btn-edit" onclick="moveTodo({{ t.id }})" title="Mover a otro día">&#8594;</button>
             <form method="POST" action="{{ url_for('day.todo_delete', date_str=date_str, todo_id=t.id) }}" style="display:inline;"
-                  onsubmit="return confirm('¿Eliminar esta tarea?');">
+                  data-confirmar="¿Eliminar esta tarea?" data-confirmar-ok="Eliminar"
+            onsubmit="return false;">
               <button type="submit" class="btn-delete" title="Eliminar">&#10005;</button>
             </form>
           </div>
@@ -117,7 +118,8 @@
               <button class="btn-edit" onclick="editJEntry({{ entry.id }})">Editar</button>
               <form method="POST"
                     action="{{ url_for('day.journal_entry_delete', date_str=date_str, entry_id=entry.id) }}"
-                    onsubmit="return confirm('¿Eliminar esta nota especial?');" style="display:inline;">
+                    data-confirmar="¿Eliminar esta nota especial?" data-confirmar-ok="Eliminar"
+            onsubmit="return false;" style="display:inline;">
                 <button type="submit" class="btn-delete">&#10005;</button>
               </form>
             </div>
@@ -318,7 +320,8 @@
         <div class="day-note-actions">
           <button class="btn-edit" onclick="editDayNote({{ note.id }})">Editar</button>
           <form method="POST" action="{{ url_for('day.note_delete', date_str=date_str, note_id=note.id) }}"
-                onsubmit="return confirm('¿Eliminar?');" style="display:inline;">
+                data-confirmar="¿Eliminar?" data-confirmar-ok="Eliminar"
+            onsubmit="return false;" style="display:inline;">
             <button type="submit" class="btn-delete">&#10005;</button>
           </form>
         </div>

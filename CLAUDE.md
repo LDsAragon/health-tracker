@@ -65,6 +65,7 @@ bitacora/
     js/
       zoom.js           # Zoom Ctrl+rueda / Ctrl±, persistido en localStorage
       colapsables.js    # recordarColapsable(): estado de un <details> en localStorage
+      confirmar.js      # Confirmaciones con la estética de la app (data-confirmar en el <form>)
       ajustes.js        # Guardado al instante de Ajustes; esconde el botón Guardar
       date-es.js        # Campo de fecha con formato configurable (hidden ISO para el backend)
       day.js / stats.js # JS de la vista del día y del constructor de gráficos
@@ -138,7 +139,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 596 tests, ~36s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 655 tests, ~34s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -512,6 +513,41 @@ cargar— hasta que el usuario lo notó usando la app. Tres piezas, y las tres h
 - **Tests en `tests/test_refresco.py`**, que corren siempre y sin dependencias: que **toda**
   pantalla cargue `refresco.js` y traiga el token, que ninguna quede impedida de refrescarse por
   el `autofocus`, y los dos tripwires (`defaultValue` y el aviso).
+
+## Confirmaciones: ninguna es del navegador
+
+`confirm()` en la ventana de escritorio sale encabezado por **"127.0.0.1:65015 dice"**, que es lo
+contrario de una app propia. Eran 16 repartidos en 8 pantallas, todos con la misma forma
+(`onsubmit="return confirm('...')"` sobre un `<form>`), así que el diálogo vive en un solo lugar y
+cada formulario **declara** lo suyo:
+
+```html
+<form ... data-confirmar="¿Eliminar esta tarea?" data-confirmar-ok="Eliminar"
+      onsubmit="return false;">
+```
+
+- `data-confirmar` el mensaje, `data-confirmar-ok` el texto del botón —que **nombra la acción**
+  ("Vaciar el perfil", "Borrar los futuros") en vez del "Aceptar" genérico que era lo único que
+  podía dar el navegador—, y `data-confirmar-suave` para las dos que no destruyen nada (combinar
+  datos del sync, traer tareas a hoy): el botón es rojo por defecto porque las otras catorce
+  borran o reemplazan.
+- ⚠️ **El `onsubmit="return false;"` es la guarda y no se puede sacar.** El `confirm()` lo ponía
+  el navegador, así que aparecía aunque el JS de la app estuviera roto; con un modal propio sin
+  esa guarda, un JS roto enviaría el formulario **sin preguntar nada** —y cuatro de estos borran
+  datos—. Con ella, si `confirmar.js` no corre el formulario simplemente no se envía: que sin JS
+  no se pueda borrar es aceptable, que borre sin preguntar no. Mismo criterio que el botón Guardar
+  de Ajustes. `test_todo_formulario_con_confirmacion_lleva_la_guarda` lo fija por formulario.
+- ⚠️ **Los saltos de línea van como `&#10;`**: los `\n` de los mensajes eran escapes de
+  JavaScript y en un atributo HTML se verían como el texto literal `\n`.
+- ⚠️ **Solo funciona bajo `base.html`**, que es donde están el modal y el script: `widget.html` es
+  plantilla propia y un `data-confirmar` ahí no haría nada (con la guarda, el formulario no se
+  enviaría). Hay un test que lo impide.
+- Las tres frases de borrado (`BORRAR DATOS` / `BORRAR PERFIL` / `BORRAR TODOS LOS PERFILES`) son
+  **otra** barrera y siguen igual: el botón nace `disabled` y lo habilita escribir la frase. El
+  modal es el segundo paso, no el reemplazo.
+- `test_confirmar.py` es el tripwire de que no vuelva un `confirm()`, `alert()` o `prompt()` a
+  ninguna plantilla. Lee las plantillas y no las rutas, así cubre los 16 sin tener que armar dos
+  perfiles, un gráfico y una previa de sync para que aparezcan los botones.
 
 ## Color por defecto de las notas rápidas
 

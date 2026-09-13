@@ -391,7 +391,8 @@
       tareas y backups. No se puede deshacer. Si borrás el que estás usando, la app pasa sola a
       otro de los que tengas.</p>
     <form method="POST" action="{{ url_for('perfiles.borrar') }}"
-          onsubmit="return confirm('¿Eliminar ese perfil y todos sus datos?');"
+          data-confirmar="¿Eliminar ese perfil y todos sus datos?" data-confirmar-ok="Eliminar el perfil"
+            onsubmit="return false;"
           style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
       <input type="hidden" name="back" value="{{ back or '' }}">
       {# Incluye el perfil activo: si lo borrás, la app pasa sola al que quede. #}

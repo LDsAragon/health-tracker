@@ -1087,3 +1087,11 @@ select.journal-cat-select {
 /* "Aleatorio": una muestra partida en cuatro, para que se lea como "cualquiera de estos". */
 .color-azar { display: flex; overflow: hidden; padding: 0; }
 .color-azar i { flex: 1; }
+
+/* El texto de la confirmación propia (ver confirmar.js). `pre-line` porque los mensajes vienen
+   de los `confirm()` que reemplazó, y algunos separaban párrafos con saltos de línea. */
+.confirmar-texto {
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+}

@@ -36,7 +36,8 @@
     </form>
     {% endif %}
     <form method="POST" action="{{ url_for('todos.todo_borrar', todo_id=t.id) }}" class="todo-mini-form"
-          onsubmit="return confirm('¿Eliminar esta tarea?');">
+          data-confirmar="¿Eliminar esta tarea?" data-confirmar-ok="Eliminar"
+            onsubmit="return false;">
       {{ filtros_hidden(f) }}
       <button type="submit" class="btn-delete-sm" title="Eliminar">×</button>
     </form>
@@ -92,7 +93,8 @@
   <div class="todos-overdue-head">
     <h2 class="stats-section">⚠️ Quedaron sin cerrar · {{ overdue_total }}</h2>
     <form method="POST" action="{{ url_for('todos.traer_todas') }}"
-          onsubmit="return confirm('¿Mover las {{ overdue_total }} tareas sin cerrar al día de hoy?');">
+          data-confirmar="¿Mover las {{ overdue_total }} tareas sin cerrar al día de hoy?"
+          data-confirmar-ok="Traer a hoy" data-confirmar-suave onsubmit="return false;">
       {{ filtros_hidden(f) }}
       <button type="submit" class="btn-primary">Traer todas a hoy</button>
     </form>
