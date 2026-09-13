@@ -102,13 +102,26 @@ def color_para_nota_nueva(elegido: str) -> str:
     del calendario siempre mandan el campo `color`, con el radio de "sin color" (`value=""`)
     marcado por default. Por eso la condición es sobre el contenido y no sobre la presencia.
     """
+    if elegido:
+        return elegido
+    return color_sugerido(db.get_setting("nota_color", ""))
+
+
+def color_sugerido(ajuste: str) -> str:
+    """Con qué color se va a guardar una nota si no elegís ninguno.
+
+    Sale aparte de `color_para_nota_nueva` porque los formularios de alta lo necesitan **antes**
+    de guardar, para dejar marcado ese color y que lo veas: con `aleatorio` el color se decidía
+    recién al insertar y la nota aparecía pintada de un color que nunca habías visto.
+
+    ⚠️ Con `aleatorio` sortea en cada llamada, así que el que se muestra es el que se manda: los
+    formularios envían el color marcado y `color_para_nota_nueva` respeta lo que le llega. Si en
+    vez de eso se mandara vacío, el servidor sortearía **otro** y la previsualización mentiría.
+    """
     import random
 
     from bitacora.appconfig import NOTE_COLORS
 
-    if elegido:
-        return elegido
-    ajuste = db.get_setting("nota_color", "")
     if ajuste == "aleatorio":
         return random.choice(NOTE_COLORS)
     return ajuste if ajuste in NOTE_COLORS else ""

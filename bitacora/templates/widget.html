@@ -134,10 +134,10 @@
     {# Mismo name="color" que en el día y el calendario. Sin elegir ninguno decide el ajuste
        `nota_color` (ver services.color_para_nota_nueva). #}
     <div class="w-colores">
-      <label><input type="radio" name="color" value="" checked><span class="w-cdot w-cdot-none"
+      <label><input type="radio" name="color" value="" {% if not color_sugerido %}checked{% endif %}><span class="w-cdot w-cdot-none"
              title="Sin color (o el que digan los Ajustes)"></span></label>
       {% for c in note_colors %}
-      <label><input type="radio" name="color" value="{{ c }}"><span class="w-cdot"
+      <label><input type="radio" name="color" value="{{ c }}" {% if color_sugerido == c %}checked{% endif %}><span class="w-cdot"
              style="background:{{ c }};"></span></label>
       {% endfor %}
     </div>

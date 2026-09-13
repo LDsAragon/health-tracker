@@ -58,6 +58,9 @@ def create_app():
                 "overdue_count": _overdue_count(settings),
                 "perfiles": profiles.listar(), "perfil_activo": profiles.activo(),
                 "note_colors": NOTE_COLORS,
+                # El color que van a tener las notas nuevas, para dejarlo marcado en los
+                # formularios de alta. Con `nota_color=aleatorio` cambia en cada página.
+                "color_sugerido": services.color_sugerido(settings.get("nota_color", "")),
                 # Acá y no en cada ruta: lo necesitan base.html y widget.html, que son los dos
                 # árboles de plantillas. Servirlo con la página evita que la primera vuelta del
                 # poleo tenga que establecer la referencia.

@@ -94,6 +94,56 @@ def test_el_widget_tiene_selector_de_color(client):
         assert c in html
 
 
+# ── Se previsualiza antes de guardar ─────────────────────────────────────────
+
+def test_el_sugerido_con_el_default_es_ninguno(client):
+    assert services.color_sugerido("") == ""
+
+
+def test_el_sugerido_de_un_color_fijo_es_ese_color(client):
+    assert services.color_sugerido("#3b82f6") == "#3b82f6"
+
+
+def test_el_sugerido_aleatorio_sale_de_la_paleta_y_varia(client):
+    salidas = {services.color_sugerido("aleatorio") for _ in range(40)}
+    assert salidas <= set(NOTE_COLORS)
+    assert len(salidas) > 1
+
+
+def test_el_sugerido_con_basura_no_pinta_nada(client):
+    assert services.color_sugerido("no-es-un-color") == ""
+
+
+@pytest.mark.parametrize("ruta", ["/day/2026-06-10", "/calendar/2026/6", "/week/2026-06-10",
+                                  "/widget?p=nota"])
+def test_el_formulario_trae_marcado_el_color_que_va_a_usar(client, ruta):
+    """Con `aleatorio` el color se decidía recién al insertar y la nota aparecía de un color que
+    nunca habías visto. Ahora el formulario viene con ese color ya marcado."""
+    db.set_setting("nota_color", "#3b82f6")
+    html = client.get(ruta).data.decode()
+    assert 'value="#3b82f6" checked' in html
+
+
+@pytest.mark.parametrize("ruta", ["/day/2026-06-10", "/calendar/2026/6", "/week/2026-06-10",
+                                  "/widget?p=nota"])
+def test_sin_ajuste_sigue_marcado_el_sin_color(client, ruta):
+    """El default no se toca: la app se comporta como siempre hasta que lo cambies."""
+    html = client.get(ruta).data.decode()
+    assert 'value="" checked' in html
+
+
+def test_lo_que_se_muestra_es_lo_que_se_guarda(client):
+    """⚠️ El formulario manda el color marcado, no vacío. Si mandara vacío, el servidor sortearía
+    OTRO color y la previsualización mentiría."""
+    db.set_setting("nota_color", "aleatorio")
+    import re
+    html = client.get(f"/day/{DIA}").data.decode()
+    marcados = re.findall(r'value="(#[0-9a-f]{6})" checked', html)
+    assert len(marcados) == 1
+    client.post(f"/day/{DIA}/note/add", data={"content": "la que se ve", "color": marcados[0]})
+    assert _colores_de() == [marcados[0]]
+
+
 # ── La paleta es una sola ────────────────────────────────────────────────────
 
 def test_la_paleta_no_esta_repetida_en_las_plantillas():

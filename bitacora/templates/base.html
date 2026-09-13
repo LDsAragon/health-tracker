@@ -321,6 +321,19 @@
   });
   </script>
 
+{# El radio de color que viene marcado del servidor (el ajuste `nota_color`) no dispara su
+   propio `onchange`, así que el campo se quedaba sin pintar y el color recién se veía en la
+   nota ya creada. Se dispara acá y no en cada plantilla porque son tres las que tienen
+   previsualización: el día, el calendario y la semana.
+   `change` y no `input`: `input` es lo que refresco.js mira para saber si hay algo tipeado. #}
+<script>
+  window.addEventListener('load', function () {
+    document.querySelectorAll('input[name="color"]:checked[onchange]').forEach(function (r) {
+      r.dispatchEvent(new Event('change'));
+    });
+  });
+</script>
+
 {# ⚠️ tojson, y NO el valor entre comillas: en Windows el token lleva la ruta de la base con
    barras invertidas, y en un literal de JavaScript esas barras son escapes (inválidos) que
    desaparecen. El valor quedaba distinto del que devuelve /refresco y la página se recargaba

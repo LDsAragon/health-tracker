@@ -458,6 +458,16 @@ así que conviene tener los dos presentes:
   la semana (las tres plantillas postean ahí), y `widget.nota` es el otro.
 - El control en Ajustes es de **swatches**, el tercer tipo de esa pantalla (además del switch y el
   segmentado): son 11 opciones y el andamio `hacer.ps1 nuevo ajuste` no lo genera.
+- ⚠️ **El formulario de alta viene con el color ya marcado** (`services.color_sugerido()`,
+  inyectado como `color_sugerido` por el context processor): con `aleatorio` el color se decidía
+  recién al insertar y la nota aparecía pintada de un color que nunca habías visto. Como el
+  formulario ahora **manda ese color**, `color_para_nota_nueva` lo respeta por la regla de "lo
+  elegido gana" — si mandara vacío, el servidor sortearía **otro** y la previsualización mentiría.
+  Sortea por página, así que cada recarga (y cada nota guardada, que recarga) trae uno nuevo.
+  El radio marcado por el servidor **no dispara su propio `onchange`**, así que el fondo del campo
+  lo pinta un script de `base.html` al cargar; es `change` y no `input` a propósito, porque
+  `input` es lo que mira `refresco.js` para saber si hay algo tipeado. El widget solo marca el
+  swatch: nunca pintó el fondo, tampoco al elegir a mano.
 
 ## La pantalla de Ajustes
 
