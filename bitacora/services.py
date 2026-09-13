@@ -89,3 +89,26 @@ def periodo_ventana(periodo, today):
         return (today + timedelta(days=1)).isoformat(), None
     dias = 1 if periodo == "hoy" else int(periodo)
     return (today - timedelta(days=dias - 1)).isoformat(), today.isoformat()
+
+
+def color_para_nota_nueva(elegido: str) -> str:
+    """Color con el que se guarda una nota rápida nueva.
+
+    Lo que elegiste a mano siempre gana. Si no elegiste nada, decide el ajuste `nota_color`:
+    vacío deja la nota sin color (el comportamiento de siempre), `aleatorio` sortea uno de
+    `NOTE_COLORS`, y cualquier otro valor es un color fijo.
+
+    ⚠️ "No elegí color" llega como **string vacío, no como ausente**: los formularios del día y
+    del calendario siempre mandan el campo `color`, con el radio de "sin color" (`value=""`)
+    marcado por default. Por eso la condición es sobre el contenido y no sobre la presencia.
+    """
+    import random
+
+    from bitacora.appconfig import NOTE_COLORS
+
+    if elegido:
+        return elegido
+    ajuste = db.get_setting("nota_color", "")
+    if ajuste == "aleatorio":
+        return random.choice(NOTE_COLORS)
+    return ajuste if ajuste in NOTE_COLORS else ""

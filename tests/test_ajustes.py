@@ -22,6 +22,7 @@ SWITCHES = {
     "show_todos": ("show", "hide"),
     "show_stats": ("show", "hide"),
     "show_export": ("show", "hide"),
+    "widget_rutinas": ("show", "hide"),
     # ANDAMIO: switches — `hacer.ps1 nuevo ajuste` inserta aca. No mover ni borrar.
 }
 SEGMENTADOS = ("date_format", "time_format", "week_start", "start_view",
@@ -70,7 +71,8 @@ def valor_del_form(html, name):
 
 def test_todos_los_ajustes_tienen_un_control():
     """El esquema es la fuente única: un ajuste nuevo sin control quedaría invisible."""
-    assert set(SWITCHES) | set(SEGMENTADOS) | {"theme"} == set(SETTINGS)
+    # `theme` y `nota_color` son los dos de swatches; el resto, switch o segmentado.
+    assert set(SWITCHES) | set(SEGMENTADOS) | {"theme", "nota_color"} == set(SETTINGS)
 
 
 def test_todos_los_ajustes_estan_en_la_pagina(client):

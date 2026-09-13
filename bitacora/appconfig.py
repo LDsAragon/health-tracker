@@ -13,6 +13,11 @@ THEMES = [
 ]
 THEME_SLUGS = {t["slug"] for t in THEMES}
 
+# Paleta de las notas, rutinas y categorias. Estaba repetida como literal en SEIS
+# plantillas; tambien es el `choices` del ajuste `nota_color`.
+NOTE_COLORS = ("#6366f1", "#22c55e", "#3b82f6", "#f97316", "#ef4444",
+               "#a855f7", "#ec4899", "#eab308", "#14b8a6")
+
 # Esquema de ajustes: clave → default + valores válidos. Agregar un ajuste = una entrada acá.
 SETTINGS = {
     "date_format": {"default": "dmy",    "choices": ("dmy", "mdy", "ymd")},
@@ -31,6 +36,10 @@ SETTINGS = {
     "todo_notify":       {"default": "off",   "choices": ("on", "off")},
     "widget_autostart":  {"default": "on",    "choices": ("on", "off")},
     "cerrar_a_bandeja":  {"default": "on",    "choices": ("on", "off")},
+    "widget_rutinas": {"default": "show", "choices": ("show", "hide")},
+    # Color con el que sale una nota rapida cuando NO elegis ninguno. "" = sin color
+    # (como siempre); "aleatorio" = uno sorteado de NOTE_COLORS; o un color fijo.
+    "nota_color": {"default": "", "choices": ("", "aleatorio") + NOTE_COLORS},
     # ANDAMIO: ajustes — `hacer.ps1 nuevo ajuste` inserta aca. No mover ni borrar.
 }
 

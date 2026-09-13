@@ -134,6 +134,41 @@
         <div class="set-control">{{ switch('journal_form_default', 'open', 'collapsed') }}</div>
       </div>
 
+      <div class="set-row set-ancho">
+        <div class="set-texto">
+          <label>Color de las notas rápidas</label>
+          <p class="set-desc">Con qué color sale una nota rápida cuando <b>no elegís</b> ninguno.
+            El que elijas a mano en el momento siempre gana.</p>
+        </div>
+        <div class="set-control">
+          <div class="color-grid">
+            {# Tercer tipo de control de esta pantalla (además del switch y el segmentado): son
+               11 opciones, y como swatches se ven de un vistazo. #}
+            <label class="color-swatch {% if not settings.nota_color %}active{% endif %}">
+              <input type="radio" name="nota_color" value=""
+                     {% if not settings.nota_color %}checked{% endif %}>
+              <span class="color-muestra color-ninguno"></span>
+              <span class="color-nombre">Sin color</span>
+            </label>
+            <label class="color-swatch {% if settings.nota_color == 'aleatorio' %}active{% endif %}">
+              <input type="radio" name="nota_color" value="aleatorio"
+                     {% if settings.nota_color == 'aleatorio' %}checked{% endif %}>
+              <span class="color-muestra color-azar">
+                {% for c in note_colors[:4] %}<i style="background:{{ c }};"></i>{% endfor %}
+              </span>
+              <span class="color-nombre">Aleatorio</span>
+            </label>
+            {% for c in note_colors %}
+            <label class="color-swatch {% if settings.nota_color == c %}active{% endif %}">
+              <input type="radio" name="nota_color" value="{{ c }}"
+                     {% if settings.nota_color == c %}checked{% endif %}>
+              <span class="color-muestra" style="background:{{ c }};"></span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
       {# ANDAMIO: calendario #}
     </div>
   </details>
@@ -204,6 +239,13 @@
         <div class="set-control">{{ switch('cerrar_a_bandeja', 'on', 'off') }}</div>
       </div>
 
+      <div class="set-row">
+        <div class="set-texto">
+          <label for="widget_rutinas">Rutinas en el widget</label>
+          <p class="set-desc">Mostrar las rutinas de hoy en el widget, debajo de las tareas, para poder tildarlas sin abrir la ventana grande.</p>
+        </div>
+        <div class="set-control">{{ switch('widget_rutinas', 'show', 'hide') }}</div>
+      </div>
       {# ANDAMIO: escritorio #}
     </div>
   </details>

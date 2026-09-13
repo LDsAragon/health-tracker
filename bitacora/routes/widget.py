@@ -44,6 +44,14 @@ def vista():
             db.get_recurring_events(), db.get_completions_range(ini, fin),
             [date(año, mes, d) for d in range(1, dias + 1)]),
         conteo_tareas=db.get_todo_counts_range(ini, fin),
+        # Rutinas de hoy: el mismo services.events_by_date que usa la vista del día, pedido para
+        # un solo día. Detrás del ajuste, así el widget se puede dejar solo con tareas.
+        rutinas_hoy=(services.events_by_date(
+            db.get_recurring_events(),
+            db.get_completions_range(hoy.isoformat(), hoy.isoformat()),
+            [hoy]).get(hoy.isoformat(), [])
+            if _setting("widget_rutinas", "show") == "show" else []),
+        ver_rutinas=_setting("widget_rutinas", "show") == "show",
         prev=(año - 1, 12) if mes == 1 else (año, mes - 1),
         sig=(año + 1, 1) if mes == 12 else (año, mes + 1),
         fijado=widget.esta_fijado(),
@@ -68,11 +76,27 @@ def tarea_agregar():
     return _volver("tareas")
 
 
+@bp.route("/widget/rutina/<int:event_id>/toggle", methods=["POST"])
+def rutina_toggle(event_id):
+    """Marcar o desmarcar una rutina de hoy. Sin "saltear" ni nota de completado: eso vive en la
+    ventana grande, y acá el espacio es de 340px."""
+    hoy = date.today().isoformat()
+    hecho = {e["id"] for e in services.events_by_date(
+        db.get_recurring_events(), db.get_completions_range(hoy, hoy), [date.today()]
+    ).get(hoy, []) if e.get("done")}
+    if event_id in hecho:
+        db.uncomplete_event(event_id, hoy)
+    else:
+        db.complete_event(event_id, hoy)
+    return _volver("tareas")
+
+
 @bp.route("/widget/nota", methods=["POST"])
 def nota():
     texto = request.form.get("content", "").strip()
+    color = request.form.get("color", "").strip()
     if texto:
-        db.add_note(date.today().isoformat(), texto)
+        db.add_note(date.today().isoformat(), texto, services.color_para_nota_nueva(color))
     return _volver("nota")
 
 

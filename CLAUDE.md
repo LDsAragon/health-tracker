@@ -136,7 +136,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 503 tests, ~31s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 531 tests, ~30s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -365,6 +365,17 @@ fijan para las dos acciones.
 ⚠️ **Borrar el perfil activo cambia de perfil ANTES de tocar los archivos** (`profiles.borrar`): en
 Windows la base que se estaba usando queda lockeada hasta que el GC recoja la conexión.
 
+### Qué muestra el widget, y qué no
+- **Rutinas de hoy**, detrás del ajuste `widget_rutinas`, en la pestaña de Tareas. Se tildan desde
+  ahí (`/widget/rutina/<id>/toggle`, que reusa `db.complete_event` / `db.uncomplete_event`). **Sin
+  "saltear" ni nota de completado**: eso vive en la ventana grande.
+- **Las notas especiales quedaron afuera a propósito.** Son formularios a medida y no entran en
+  340px; el camino es el atajo de la pestaña Nota, que abre el día en la ventana grande con
+  `widget.dia`, la misma ruta que ya usa el clic en un día del calendario. Decisión suya:
+  *"dejando el widget compacto y pequeño"*.
+- **El selector de color de la nota rápida** usa el mismo `name="color"` que el día y el
+  calendario, así que pasa por `services.color_para_nota_nueva()` como todos.
+
 ### La regla de seguridad de la bandeja
 `tray.iniciar()` devuelve si pudo poner el icono, y **el cierre solo se intercepta si devolvió
 True**. Esconder la ventana al cerrar sin icono dejaría el programa corriendo **sin forma de
@@ -423,6 +434,24 @@ así que conviene tener los dos presentes:
   arregla la causa, la acota — convierte "la app es inusable" en "el refresco dejó de andar".
   También se corta tras 5 fallos de red seguidos, que es lo que pasa al cerrar la app.
 
+## Color por defecto de las notas rápidas
+
+`services.color_para_nota_nueva(elegido)` decide con qué color se guarda una nota nueva:
+**lo que elegiste a mano siempre gana**, y si no elegiste nada manda el ajuste `nota_color`
+(vacío = sin color, `aleatorio` = uno de `NOTE_COLORS`, o un color fijo).
+
+- ⚠️ **"No elegí color" llega como string VACÍO, no como ausente**: los formularios del día, del
+  calendario y del widget siempre mandan el campo `color`, con el radio de "sin color"
+  (`value=""`) marcado por default. La condición es sobre el contenido, no sobre la presencia.
+- **El color se guarda en la nota**, no se deriva al mostrar. Fue decisión suya y explícita:
+  *"no sería sin color sino como si se hubiera elegido un color elegido aleatorio"*. La
+  consecuencia aceptada es que `notes.color` deja de distinguir "no elegí" de "elegí esto" cuando
+  el ajuste está activo.
+- **Dos call sites y no cuatro**: `day.note_add` recibe las altas del día, del calendario **y** de
+  la semana (las tres plantillas postean ahí), y `widget.nota` es el otro.
+- El control en Ajustes es de **swatches**, el tercer tipo de esa pantalla (además del switch y el
+  segmentado): son 11 opciones y el andamio `hacer.ps1 nuevo ajuste` no lo genera.
+
 ## La pantalla de Ajustes
 
 Cero `<select>` entre los 16 ajustes, seis secciones colapsables y **guardado al instante**.
@@ -469,6 +498,7 @@ Cero `<select>` entre los 16 ajustes, seis secciones colapsables y **guardado al
 - Sin comentarios que expliquen el *qué* — solo el *por qué* cuando no es obvio.
 - `MESES[]` hardcodeado en `helpers.py` (no `calendar.month_name` — depende del locale del sistema).
 - Renames de datos de usuario: solo con señal explícita (hidden `field_oldlabel[]` o control de UI); nunca por heurística.
+- **La paleta de colores de notas, rutinas y categorías es `appconfig.NOTE_COLORS`**, inyectada como `note_colors`. Estaba repetida como literal en **seis** plantillas; también es el `choices` del ajuste `nota_color`. `test_nota_color.py` falla si vuelve a aparecer una paleta copiada (tres o más colores en una línea de una plantilla) — un color suelto sí es legítimo, como el de una categoría predefinida de `journal.html`.
 - Los valores de las entradas se guardan como `{etiqueta: valor}` en `values_json` — por eso renombrar un campo obliga a `migrate_entry_values()` (que además re-clava las etiquetas en la tabla `charts`).
 
 ### Agregar cosas: los andamios

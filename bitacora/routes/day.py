@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from urllib.parse import urlsplit
 from flask import Blueprint, render_template, request, redirect, url_for
 from bitacora import database as db
+from bitacora import services
 from bitacora.appconfig import PET_CHANCE
 
 bp = Blueprint("day", __name__)
@@ -71,7 +72,8 @@ def note_add(date_str):
     content = request.form.get("content", "").strip()
     color   = request.form.get("color", "").strip()
     if content:
-        db.add_note(date_str, content, color)
+        # Recibe las altas del calendario, de la semana Y del día: las tres postean acá.
+        db.add_note(date_str, content, services.color_para_nota_nueva(color))
     next_page = request.form.get("next")
     if next_page == "calendar":
         d = date.fromisoformat(date_str)

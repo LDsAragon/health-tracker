@@ -24,7 +24,7 @@
       <div class="field-group">
         <label>Color</label>
         <div class="color-row">
-          {% set colors = ['#6366f1','#22c55e','#3b82f6','#f97316','#ef4444','#a855f7','#ec4899','#eab308','#14b8a6'] %}
+          {% set colors = note_colors %}
           {% for c in colors %}
           <label class="color-opt">
             <input type="radio" name="color" value="{{ c }}" {% if loop.first %}checked{% endif %}>
@@ -95,7 +95,7 @@
 {% if events %}
 <div class="rec-list">
   {% for ev in events %}
-  {% set colors = ['#6366f1','#22c55e','#3b82f6','#f97316','#ef4444','#a855f7','#ec4899','#eab308','#14b8a6'] %}
+  {% set colors = note_colors %}
   {% set wdays_checked = ev.recurrence.split(':')[1].split(',') if ev.recurrence.startswith('weekly:') else [] %}
 
   <div class="rec-entry">

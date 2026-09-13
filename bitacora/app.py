@@ -8,7 +8,7 @@ from bitacora import filters
 from bitacora import services
 from bitacora import profiles
 from bitacora.fieldtypes import FIELD_TYPES
-from bitacora.appconfig import PET_ART
+from bitacora.appconfig import PET_ART, NOTE_COLORS
 from bitacora.helpers import _week_start
 # Re-export para tests que hacen `from app import dur_fmt_filter, ...`
 from bitacora.filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
@@ -57,6 +57,7 @@ def create_app():
         return {"settings": settings, "field_types": FIELD_TYPES, "pet_art": PET_ART,
                 "overdue_count": _overdue_count(settings),
                 "perfiles": profiles.listar(), "perfil_activo": profiles.activo(),
+                "note_colors": NOTE_COLORS,
                 # Acá y no en cada ruta: lo necesitan base.html y widget.html, que son los dos
                 # árboles de plantillas. Servirlo con la página evita que la primera vuelta del
                 # poleo tenga que establecer la referencia.

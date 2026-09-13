@@ -77,6 +77,21 @@
     <button class="w-btn">+</button>
   </form>
 
+  {% if ver_rutinas and rutinas_hoy %}
+  <p class="w-titulo w-titulo-sep">Rutinas</p>
+  <ul class="w-lista">
+    {% for ev in rutinas_hoy %}
+    <li class="w-item {% if ev.done %}w-hecha{% endif %}">
+      <form method="POST" action="{{ url_for('widget.rutina_toggle', event_id=ev.id) }}">
+        <button class="w-check {% if ev.done %}w-check-on{% endif %}" style="--c: {{ ev.color }};"
+                title="{{ 'Desmarcar' if ev.done else 'Marcar como hecha' }}">{% if ev.done %}✓{% endif %}</button>
+      </form>
+      <span class="w-txt">{{ ev.title }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
 {% elif pestana == 'calendario' %}
   <div class="w-mes">
     <a href="{{ url_for('widget.vista', p='calendario', anio=prev[0], mes=prev[1]) }}" class="w-icono">←</a>
@@ -115,8 +130,24 @@
 {% else %}
   <p class="w-titulo">Nota rápida de hoy</p>
   <form method="POST" action="{{ url_for('widget.nota') }}" class="w-form-nota">
-    <textarea name="content" rows="8" placeholder="Anotar algo..." required></textarea>
+    <textarea name="content" rows="7" placeholder="Anotar algo..." required></textarea>
+    {# Mismo name="color" que en el día y el calendario. Sin elegir ninguno decide el ajuste
+       `nota_color` (ver services.color_para_nota_nueva). #}
+    <div class="w-colores">
+      <label><input type="radio" name="color" value="" checked><span class="w-cdot w-cdot-none"
+             title="Sin color (o el que digan los Ajustes)"></span></label>
+      {% for c in note_colors %}
+      <label><input type="radio" name="color" value="{{ c }}"><span class="w-cdot"
+             style="background:{{ c }};"></span></label>
+      {% endfor %}
+    </div>
     <button class="w-btn w-btn-ancho">Guardar</button>
+  </form>
+
+  {# Las notas especiales no entran en 340px: el camino es abrir el día en la ventana grande,
+     que es lo que ya hace el clic en un día del calendario. #}
+  <form method="POST" action="{{ url_for('widget.dia', date_str=hoy) }}" class="w-especial-form">
+    <button class="w-especial">＋ Nota especial (abre el día)</button>
   </form>
 {% endif %}
 

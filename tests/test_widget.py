@@ -223,3 +223,47 @@ def test_si_no_se_puede_esconder_deja_cerrar():
         def hide(self):
             raise RuntimeError("no se pudo")
     assert desktop._a_la_bandeja(V()) is True
+
+
+# ── Rutinas de hoy en el widget (ajuste widget_rutinas) ─────────────────────
+
+def _rutina_de_hoy():
+    """Una rutina diaria, que por definición aplica hoy."""
+    db.add_recurring_event({"title": "Caminar", "color": "#22c55e", "recurrence": "daily",
+                            "start_date": "2020-01-01", "end_date": ""})
+    return db.get_recurring_events()[0]["id"]
+
+
+def test_el_widget_muestra_las_rutinas_de_hoy(cliente):
+    _rutina_de_hoy()
+    html = cliente.get("/widget").data.decode()
+    assert "Rutinas" in html and "Caminar" in html
+
+
+def test_con_el_ajuste_apagado_no_aparecen(cliente):
+    _rutina_de_hoy()
+    db.set_setting("widget_rutinas", "hide")
+    html = cliente.get("/widget").data.decode()
+    assert "Caminar" not in html
+
+
+def test_tildar_una_rutina_desde_el_widget(cliente):
+    ev = _rutina_de_hoy()
+    r = cliente.post(f"/widget/rutina/{ev}/toggle")
+    assert r.status_code == 302 and "/widget" in r.headers["Location"]
+    assert db.get_completions_range(HOY, HOY).get(HOY)
+
+
+def test_destildarla_la_deja_como_estaba(cliente):
+    """El mismo botón marca y desmarca, como el de las tareas."""
+    ev = _rutina_de_hoy()
+    cliente.post(f"/widget/rutina/{ev}/toggle")
+    cliente.post(f"/widget/rutina/{ev}/toggle")
+    assert not db.get_completions_range(HOY, HOY).get(HOY)
+
+
+def test_el_acceso_a_nota_especial_abre_el_dia(cliente):
+    """Las notas especiales no entran en 340px: el camino es abrir el día en la ventana grande."""
+    html = cliente.get("/widget?p=nota").data.decode()
+    assert "Nota especial" in html
+    assert f"/widget/dia/{HOY}" in html
