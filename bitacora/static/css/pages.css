@@ -719,8 +719,9 @@ select.journal-cat-select {
 .stats-card-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
 .stats-card canvas { width: 100% !important; height: 220px !important; }
 .stats-section { font-size: 16px; font-weight: 700; margin: 26px 0 12px; }
-.stats-adherence { display: flex; flex-direction: column; gap: 8px; max-width: 620px; }
-.adh-row { display: grid; grid-template-columns: 160px 1fr auto; align-items: center; gap: 10px; }
+.stats-adherence { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
+.adh-row { display: grid; grid-template-columns: minmax(90px, 160px) 1fr auto auto; align-items: center; gap: 10px; }
+.adh-delta { text-align: right; min-width: 62px; }
 .adh-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .adh-bar { height: 10px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
 .adh-fill { height: 100%; background: var(--c, var(--accent)); border-radius: 6px; }
@@ -731,6 +732,49 @@ select.journal-cat-select {
 .stats-builder-form select, .stats-builder-form input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 13px; }
 .stats-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
 .stats-card-head .stats-card-title { margin-bottom: 0; }
+.stats-card-sub { font-size: 12px; color: var(--muted); text-align: right; margin-left: auto; }
+/* Las tarjetas de arriba: dos columnas en pantalla ancha, una sola cuando no entran. */
+.stats-duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px; margin-bottom: 16px; align-items: start; }   /* start: sin esto la tarjeta corta se estira y queda medio metro de vacío */
+.stats-card-ancha { margin-bottom: 16px; }
+
+/* El resumen de lo anotado: tres columnas (qué, cuánto, y contra qué) */
+.stats-resumen { width: 100%; border-collapse: collapse; font-size: 14px; }
+.stats-resumen th { text-align: left; font-weight: 500; color: var(--muted); padding: 7px 0; }
+.stats-resumen td { padding: 7px 0; border-bottom: 1px solid var(--line); }
+.stats-resumen th { border-bottom: 1px solid var(--line); }
+.stats-resumen tr:last-child th, .stats-resumen tr:last-child td { border-bottom: none; }
+.stats-resumen-val { font-weight: 700; font-size: 15px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stats-resumen-val small { font-weight: 400; font-size: 12px; color: var(--muted); }
+.stats-resumen-delta { text-align: right; width: 78px; }
+.stats-nada { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+.stats-nada a { color: var(--accent); }
+
+/* ▲ mejor / ▼ peor. Los colores salen de var() para que anden en los 8 temas. */
+.stats-delta { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stats-delta-sube { color: var(--green); }
+.stats-delta-baja { color: var(--red); }
+.stats-delta-nulo { cursor: help; }
+
+/* Emociones más frecuentes: mismas barras que la adherencia */
+.stats-rueda { font-size: 12px; font-weight: 600; color: var(--muted); margin: 12px 0 6px; }
+.stats-emociones { display: flex; flex-direction: column; gap: 8px; }
+.emo-row { display: grid; grid-template-columns: minmax(70px, 120px) 1fr auto; align-items: center; gap: 10px; }
+.emo-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.emo-bar { height: 10px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
+.emo-fill { height: 100%; background: var(--c, var(--accent)); border-radius: 6px; }
+.emo-num { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stats-ayuda { margin: 12px 0 0; font-size: 13px; }
+.stats-ayuda a { color: var(--accent); }
+.stats-ayuda { display: block; }
+.stats-ayuda-sola { margin: 0; }
+
+/* Angosto: el nombre se lleva la primera fila y la barra con sus números la segunda, en vez de
+   quedar la barra en 20px de ancho. */
+@media (max-width: 560px) {
+  .adh-row, .emo-row { grid-template-columns: 1fr auto auto; }
+  .adh-name, .emo-name { grid-column: 1 / -1; white-space: normal; }
+}
 
 /* ── Zona peligrosa (tab Datos): borrar toda la DB ──────────────────────────── */
 .danger-zone { border: 1px solid rgba(239, 68, 68, .4); }
@@ -762,8 +806,7 @@ select.journal-cat-select {
 .stats-totals td { padding: 4px 6px; border-top: 1px solid var(--line); color: var(--text); }
 .stats-totals-val { text-align: right; font-weight: 600; color: var(--accent); white-space: nowrap; }
 
-/* ── Resumen "tiempo por actividad" en Estadísticas ─────────────────────── */
-.stats-summary-card { margin-bottom: 16px; }
+/* ── Tabla de "tiempo por actividad" en Estadísticas ────────────────────── */
 .stats-summary { width: 100%; border-collapse: collapse; font-size: 14px; }
 .stats-summary th {
   text-align: left;

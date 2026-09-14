@@ -30,6 +30,6 @@ from .todos import (
 from .settings import get_setting, set_setting, get_all_settings
 from .stats import (
     numeric_series, bool_counts, option_distribution, chartable_fields, build_series, grouped_series,
-    time_summary, TIME_TYPES,
+    TIME_TYPES, resumen, resumen_comparado, tiempo_comparado, emociones_frecuentes,
 )
 from .charts import get_charts, add_chart, delete_chart

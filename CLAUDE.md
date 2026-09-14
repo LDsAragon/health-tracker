@@ -35,8 +35,9 @@ bitacora/
   database/             # Paquete; __init__.py re-exporta todo (`from bitacora import database as db`)
     conn.py             # get_db, snapshot_to, backup_path, is_valid_db, reset_db, restore_from
     schema.py           # SCHEMA + MIGRATIONS declarativas (idempotente)
-    stats.py            # Motor de series de Estadísticas: build_series, grouped_series,
-                        #   chartable_fields, y time_summary() para "Tiempo por actividad"
+    stats.py            # Motor de Estadísticas: build_series, grouped_series, chartable_fields,
+                        #   resumen/resumen_comparado (lo anotado + la comparación),
+                        #   tiempo_comparado ("Tiempo por actividad") y emociones_frecuentes
     journal.py          # Categorías + entradas de notas especiales; migrate_entry_values
     todos.py            # Tareas por día + el motor del visor: get_overdue_todos,
                         #   count_overdue_todos, move_todos, get_todos_filtered
@@ -730,6 +731,42 @@ cada formulario **declara** lo suyo:
   lo pinta un script de `base.html` al cargar; es `change` y no `input` a propósito, porque
   `input` es lo que mira `refresco.js` para saber si hay algo tipeado. El widget solo marca el
   swatch: nunca pintó el fondo, tampoco al elegir a mano.
+
+## La pantalla de Estadísticas
+
+Tenía tres problemas de fondo y los tres eran de diseño, no de código: **nacía vacía** (sin campos
+marcados con 📈 no mostraba nada, aunque hubieras anotado todos los días durante meses),
+**ignoraba casi todo lo que la app registra** (notas rápidas, tareas y la rueda de emociones no se
+miraban) y **ningún número era comparativo** — un `0 / 15 · 0%` no dice si venís mejorando.
+
+- **El bloque "Lo que anotaste" va SIEMPRE**, incluso en cero, y se arma con las funciones de rango
+  que ya existían (`get_notes_range`, `get_todo_counts_range`, `get_journal_entries_range`): no
+  hizo falta SQL nuevo. Es lo que hace que la pantalla cuente algo el día uno, sin configurar nada.
+  "Un día con algo anotado" incluye nota, tarea o nota especial; **tildar una rutina no cuenta**:
+  es cumplir algo que ya estaba planeado, no anotar.
+- ⚠️ **Un delta contra un período anterior sin datos no es una mejora.** Si antes no usabas la app,
+  un "▲ +23" es ruido que se lee como un logro. Sin datos previos el delta viaja `None` y la
+  pantalla muestra un guion (`resumen_comparado`, `tiempo_comparado`). La adherencia usa la misma
+  regla con su propia señal: se compara **solo si entonces marcabas rutinas** (alguna completion en
+  el período anterior), porque si no, todas aparecerían subiendo 90 puntos contra una app vacía.
+- ⚠️ **Un solo período para toda la pantalla.** `charts.range_days` sigue existiendo y se sigue
+  guardando, pero **ya no decide el render**: era una segunda noción de rango y hacía que dos
+  tarjetas al lado mostraran ventanas distintas sin decirlo. Cada tarjeta dice de qué período
+  habla. Lo mismo con "Tiempo por actividad", que eran tres ventanas fijas (semana / mes / 90 días)
+  ajenas al selector.
+- Los períodos viven en `routes/main.PERIODOS`; el default son **30 días**. `mes` ("Este mes") es
+  el único de largo variable —el mes calendario en curso— porque la gente piensa en meses.
+  Se llama `periodo` en el código y en la UI, nunca "rango" (mismo criterio que el visor de
+  tareas); el parámetro de la URL se quedó en `range=` para no romper enlaces guardados.
+- ⚠️ **Las dos ruedas de emociones se cuentan por separado.** Willcox y Ekman son taxonomías
+  distintas: sumar "Ira" con "Enojado" sería inventar una equivalencia que nadie definió. Se cuenta
+  por **emoción base** (el primer nivel, que es la que tiene color); los matices de abajo
+  dispersarían todo en frecuencia 1.
+- Los colores salen de `appconfig.EMOTION_COLORS` —estaban como literales dentro de `day.html`— y
+  un test los compara **contra el JS de cada rueda**: una emoción que falte ahí sale del gris de
+  fallback sin que nada avise, y la estadística mentiría el color.
+- **No hay rachas ni gamificación.** Se rechazaron para el visor de tareas (*"el visor no es un
+  tablero"*) y acá no se sumaron sin pedirlo. Queda anotado.
 
 ## La pantalla de Ajustes
 

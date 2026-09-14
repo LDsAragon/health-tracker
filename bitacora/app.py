@@ -8,7 +8,7 @@ from bitacora import filters
 from bitacora import services
 from bitacora import profiles
 from bitacora.fieldtypes import FIELD_TYPES
-from bitacora.appconfig import PET_ART, NOTE_COLORS
+from bitacora.appconfig import PET_ART, NOTE_COLORS, EMOTION_COLORS, EMOTION_FALLBACK
 from bitacora.helpers import _week_start
 # Re-export para tests que hacen `from app import dur_fmt_filter, ...`
 from bitacora.filters import humantime_filter, fechacorta_filter, dur_fmt_filter, rango_fmt_filter
@@ -58,6 +58,10 @@ def create_app():
                 "overdue_count": _overdue_count(settings),
                 "perfiles": profiles.listar(), "perfil_activo": profiles.activo(),
                 "note_colors": NOTE_COLORS,
+                # Un color por emoción, igual en el día y en Estadísticas: estaban
+                # copiados como literales dentro de `day.html`.
+                "emotion_colors": EMOTION_COLORS,
+                "emotion_fallback": EMOTION_FALLBACK,
                 # El color que van a tener las notas nuevas, para dejarlo marcado en los
                 # formularios de alta. Con `nota_color=aleatorio` cambia en cada página.
                 "color_sugerido": services.color_sugerido(settings.get("nota_color", "")),
