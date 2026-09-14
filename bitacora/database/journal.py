@@ -88,7 +88,19 @@ def migrate_entry_values(cat_id: int, label_renames: dict | None = None,
     return changed
 
 
+def count_journal_entries_by_category() -> dict:
+    """{cat_id: cuántas notas tiene} — para decir en pantalla qué se lleva un borrado."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT category_id, COUNT(*) AS n FROM journal_entries GROUP BY category_id"
+        ).fetchall()
+    return {r["category_id"]: r["n"] for r in rows}
+
+
 def delete_journal_category(cat_id: int):
+    """⚠️ Se lleva TODAS las notas de la categoría. Backup previo, como cualquier camino
+    destructivo de la app: hasta un renombre de campo hace el suyo (migrate_entry_values)."""
+    snapshot_to(backup_path("health-prejournal"))
     with get_db() as conn:
         conn.execute("DELETE FROM journal_entries WHERE category_id = ?", (cat_id,))
         conn.execute("DELETE FROM journal_categories WHERE id = ?", (cat_id,))

@@ -10,7 +10,9 @@ bp = Blueprint("journal", __name__)
 @bp.route("/journal")
 def journal_view():
     categories = db.get_journal_categories()
-    return render_template("journal.html", categories=categories, back=safe_back(request.args.get("back")))
+    return render_template("journal.html", categories=categories,
+                           usos=db.count_journal_entries_by_category(),
+                           back=safe_back(request.args.get("back")))
 
 
 def _parse_fields(form) -> list:

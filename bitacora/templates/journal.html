@@ -116,8 +116,12 @@
         </span>
       </div>
       <button class="btn-edit" onclick="editJCat({{ cat.id }})">Editar</button>
+      {# El modal dice el número real: "y todas sus notas" no deja saber si son dos o doscientas.
+         Y el borrado hace un backup antes, así que decirlo es parte de la información. #}
+      {% set n = usos.get(cat.id, 0) %}
       <form method="POST" action="{{ url_for('journal.journal_category_delete', cat_id=cat.id) }}"
-            data-confirmar="¿Eliminar esta categoría y todas sus notas?" data-confirmar-ok="Eliminar"
+            data-confirmar="¿Eliminar «{{ cat.name }}»{% if n == 1 %} y la nota que tiene guardada{% elif n %} y sus {{ n }} notas{% endif %}?&#10;{% if n %}Se guarda un backup antes de borrar.{% else %}No tiene ninguna nota guardada.{% endif %}"
+            data-confirmar-ok="Eliminar la categoría"
             onsubmit="return false;"
             style="display:inline;">
         <input type="hidden" name="back" value="{{ back or '' }}">

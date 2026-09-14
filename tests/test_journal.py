@@ -518,3 +518,42 @@ def test_el_calendario_y_la_semana_no_traen_alta_de_notas_especiales(client, tes
         for muerto in ("toggleJForm", "updateJFields", "submitJEntry", "JCATS"):
             assert muerto not in html, f"{muerto} en {url}"
 
+
+# ── Borrar una categoría ─────────────────────────────────────────────────────
+
+def test_borrar_una_categoria_hace_backup_antes(test_db, tmp_path):
+    """Es la operación más destructiva de la feature: se lleva la categoría Y todas sus notas.
+
+    Cualquier camino destructivo de la app deja su snapshot antes; hasta un renombre de campo
+    hace el suyo. Este era el único que borraba sin red.
+    """
+    cid = _add_cat(test_db)
+    _add_entry(test_db, cid)
+    db.delete_journal_category(cid)
+    assert any(p.name.startswith("health-prejournal-")
+               for p in (tmp_path / "backups").iterdir())
+
+
+def test_la_confirmacion_de_borrar_dice_cuantas_notas_se_van(client, test_db):
+    """"y todas sus notas" no deja saber si son dos o doscientas."""
+    cid = _add_cat(test_db)
+    assert "No tiene ninguna nota guardada" in client.get("/journal").data.decode()
+
+    _add_entry(test_db, cid, entry_date=DATE)
+    assert "la nota que tiene guardada" in client.get("/journal").data.decode()
+
+    _add_entry(test_db, cid, entry_date=DATE2)
+    html = client.get("/journal").data.decode()
+    assert "y sus 2 notas" in html
+    assert "Se guarda un backup antes de borrar" in html
+
+
+def test_el_conteo_por_categoria_no_mezcla_categorias(test_db):
+    uno = _add_cat(test_db)
+    db.add_journal_category({**CAT_BASE, "name": "Sueño"})
+    otro = [c["id"] for c in db.get_journal_categories() if c["id"] != uno][0]
+    _add_entry(test_db, uno)
+    _add_entry(test_db, otro, entry_date=DATE2)
+    _add_entry(test_db, otro, entry_date=DATE2)
+    assert db.count_journal_entries_by_category() == {uno: 1, otro: 2}
+
