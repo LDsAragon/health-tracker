@@ -9,7 +9,7 @@ bp = Blueprint("journal", __name__)
 
 @bp.route("/journal")
 def journal_view():
-    categories = db.get_journal_categories()
+    categories = db.get_journal_categories(incluir_archivadas=True)
     return render_template("journal.html", categories=categories,
                            usos=db.count_journal_entries_by_category(),
                            usos_campos=db.journal_field_usage(),
@@ -82,7 +82,8 @@ def journal_category_edit(cat_id):
     if not name:
         return redirect(url_for("journal.journal_view", back=safe_back(request.form.get("back"))))
 
-    old_cat = next((c for c in db.get_journal_categories() if c["id"] == cat_id), None)
+    old_cat = next((c for c in db.get_journal_categories(incluir_archivadas=True)
+                if c["id"] == cat_id), None)
     old_fields = {f["label"]: f for f in (old_cat or {}).get("fields", [])}
     new_fields = _parse_fields(request.form)
     label_renames = _detect_label_renames(request.form, old_fields)
@@ -111,6 +112,13 @@ def journal_category_edit(cat_id):
         "show_in_calendar": show,
     })
     db.migrate_entry_values(cat_id, label_renames, option_renames)
+    return redirect(url_for("journal.journal_view", back=safe_back(request.form.get("back"))))
+
+
+@bp.route("/journal/<int:cat_id>/archivar", methods=["POST"])
+def journal_category_archive(cat_id):
+    """Sin confirmación a propósito: no borra nada y se deshace con un clic."""
+    db.set_journal_category_active(cat_id, request.form.get("activa") == "1")
     return redirect(url_for("journal.journal_view", back=safe_back(request.form.get("back"))))
 
 

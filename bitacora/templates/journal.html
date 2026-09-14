@@ -100,9 +100,14 @@
 </div>
 
 <!-- ── Lista de categorías ── -->
-{% if categories %}
+{# Archivar saca la categoría del alta del día sin borrar nada: lo anotado se sigue viendo en su
+   día, en el calendario y en Estadísticas. Es la salida no destructiva a "esto ya no lo
+   registro más". #}
+{% set activas    = categories | selectattr('active') | list %}
+{% set archivadas = categories | rejectattr('active') | list %}
+{% if activas %}
 <div class="rec-list">
-  {% for cat in categories %}
+  {% for cat in activas %}
   <div class="rec-entry" id="jcat-entry-{{ cat.id }}" style="--c: {{ cat.color }};">
 
     <!-- Vista -->
@@ -120,6 +125,13 @@
         </span>
       </div>
       <button class="btn-edit" onclick="editJCat({{ cat.id }})">Editar</button>
+      <form method="POST" action="{{ url_for('journal.journal_category_archive', cat_id=cat.id) }}"
+            style="display:inline;">
+        <input type="hidden" name="back" value="{{ back or '' }}">
+        <input type="hidden" name="activa" value="0">
+        <button type="submit" class="btn-edit"
+                title="Dejar de ofrecerla al cargar una nota, sin borrar lo anotado">Archivar</button>
+      </form>
       {# El modal dice el número real: "y todas sus notas" no deja saber si son dos o doscientas.
          Y el borrado hace un backup antes, así que decirlo es parte de la información. #}
       {% set n = usos.get(cat.id, 0) %}
@@ -240,8 +252,42 @@
   </div>
   {% endfor %}
 </div>
-{% else %}
+{% elif not archivadas %}
 <p class="empty-msg">No hay categorías todavía. ¡Creá la primera arriba!</p>
+{% endif %}
+
+{% if archivadas %}
+<h2 class="stats-section">Archivadas · {{ archivadas | length }}</h2>
+<p class="page-sub" style="margin-top:-6px;">No aparecen al cargar una nota nueva. Lo que
+  anotaste con ellas se sigue viendo en su día, en el calendario y en Estadísticas.</p>
+<div class="rec-list">
+  {% for cat in archivadas %}
+  {% set n = usos.get(cat.id, 0) %}
+  <div class="rec-entry jcat-archivada" style="--c: {{ cat.color }};">
+    <div class="rec-item">
+      <span class="rec-dot"></span>
+      <div class="rec-info">
+        <span class="rec-title">{{ cat.name }}</span>
+        <span class="rec-rule">{% if n %}{{ n }} nota{{ 's' if n != 1 }} guardada{{ 's' if n != 1 }}{% else %}Sin notas guardadas{% endif %}</span>
+      </div>
+      <form method="POST" action="{{ url_for('journal.journal_category_archive', cat_id=cat.id) }}"
+            style="display:inline;">
+        <input type="hidden" name="back" value="{{ back or '' }}">
+        <input type="hidden" name="activa" value="1">
+        <button type="submit" class="btn-edit">Desarchivar</button>
+      </form>
+      <form method="POST" action="{{ url_for('journal.journal_category_delete', cat_id=cat.id) }}"
+            data-confirmar="¿Eliminar «{{ cat.name }}»{% if n == 1 %} y la nota que tiene guardada{% elif n %} y sus {{ n }} notas{% endif %}?&#10;{% if n %}Se guarda un backup antes de borrar.{% else %}No tiene ninguna nota guardada.{% endif %}"
+            data-confirmar-ok="Eliminar la categoría"
+            onsubmit="return false;"
+            style="display:inline;">
+        <input type="hidden" name="back" value="{{ back or '' }}">
+        <button type="submit" class="btn-delete-sm">Eliminar</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
 {% endif %}
 
 <script>

@@ -606,3 +606,57 @@ def test_una_fila_que_no_viaja_quita_el_campo_y_deja_el_resto_alineado(client, t
     assert [f["label"] for f in fields] == ["¿Qué pensé?"]
     assert fields[0]["placeholder"] == "Pensamientos..."
 
+
+# ── Archivar ─────────────────────────────────────────────────────────────────
+
+def test_archivar_la_saca_del_alta_del_dia_pero_no_de_lo_anotado(client, test_db):
+    cid = _add_cat(test_db)
+    _add_entry(test_db, cid)
+    client.post(f"/journal/{cid}/archivar", data={"activa": "0"})
+
+    html = client.get(f"/day/{DATE}").data.decode()
+    assert 'data-id="%d"' % cid not in html      # ya no se puede elegir para una nota nueva
+    assert "ansioso" in html                     # pero lo anotado sigue ahí
+    assert db.get_journal_categories() == []
+    assert len(db.get_journal_categories(incluir_archivadas=True)) == 1
+
+
+def test_archivar_no_saca_lo_anotado_de_estadisticas(client, test_db):
+    """⚠️ Tripwire del fallo callado de esta feature.
+
+    Si archivar filtrara también donde se LEE, meses de datos desaparecerían de los gráficos, de
+    "Tiempo por actividad" y de las emociones sin que nada avise. Archivar es sobre dónde se
+    escribe, nunca sobre dónde se lee.
+    """
+    db.add_journal_category({
+        "name": "Sueño", "color": "#3b82f6", "show_in_calendar": 1,
+        "fields_json": json.dumps([
+            {"label": "Horas", "type": "duracion", "chart": True},
+            {"label": "Emoción", "type": "emotion-wheel"},
+        ]),
+    })
+    cid = db.get_journal_categories()[0]["id"]
+    _add_entry(test_db, cid, values={"Horas": "480", "Emoción": "Alegre > Contento"})
+    client.post(f"/journal/{cid}/archivar", data={"activa": "0"})
+
+    assert [f["label"] for f in db.chartable_fields()] == ["Horas"]
+    assert [t["name"] for t in db.tiempo_comparado(DATE, DATE)] == ["Sueño"]
+    assert db.emociones_frecuentes(DATE, DATE)["ruedas"]["willcox"]
+
+
+def test_desarchivar_la_devuelve_al_alta(client, test_db):
+    cid = _add_cat(test_db)
+    client.post(f"/journal/{cid}/archivar", data={"activa": "0"})
+    client.post(f"/journal/{cid}/archivar", data={"activa": "1"})
+    assert len(db.get_journal_categories()) == 1
+    assert 'data-id="%d"' % cid in client.get(f"/day/{DATE}").data.decode()
+
+
+def test_una_categoria_archivada_se_sigue_pudiendo_editar(client, test_db):
+    """journal_view y el edit leen con incluir_archivadas: sin eso, guardar una archivada
+    perdería sus campos (old_cat sale None y no hay con qué comparar)."""
+    cid = _add_cat(test_db)
+    client.post(f"/journal/{cid}/archivar", data={"activa": "0"})
+    html = client.get("/journal").data.decode()
+    assert "Archivadas" in html and "Desarchivar" in html
+

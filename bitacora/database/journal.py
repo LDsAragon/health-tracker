@@ -3,10 +3,16 @@ import json
 from .conn import get_db, snapshot_to, backup_path
 
 
-def get_journal_categories() -> list:
+def get_journal_categories(incluir_archivadas: bool = False) -> list:
+    """⚠️ Por default solo las activas, que es lo que corresponde en el único lugar donde se
+    ELIGE una: el alta del día. Todo lo que LEE historia —Estadísticas, la pantalla de
+    categorías— pide `incluir_archivadas=True`: si archivar sacara la categoría de ahí, meses de
+    datos desaparecerían de los gráficos y del resumen sin que nada avise."""
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT * FROM journal_categories WHERE active = 1 ORDER BY id"
+            "SELECT * FROM journal_categories"
+            + ("" if incluir_archivadas else " WHERE active = 1")
+            + " ORDER BY id"
         ).fetchall()
     result = []
     for r in rows:
@@ -95,6 +101,18 @@ def count_journal_entries_by_category() -> dict:
             "SELECT category_id, COUNT(*) AS n FROM journal_entries GROUP BY category_id"
         ).fetchall()
     return {r["category_id"]: r["n"] for r in rows}
+
+
+def set_journal_category_active(cat_id: int, activa: bool):
+    """Archivar / desarchivar.
+
+    Archivar la saca de donde se ESCRIBE (el alta del día) y de ningún lado donde se LEE: las
+    notas viejas se siguen viendo en su día, en el calendario y en Estadísticas. Es lo que la
+    separa de borrar, y por eso no pide confirmación: no se pierde nada y se deshace con un clic.
+    """
+    with get_db() as conn:
+        conn.execute("UPDATE journal_categories SET active = ? WHERE id = ?",
+                     (1 if activa else 0, cat_id))
 
 
 def journal_field_usage() -> dict:

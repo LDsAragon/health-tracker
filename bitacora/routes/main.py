@@ -199,7 +199,7 @@ def stats_view():
         periodo_texto = f"últimos {range_days} días"
     end = today.isoformat()
 
-    cats = db.get_journal_categories()
+    cats = db.get_journal_categories(incluir_archivadas=True)
     fieldinfo = {(c["id"], f["label"]): (f.get("type", "text"), c["name"])
                  for c in cats for f in c.get("fields", [])}
 

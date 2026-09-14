@@ -70,7 +70,7 @@ def option_distribution(cat_id, field_label, start, end):
 def chartable_fields():
     """Campos marcados con 'graficar' (chart=true) en alguna categoría."""
     out = []
-    for c in get_journal_categories():
+    for c in get_journal_categories(incluir_archivadas=True):
         for f in c.get("fields", []):
             if f.get("chart"):
                 out.append({
@@ -224,7 +224,7 @@ def _tiempo_por_actividad(start: str, end: str) -> dict:
     `opciones`, una clave por opción ("Ejercicio · Correr").
     """
     info = {}
-    for c in get_journal_categories():
+    for c in get_journal_categories(incluir_archivadas=True):
         tf = [(f["label"], f["type"]) for f in c.get("fields", []) if f.get("type") in TIME_TYPES]
         if tf:
             gf = next((f["label"] for f in c["fields"] if f.get("type") == "opciones"), "")
@@ -291,7 +291,7 @@ def emociones_frecuentes(start: str, end: str) -> dict:
 
     Es la feature más rica de la app y Estadísticas no la miraba.
     """
-    cats = get_journal_categories()
+    cats = get_journal_categories(incluir_archivadas=True)
     campos = {c["id"]: [f["label"] for f in c.get("fields", [])
                         if f.get("type") == "emotion-wheel"]
               for c in cats}

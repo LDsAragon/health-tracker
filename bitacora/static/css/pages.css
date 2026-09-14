@@ -693,6 +693,9 @@ select.journal-cat-select {
 .stats-card-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
 .stats-card canvas { width: 100% !important; height: 220px !important; }
 .stats-section { font-size: 16px; font-weight: 700; margin: 26px 0 12px; }
+/* Archivada: sigue siendo legible, pero se lee como guardada y no como en uso. */
+.jcat-archivada .rec-title { color: var(--muted); }
+.jcat-archivada .rec-dot { opacity: .45; }
 .stats-adherence { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
 .adh-row { display: grid; grid-template-columns: minmax(90px, 160px) 1fr auto auto; align-items: center; gap: 10px; }
 .adh-delta { text-align: right; min-width: 62px; }
