@@ -723,6 +723,22 @@ el alta, la vista y la edición, en la vista del día.
 - **No hay validación de "nota vacía"**: una categoría sin campos es un marcador legítimo ("hoy
   medité"), y exigir contenido rompería ese uso.
 
+## Volver de una pantalla del navbar
+
+Las ocho pantallas que se abren desde el navbar llevan el mismo `.page-back .back-link`
+("← Volver" si venís de algún lado, "← Calendario" si entraste por URL), y el navbar les pasa
+`back=request.full_path`. `safe_back()` (`helpers.py`) corta cualquier URL externa.
+
+- ⚠️ **Sin ese enlace no hay botón Y TAMPOCO Escape**: el handler global de `base.html` navega
+  atrás buscando exactamente un `.page-back .back-link`. Tareas, Estadísticas y Búsqueda no lo
+  tenían y quedaban sin salida, mientras las otras cinco sí. Al agregar una pantalla al navbar,
+  el enlace de vuelta es parte de la pantalla.
+- ⚠️ **En el visor de tareas `back` viaja DENTRO de `_filtros()`**, no como un parámetro aparte:
+  así lo arrastran solos los enlaces de estado y período, el buscador y `_back_to_todos()`.
+  Afuera, filtrar o mover una tarea te dejaba sin camino de vuelta.
+- En `/search` el hidden del formulario **conserva** el `back` en vez de recalcularlo, o buscar
+  dos veces seguidas encadenaba el volver a la búsqueda anterior.
+
 ## Confirmaciones: ninguna es del navegador
 
 `confirm()` en la ventana de escritorio sale encabezado por **"127.0.0.1:65015 dice"**, que es lo
@@ -1014,5 +1030,16 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
   **`create_window(http_port=...)`, no por `webview.start()`**: con un objeto Flask la ventana
   levanta su propio servidor en `_initialize()` y ahí solo llega el de `create_window`. El widget
   no necesita nada porque reusa ese mismo servidor.
-- **pywebview / localStorage**: `webview.start(private_mode=False, storage_path=...)` — sin eso pywebview borra el zoom y el tamaño de celdas al cerrar.
+- **pywebview / localStorage**: `webview.start(private_mode=False, storage_path=...)` — sin eso
+  pywebview borra el perfil del WebView2 al cerrar.
+  ⚠️ **Pero eso NO alcanza: hoy el `localStorage` se pierde igual en cada arranque.** Vive por
+  **origen**, y el origen es `http://127.0.0.1:<puerto>` con un puerto efímero distinto cada vez
+  (`puerto_seguro()`, que nació para esquivar `ERR_UNSAFE_PORT`). Medido en una instalación real:
+  **52 orígenes** acumulados, con `app_zoom` guardada bajo 18 de ellos, `setOpen-apariencia` bajo
+  15 y `day_side_width` bajo 13. O sea que se resetean en cada arranque los colapsables
+  (`setOpen-*`, `todos*Open`, `widgetNotasHoy`), el zoom, `cal_cell_height`, el ancho y alto de
+  los paneles del día y el "dejarla como está" de las sugerencias de rutinas. En el navegador sí
+  persisten: ahí el puerto es fijo. **Arreglo pendiente** (decisión del usuario, 2026-09-14):
+  recordar el último puerto en un archivo del dispositivo y reusarlo si sigue libre. Hasta
+  entonces el manual dice la verdad —"mientras la app está abierta"— en vez de prometerlo.
 - **DB path en tests**: `bitacora.database.conn.DB_PATH` se parchea directamente (por string, así que un cambio de layout lo rompe ruidoso); `get_db()` lo lee en cada call.
