@@ -913,14 +913,14 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
 - **Linux / descargas**: `webview.settings["ALLOW_DOWNLOADS"] = True` es necesario (está en `bitacora/escritorio/main.py`); por defecto pywebview cancela descargas silenciosamente.
 - **Arch / keyring**: `instalar.sh` detecta keyring sin inicializar chequeando `/etc/pacman.d/gnupg/trustdb.gpg` (no solo el directorio — el dir puede existir vacío).
 - **Windows / Mark of the Web**: si el zip viajó por internet, .NET se niega a cargar `Python.Runtime.dll`. `escritorio/main.py::_unblock_dlls()` borra el stream `Zone.Identifier` de las DLLs de `_internal/` en cada arranque; el updater hace lo mismo tras copiar los archivos nuevos.
-- ⚠️ **Sin panel de rutinas, la tercera columna del día NO se declara.** `minmax(0, 300px)` en
-  una columna vacía igual mide 300px (el algoritmo de grid reparte el espacio libre hasta el
-  growth limit), así que con `justify-content: center` el día quedaba corrido a la izquierda con
-  420px muertos a la derecha en 1600px. La clase `day-layout-sin-rutinas` y el `<aside>` salen de
-  **una sola variable de la plantilla** (`hay_panel_rutinas`) — decidirlo dos veces es lo que
-  dejaba la columna fantasma. Ahí el panel de tareas arranca en 480px (el ancho que hace que una
-  tarea entre en una línea) en vez de 300, y el tope del arrastre deja de dividir por dos: con un
-  solo panel no hay nada con qué repartir.
+- **Las columnas laterales arrancan en 400px** (`--day-side`), no en 300: con 300 al texto de una
+  tarea le quedaban 103px y los títulos se partían en dos líneas. 400 es lo más ancho que entra
+  sin achicar la card en una pantalla de 1600.
+  ⚠️ **Las tres columnas se declaran siempre, incluso sin panel de rutinas.** Se probó no
+  declarar la tercera cuando el panel no está —una columna vacía igual mide su ancho y corre todo
+  a la izquierda— y **se revirtió por pedido del usuario**: el tema del layout del día se va a
+  rehacer entero más adelante, con algo más adaptable, y mientras tanto la vista se queda como
+  estaba. No volver a intentarlo suelto.
 - **El panel de tareas arranca en 420px de alto** (`min-height: var(--day-alto-tareas, 420px)`).
   El mismo var en `height` y en `min-height` es lo que deja el arrastre intacto: con un alto
   elegido los dos valen lo mismo y se puede achicar; sin arrastrar, crece con las tareas y **no

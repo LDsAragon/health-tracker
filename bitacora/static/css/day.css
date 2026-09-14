@@ -21,19 +21,11 @@
      el medio, la del medio se comía todo el sobrante y la card quedaba lejísimos del panel. Así
      el conjunto mide lo que necesita, `justify-content: center` lo centra y **el sobrante queda
      afuera** — que es el espacio que se aprovecha al ensanchar los paneles. */
-  grid-template-columns: minmax(0, var(--day-side, 300px)) minmax(0, 760px)
-                         minmax(0, var(--day-side, 300px));
+  grid-template-columns: minmax(0, var(--day-side, 400px)) minmax(0, 760px)
+                         minmax(0, var(--day-side, 400px));
   justify-content: center;
   gap: 20px;
   align-items: start;
-}
-/* Sin rutinas ni avisos no hay tercera columna. Declarada igual, medía sus 300px —una pista
-   vacía— y empujaba todo a la izquierda: en 1600px quedaban 420px muertos a la derecha, en 1920
-   eran 580. Y como queda un solo panel lateral, el default del de tareas es más ancho: el que
-   hace que una tarea entre en una línea en vez de partirse en dos. Un ancho arrastrado
-   (`--day-side`) manda sobre los dos defaults. */
-.day-layout-sin-rutinas {
-  grid-template-columns: minmax(0, var(--day-side, 480px)) minmax(0, 760px);
 }
 .day-card {
   grid-column: 2;
