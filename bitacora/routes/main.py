@@ -155,6 +155,11 @@ def _guardar_ajuste(key, val) -> bool:
     if not valor_valido(key, val):
         return False
     db.set_setting(key, val)
+    if key == "window_size":
+        # En caliente: el ajuste se elige mirando la ventana, así que verlo recién al próximo
+        # arranque es como no verlo. En el navegador y en los tests esto es un no-op.
+        from bitacora.escritorio import widget as ventana
+        ventana.aplicar_tamano_principal(val)
     return True
 
 

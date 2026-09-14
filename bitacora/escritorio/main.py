@@ -19,7 +19,6 @@ from pathlib import Path
 
 # La carpeta de la instalación sale del updater para tener UNA sola definición:
 # estuvo duplicada acá y divergió, y la copia de allá era la que estaba mal.
-from bitacora.appconfig import es_resolucion
 from bitacora.escritorio.updater import base_dir
 
 # ⚠️ Chromium —y con él WebView2 y WebKitGTK— se niega a cargar una página servida desde una
@@ -55,30 +54,14 @@ MIN_SIZE = (420, 480)
 
 
 def tamano_inicial():
-    """(ancho, alto, maximizada) para la ventana grande, según el ajuste `window_size`.
+    """(ancho, alto, maximizada) para la ventana, según el ajuste `window_size`.
 
-    ⚠️ Se acota a la pantalla. Los ajustes viajan en el sync, así que una medida elegida en un
-    monitor de 2560 puede llegar a una máquina de 1366: una ventana más grande que la pantalla
-    nace con los bordes afuera, y en Windows el borde de arriba se lleva la barra de título.
+    El cálculo vive en `escritorio/widget.py` —que es donde está el handle de la ventana grande—
+    para que el arranque y el cambio en caliente desde Ajustes no puedan divergir.
     """
     from bitacora import database as db
-    valor = db.get_setting("window_size", "")
-    if valor == "maximizada":
-        return WINDOW_SIZE[0], WINDOW_SIZE[1], True      # el tamaño queda de "restaurar"
-    if not es_resolucion(valor):
-        return WINDOW_SIZE[0], WINDOW_SIZE[1], False
-    ancho, alto = (int(n) for n in valor.split("x"))
-    try:
-        import webview
-        pantallas = list(webview.screens)
-    except Exception:
-        pantallas = []
-    if pantallas:
-        # La más grande: es donde la ventana tiene chance de entrar entera.
-        ancho_max = max(p.width for p in pantallas)
-        alto_max = max(p.height for p in pantallas) - 40      # barra de tareas
-        ancho, alto = min(ancho, ancho_max), min(alto, alto_max)
-    return max(ancho, MIN_SIZE[0]), max(alto, MIN_SIZE[1]), False
+    from bitacora.escritorio import widget
+    return widget.medidas_ventana(db.get_setting("window_size", ""))
 
 
 def puerto_seguro():

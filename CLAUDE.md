@@ -142,7 +142,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 823 tests, ~45s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 826 tests, ~45s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -846,11 +846,17 @@ Cero `<select>` entre los 17 ajustes, seis secciones colapsables y **guardado al
   validador elegir una medida propia y recargar la borraba. Hay un test que lo fija.
   El radio de "Otra" lleva el valor que escriben los dos números y dispara **su** `change`, así el
   guardado al instante es el mismo camino que el de los presets; sin JS quedan los presets.
-- ⚠️ **El tamaño pedido se acota a la pantalla al abrir** (`escritorio/main.tamano_inicial()`,
-  con `webview.screens`): los ajustes viajan en el sync, así que una medida elegida en un monitor
-  de 2560 puede llegar a una máquina de 1366, y una ventana más grande que la pantalla nace con
-  los bordes —y la barra de título— afuera. `maximizada` usa `create_window(maximized=True)` y
-  deja el default como tamaño de "restaurar".
+- **El cambio se aplica EN CALIENTE**, no al próximo arranque: es un ajuste que se elige mirando
+  la ventana. Lo hace `escritorio/widget.aplicar_tamano_principal()` desde `_guardar_ajuste`, por
+  el mismo canal que ya usan las rutas del widget (`routes/widget.py` importa ese módulo, que
+  degrada a no-op sin pywebview). De maximizada a una medida hay que `restore()` primero, o el
+  `resize()` no se ve.
+- ⚠️ **El tamaño pedido se acota a la pantalla** (`widget.medidas_ventana()`, con
+  `webview.screens`): los ajustes viajan en el sync, así que una medida elegida en un monitor de
+  2560 puede llegar a una máquina de 1366, y una ventana más grande que la pantalla nace con los
+  bordes —y la barra de título— afuera. El cálculo vive junto al handle de la ventana grande para
+  que el arranque (`main.tamano_inicial()`) y el cambio en caliente no puedan divergir.
+  `maximizada` usa `create_window(maximized=True)` y deja el default como tamaño de "restaurar".
 - ⚠️ **El switch es un `<input type="checkbox">` escondido + un `<input type="hidden">` DESPUÉS**.
   Un checkbox sin marcar no manda nada: sin el hidden, apagar un switch desde el formulario dejaría
   el ajuste en blanco en vez de apagado. El orden no es cosmético — marcado viajan los dos y

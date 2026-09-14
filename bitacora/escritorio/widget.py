@@ -9,6 +9,8 @@ import threading
 
 TITULO = "Bitácora"
 ANCHO, ALTO = 340, 520
+# Mínimo de la ventana GRANDE (el del widget es el min_size de su create_window).
+MIN_PRINCIPAL = (420, 480)
 GEOMETRIA = "widget.json"
 
 # La ventana y la URL base viven acá y no en webview.windows[n]: esa lista cambia de tamaño
@@ -269,6 +271,49 @@ def abrir_en_principal(ruta: str):
 def _olvidar_principal():
     global _principal
     _principal = None
+
+
+# ── La medida de la ventana grande (ajuste `window_size`) ────────────────────
+
+def medidas_ventana(valor: str):
+    """(ancho, alto, maximizada) para la ventana grande, a partir del ajuste.
+
+    ⚠️ Se acota a la pantalla. Los ajustes viajan en el sync, así que una medida elegida en un
+    monitor de 2560 puede llegar a una máquina de 1366: una ventana más grande que la pantalla
+    nace con los bordes afuera, y en Windows el borde de arriba se lleva la barra de título.
+    """
+    from bitacora.appconfig import SETTINGS, es_resolucion
+    ancho, alto = (int(n) for n in SETTINGS["window_size"]["default"].split("x"))
+    if valor == "maximizada":
+        return ancho, alto, True                 # el default queda como tamaño de "restaurar"
+    if es_resolucion(valor):
+        ancho, alto = (int(n) for n in valor.split("x"))
+    pantallas = _pantallas()
+    if pantallas:
+        # La más grande: es donde la ventana tiene chance de entrar entera.
+        ancho = min(ancho, max(p[2] for p in pantallas))
+        alto = min(alto, max(p[3] for p in pantallas) - 40)      # barra de tareas
+    return max(ancho, MIN_PRINCIPAL[0]), max(alto, MIN_PRINCIPAL[1]), False
+
+
+def aplicar_tamano_principal(valor: str) -> bool:
+    """Cambiar la medida de la ventana grande **en caliente**, al elegirla en Ajustes.
+
+    Aplicarlo solo al arrancar dejaba el ajuste sin efecto visible hasta el siguiente arranque,
+    que para algo que se elige mirando la ventana es como no verlo.
+    """
+    if not hay_escritorio() or not _principal_viva():
+        return False
+    ancho, alto, maximizada = medidas_ventana(valor)
+    try:
+        if maximizada:
+            _principal.maximize()
+        else:
+            _principal.restore()      # sin salir de maximizada, el resize no se ve
+            _principal.resize(ancho, alto)
+        return True
+    except Exception:
+        return False
 
 
 def mostrar_principal():

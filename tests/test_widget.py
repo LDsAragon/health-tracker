@@ -212,6 +212,30 @@ def test_la_geometria_va_a_un_archivo_y_no_a_settings(tmp_path, monkeypatch):
         claves = [r["key"] for r in c.execute("SELECT key FROM settings").fetchall()]
     assert not [k for k in claves if "widget" in k and k != "widget_autostart"]
 
+# ── La medida de la ventana grande ───────────────────────────────────────────
+
+def test_la_medida_de_la_ventana_sale_del_ajuste(monkeypatch):
+    monkeypatch.setattr(widget, "_pantallas", lambda: [(0, 0, 1920, 1080)])
+    assert widget.medidas_ventana("1366x768") == (1366, 768, False)
+    assert widget.medidas_ventana("maximizada")[2] is True
+    assert widget.medidas_ventana("")[:2] == (1280, 860)        # el default del esquema
+    assert widget.medidas_ventana("basura")[:2] == (1280, 860)
+
+
+def test_una_medida_mas_grande_que_la_pantalla_se_acota(monkeypatch):
+    """⚠️ Los ajustes viajan en el sync: una medida elegida en un monitor de 2560 puede llegar a
+    una máquina de 1366, y una ventana más grande que la pantalla nace con los bordes —y la
+    barra de título— afuera."""
+    monkeypatch.setattr(widget, "_pantallas", lambda: [(0, 0, 1366, 768)])
+    assert widget.medidas_ventana("1920x1080") == (1366, 728, False)
+
+
+def test_aplicar_el_tamano_sin_escritorio_no_explota(monkeypatch):
+    """En el navegador y en los tests no hay ventana que redimensionar."""
+    monkeypatch.setattr(widget, "_url_base", "")
+    assert widget.aplicar_tamano_principal("1600x900") is False
+
+
 def test_no_se_guarda_la_posicion_de_una_ventana_MINIMIZADA(tmp_path, monkeypatch):
     """⚠️ El bug que dejaba el widget abierto e invisible.
 
