@@ -22,7 +22,11 @@
   </div>
 </div>
 
-<div class="day-layout">
+{# Una sola decisión para las dos cosas que dependen del panel derecho: la clase del
+   layout y el propio panel. Separadas, un día sin rutinas podía quedar con la tercera
+   columna reservada y vacía. #}
+{% set hay_panel_rutinas = day_events or avisos %}
+<div class="day-layout{% if not hay_panel_rutinas %} day-layout-sin-rutinas{% endif %}">
 
 <!-- Panel lateral permanente: objetivos / quehaceres -->
 <aside class="day-side">
@@ -406,7 +410,7 @@
 <!-- Panel lateral derecho: rutinas y eventos agendados -->
 {# El panel aparece si hay algo HOY o algo que se viene: un recordatorio a tres días era lo
    único en pantalla y quedaba invisible porque el aside colgaba solo de day_events. #}
-{% if day_events or avisos %}
+{% if hay_panel_rutinas %}
 <aside class="day-side day-side-right">
   <div class="day-alto-grip" data-var="--day-alto-rutinas" data-pref="day_alto_rutinas"
        data-panel=".day-card-events-panel"

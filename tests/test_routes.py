@@ -103,6 +103,26 @@ def test_calendario_mes_especifico(client):
 def test_vista_dia(client):
     assert client.get(f"/day/{DATE}").status_code == 200
 
+def test_el_dia_sin_rutinas_no_reserva_la_tercera_columna(client):
+    """La columna del panel de rutinas medía sus 300px aunque el panel no estuviera.
+
+    Con `justify-content: center` eso corría todo a la izquierda y dejaba un hueco muerto a la
+    derecha (420px en una pantalla de 1600). La clase y el `<aside>` salen de la misma variable
+    de la plantilla: este test es lo que impide que vuelvan a decidirse por separado.
+    """
+    html = client.get(f"/day/{DATE}").data.decode()
+    assert "day-layout-sin-rutinas" in html
+    assert "day-side-right" not in html
+
+
+def test_el_dia_con_rutinas_mantiene_las_tres_columnas(client):
+    db.add_recurring_event({"title": "Gimnasio", "color": "#22c55e", "recurrence": "daily",
+                            "start_date": "2020-01-01", "end_date": ""})
+    html = client.get(f"/day/{DATE}").data.decode()
+    assert "day-side-right" in html
+    assert "day-layout-sin-rutinas" not in html
+
+
 def test_vista_semana(client):
     r = client.get(f"/week/{DATE}")
     assert r.status_code == 200

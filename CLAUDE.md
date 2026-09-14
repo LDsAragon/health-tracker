@@ -142,7 +142,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 800 tests, ~45s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 802 tests, ~45s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -900,6 +900,18 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
 - **Linux / descargas**: `webview.settings["ALLOW_DOWNLOADS"] = True` es necesario (está en `bitacora/escritorio/main.py`); por defecto pywebview cancela descargas silenciosamente.
 - **Arch / keyring**: `instalar.sh` detecta keyring sin inicializar chequeando `/etc/pacman.d/gnupg/trustdb.gpg` (no solo el directorio — el dir puede existir vacío).
 - **Windows / Mark of the Web**: si el zip viajó por internet, .NET se niega a cargar `Python.Runtime.dll`. `escritorio/main.py::_unblock_dlls()` borra el stream `Zone.Identifier` de las DLLs de `_internal/` en cada arranque; el updater hace lo mismo tras copiar los archivos nuevos.
+- ⚠️ **Sin panel de rutinas, la tercera columna del día NO se declara.** `minmax(0, 300px)` en
+  una columna vacía igual mide 300px (el algoritmo de grid reparte el espacio libre hasta el
+  growth limit), así que con `justify-content: center` el día quedaba corrido a la izquierda con
+  420px muertos a la derecha en 1600px. La clase `day-layout-sin-rutinas` y el `<aside>` salen de
+  **una sola variable de la plantilla** (`hay_panel_rutinas`) — decidirlo dos veces es lo que
+  dejaba la columna fantasma. Ahí el panel de tareas arranca en 480px (el ancho que hace que una
+  tarea entre en una línea) en vez de 300, y el tope del arrastre deja de dividir por dos: con un
+  solo panel no hay nada con qué repartir.
+- **El panel de tareas arranca en 420px de alto** (`min-height: var(--day-alto-tareas, 420px)`).
+  El mismo var en `height` y en `min-height` es lo que deja el arrastre intacto: con un alto
+  elegido los dos valen lo mismo y se puede achicar; sin arrastrar, crece con las tareas y **no
+  aparece scroll interno**.
 - ⚠️ **`.main-day` NO lleva `max-width`**, como `.main-wide` (el calendario). Con el tope de
   1400px que tenía, en una pantalla grande el día vivía en 1400px centrados y ensanchar el panel
   solo podía robarle ancho a la card: los costados quedaban sin usar. Y las tres columnas de

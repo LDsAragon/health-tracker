@@ -363,11 +363,19 @@ window.BITACORA_REINIT.push(restaurarRuedas);
   const ANCHO_MIN = 200, ANCHO_TOPE = 900, CARD = 760, GAPS = 40;
   const gripAncho = document.getElementById('day-side-grip');
   const panelIzq = gripAncho && gripAncho.closest('.day-side');
+  // ⚠️ El tope depende de cuántos paneles haya. Con los dos, lo que sobra se reparte en dos
+  // (mover un agarre ensancha los dos lados). Sin el de rutinas hay una columna menos y un gap
+  // menos, así que dividir igual dejaba la mitad del espacio libre sin poder usar.
+  const hayPanelDerecho = !!document.querySelector('.day-side-right');
   arrastrable({
     grip: gripAncho, eje: 'x', variable: '--day-side', pref: 'day_side_width',
     minimo: ANCHO_MIN,
-    maximo: () => Math.max(ANCHO_MIN, Math.min(ANCHO_TOPE,
-      Math.floor((document.documentElement.clientWidth - 48 - CARD - GAPS) / 2))),
+    maximo: () => {
+      const libre = document.documentElement.clientWidth - 48 - CARD
+                    - (hayPanelDerecho ? GAPS : GAPS / 2);
+      return Math.max(ANCHO_MIN,
+                      Math.min(ANCHO_TOPE, Math.floor(hayPanelDerecho ? libre / 2 : libre)));
+    },
     medir: () => panelIzq.getBoundingClientRect().width,
   });
 
