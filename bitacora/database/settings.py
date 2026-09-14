@@ -1,5 +1,5 @@
 """Ajustes clave/valor (esquema en appconfig.SETTINGS)."""
-from bitacora.appconfig import DEFAULT_SETTINGS, SETTINGS
+from bitacora.appconfig import DEFAULT_SETTINGS, SETTINGS, valor_valido
 from .conn import get_db
 
 
@@ -27,6 +27,6 @@ def get_all_settings() -> dict:
             s[r["key"]] = r["value"]
     # Clamp: un valor guardado que ya no es válido (ej. tema removido) cae al default.
     for key, spec in SETTINGS.items():
-        if s.get(key) not in spec["choices"]:
+        if not valor_valido(key, s.get(key)):
             s[key] = spec["default"]
     return s

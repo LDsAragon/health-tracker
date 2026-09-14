@@ -71,8 +71,10 @@ def valor_del_form(html, name):
 
 def test_todos_los_ajustes_tienen_un_control():
     """El esquema es la fuente única: un ajuste nuevo sin control quedaría invisible."""
-    # `theme` y `nota_color` son los dos de swatches; el resto, switch o segmentado.
-    assert set(SWITCHES) | set(SEGMENTADOS) | {"theme", "nota_color"} == set(SETTINGS)
+    # `theme` y `nota_color` son los dos de swatches, y `window_size` el único que además de
+    # opciones admite una medida escrita a mano; el resto, switch o segmentado.
+    assert (set(SWITCHES) | set(SEGMENTADOS)
+            | {"theme", "nota_color", "window_size"}) == set(SETTINGS)
 
 
 def test_todos_los_ajustes_estan_en_la_pagina(client):
@@ -231,3 +233,38 @@ def test_el_widget_no_anida_un_formulario(client):
     assert html.index('id="ajustes-form"') < html.index('id="abrir-widget-form"')
     dentro = html[html.index('id="ajustes-form"'):html.index("</form>")]
     assert "<form" not in dentro
+
+
+# ── El tamaño con el que abre la ventana ─────────────────────────────────────
+
+def test_el_tamano_de_ventana_acepta_las_opciones_y_una_medida_propia(client):
+    """Es el único ajuste sin whitelist cerrada: el control ofrece medidas comunes y deja
+    escribir la tuya, así que la validación es un formato y no una lista."""
+    for valor in ("maximizada", "1600x900", "1920x1080", "1234x789"):
+        assert client.post("/ajustes/set",
+                           data={"key": "window_size", "value": valor}).status_code == 204
+        assert db.get_setting("window_size") == valor
+
+
+def test_el_tamano_de_ventana_rechaza_cualquier_cosa(client):
+    for valor in ("", "hola", "100x100", "20000x900", "1600 x 900", "1600x900; rm -rf"):
+        assert client.post("/ajustes/set",
+                           data={"key": "window_size", "value": valor}).status_code == 400
+    assert db.get_setting("window_size") == SETTINGS["window_size"]["default"]
+
+
+def test_una_medida_guardada_sobrevive_a_la_lectura(client, test_db):
+    """⚠️ `get_all_settings` clampea al default lo que no es válido, y una medida propia no está
+    en `choices`: sin el validador propio, elegirla y recargar la borraba."""
+    db.set_setting("window_size", "1234x789")
+    assert db.get_all_settings()["window_size"] == "1234x789"
+    html = client.get("/ajustes").data.decode()
+    assert 'value="1234"' in html and 'value="789"' in html
+
+
+def test_el_control_del_tamano_ofrece_las_medidas_comunes(client):
+    html = client.get("/ajustes").data.decode()
+    for valor in ("maximizada", "1366x768", "1920x1080"):
+        assert f'value="{valor}"' in html
+    assert 'id="win-otra"' in html
+

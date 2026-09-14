@@ -142,7 +142,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 818 tests, ~45s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 823 tests, ~45s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -831,12 +831,26 @@ miraban) y **ningún número era comparativo** — un `0 / 15 · 0%` no dice si 
 
 ## La pantalla de Ajustes
 
-Cero `<select>` entre los 16 ajustes, seis secciones colapsables y **guardado al instante**.
+Cero `<select>` entre los 17 ajustes, seis secciones colapsables y **guardado al instante**.
 
-- **Tres controles, y cuál va dónde no es estético**: switch deslizable para los 8 que se leen como
-  prendido/apagado (aunque el vocabulario cambie: `on/off`, `show/hide`, `open/collapsed`);
+- **Cuatro controles, y cuál va dónde no es estético**: switch deslizable para los 9 que se leen
+  como prendido/apagado (aunque el vocabulario cambie: `on/off`, `show/hide`, `open/collapsed`);
   segmentado para los que son **esto o aquello** (`24h/12h`, `mon/sun`, `week/day`) y para los de 3
-  opciones; swatches para el tema. Un switch en "24 h" haría preguntar *"¿12 h está prendido?"*.
+  opciones; swatches para el tema y el color de nota; y el de **medida** (tamaño de ventana), que
+  es un segmentado de medidas comunes más dos números para escribir la tuya. Un switch en "24 h"
+  haría preguntar *"¿12 h está prendido?"*.
+- ⚠️ **`window_size` es el único ajuste sin whitelist cerrada.** Admite `maximizada`, una de
+  `VENTANA_PRESETS` o una medida escrita a mano, así que trae **su propio validador** en el
+  esquema (`valida: es_resolucion`) y toda la app valida por `appconfig.valor_valido()`. Eso no es
+  opcional: `get_all_settings()` clampea al default lo que no está en `choices`, así que sin el
+  validador elegir una medida propia y recargar la borraba. Hay un test que lo fija.
+  El radio de "Otra" lleva el valor que escriben los dos números y dispara **su** `change`, así el
+  guardado al instante es el mismo camino que el de los presets; sin JS quedan los presets.
+- ⚠️ **El tamaño pedido se acota a la pantalla al abrir** (`escritorio/main.tamano_inicial()`,
+  con `webview.screens`): los ajustes viajan en el sync, así que una medida elegida en un monitor
+  de 2560 puede llegar a una máquina de 1366, y una ventana más grande que la pantalla nace con
+  los bordes —y la barra de título— afuera. `maximizada` usa `create_window(maximized=True)` y
+  deja el default como tamaño de "restaurar".
 - ⚠️ **El switch es un `<input type="checkbox">` escondido + un `<input type="hidden">` DESPUÉS**.
   Un checkbox sin marcar no manda nada: sin el hidden, apagar un switch desde el formulario dejaría
   el ajuste en blanco en vez de apagado. El orden no es cosmético — marcado viajan los dos y

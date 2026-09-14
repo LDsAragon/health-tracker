@@ -246,6 +246,47 @@
         </div>
         <div class="set-control">{{ switch('widget_rutinas', 'show', 'hide') }}</div>
       </div>
+      <div class="set-row set-ancho">
+        <div class="set-texto">
+          <label for="window_size">Tamaño al abrir la app</label>
+          <p class="set-desc">Con qué medida arranca la ventana. <b>Pantalla completa</b> la abre
+            ocupando el monitor entero. Solo aplica a la app de escritorio: en el navegador manda
+            el navegador.</p>
+        </div>
+        <div class="set-control">
+          {# Presets + una medida propia. El radio de "Otra" lleva el valor de los dos números y
+             lo actualiza el script de abajo, así el guardado al instante es exactamente el
+             mismo camino que el de los presets. #}
+          <div class="seg seg-wrap" role="radiogroup" aria-label="window_size">
+            <label class="seg-opt">
+              <input type="radio" name="window_size" value="maximizada"
+                     {% if settings.window_size == 'maximizada' %}checked{% endif %}>
+              <span>Pantalla completa</span>
+            </label>
+            {% for v in ventana_presets %}
+            <label class="seg-opt">
+              <input type="radio" name="window_size" value="{{ v }}"
+                     {% if settings.window_size == v %}checked{% endif %}>
+              <span>{{ v | replace('x', '×') }}</span>
+            </label>
+            {% endfor %}
+            <label class="seg-opt">
+              <input type="radio" name="window_size" id="win-otra" value="{{ medida_propia }}"
+                     {% if medida_propia %}checked{% endif %}>
+              <span>Otra</span>
+            </label>
+          </div>
+          <div class="set-medida">
+            <input type="number" id="win-w" min="640" max="10000" step="10"
+                   value="{{ medida_w }}" aria-label="Ancho">
+            <span>×</span>
+            <input type="number" id="win-h" min="480" max="10000" step="10"
+                   value="{{ medida_h }}" aria-label="Alto">
+            <span class="set-medida-nota">píxeles</span>
+          </div>
+        </div>
+      </div>
+
       {# ANDAMIO: escritorio #}
     </div>
   </details>
@@ -418,6 +459,24 @@
   ['apariencia', 'calendario', 'tareas', 'escritorio', 'menu', 'detalles'].forEach(n =>
     recordarColapsable('set-' + n, 'setOpen-' + n, true));
   recordarColapsable('set-atajos', 'setOpen-atajos', false);
+
+  // "Otra" medida de ventana: los dos números escriben el valor del radio y disparan SU change,
+  // así el guardado al instante (y el rechazo del servidor, que recarga) es el mismo camino que
+  // el de los presets. Sin JS quedan los presets, que es lo que el formulario sabe postear.
+  (function () {
+    const otra = document.getElementById('win-otra');
+    const w = document.getElementById('win-w');
+    const h = document.getElementById('win-h');
+    if (!otra || !w || !h) return;
+    function aplicar() {
+      if (!w.value || !h.value) return;
+      otra.value = Math.round(w.value) + 'x' + Math.round(h.value);
+      otra.checked = true;
+      otra.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    w.addEventListener('change', aplicar);
+    h.addEventListener('change', aplicar);
+  })();
 </script>
 <script src="{{ url_for('static', filename='js/ajustes.js') }}"></script>
 {% endblock %}

@@ -5,7 +5,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, make_r
 from bitacora import database as db
 from bitacora import services
 from bitacora.escritorio import updater
-from bitacora.appconfig import THEMES, SETTINGS
+from bitacora.appconfig import (THEMES, SETTINGS, VENTANA_PRESETS, es_resolucion,
+                                valor_valido)
 from bitacora.helpers import _setting, _first_weekday, _week_start, _dow_names, safe_back, MESES
 from bitacora.filters import dur_fmt_filter
 
@@ -113,7 +114,14 @@ def week_view(date_str):
 
 @bp.route("/ajustes")
 def settings_view():
+    # El tamaño de ventana: si el guardado no es uno de los presets es una medida propia, y los
+    # dos números del control arrancan con ella (o con el default, para que no salgan vacíos).
+    medida = db.get_setting("window_size", "")
+    propia = medida if es_resolucion(medida) and medida not in VENTANA_PRESETS else ""
+    ancho, alto = (propia or SETTINGS["window_size"]["default"]).split("x")
     return render_template("settings.html", themes=THEMES,
+                           ventana_presets=VENTANA_PRESETS,
+                           medida_propia=propia, medida_w=ancho, medida_h=alto,
                            perfiles_msg=request.args.get("perfiles"),
                            back=safe_back(request.args.get("back")))
 
@@ -144,8 +152,7 @@ def _guardar_ajuste(key, val) -> bool:
     La usan los DOS caminos de guardado —el formulario y el guardado al instante— para que no
     puedan divergir en qué aceptan.
     """
-    spec = SETTINGS.get(key)
-    if spec is None or val is None or val not in spec["choices"]:
+    if not valor_valido(key, val):
         return False
     db.set_setting(key, val)
     return True

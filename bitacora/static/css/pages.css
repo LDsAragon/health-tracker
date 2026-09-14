@@ -716,6 +716,16 @@ select.journal-cat-select {
 .stats-card-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
 .stats-card canvas { width: 100% !important; height: 220px !important; }
 .stats-section { font-size: 16px; font-weight: 700; margin: 26px 0 12px; }
+/* El segmentado del tamaño de ventana tiene seis opciones: envuelve en vez de apretarlas. */
+.seg-wrap { flex-wrap: wrap; }
+.set-medida { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.set-medida input[type="number"] {
+  width: 84px; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 13px;
+  font-family: inherit;
+}
+.set-medida input[type="number"]:focus { outline: none; border-color: var(--accent); }
+.set-medida-nota { font-size: 12px; color: var(--muted); }
 /* Archivada: sigue siendo legible, pero se lee como guardada y no como en uso. */
 .jcat-archivada .rec-title { color: var(--muted); }
 .jcat-archivada .rec-dot { opacity: .45; }

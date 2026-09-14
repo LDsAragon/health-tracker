@@ -19,6 +19,7 @@ from pathlib import Path
 
 # La carpeta de la instalación sale del updater para tener UNA sola definición:
 # estuvo duplicada acá y divergió, y la copia de allá era la que estaba mal.
+from bitacora.appconfig import es_resolucion
 from bitacora.escritorio.updater import base_dir
 
 # ⚠️ Chromium —y con él WebView2 y WebKitGTK— se niega a cargar una página servida desde una
@@ -51,6 +52,33 @@ WINDOW_SIZE = (1280, 860)
 # Mínimo chico a propósito: la app es responsive (<600px = modo agenda) y así
 # la ventana sirve como "columnita" al costado de la pantalla.
 MIN_SIZE = (420, 480)
+
+
+def tamano_inicial():
+    """(ancho, alto, maximizada) para la ventana grande, según el ajuste `window_size`.
+
+    ⚠️ Se acota a la pantalla. Los ajustes viajan en el sync, así que una medida elegida en un
+    monitor de 2560 puede llegar a una máquina de 1366: una ventana más grande que la pantalla
+    nace con los bordes afuera, y en Windows el borde de arriba se lleva la barra de título.
+    """
+    from bitacora import database as db
+    valor = db.get_setting("window_size", "")
+    if valor == "maximizada":
+        return WINDOW_SIZE[0], WINDOW_SIZE[1], True      # el tamaño queda de "restaurar"
+    if not es_resolucion(valor):
+        return WINDOW_SIZE[0], WINDOW_SIZE[1], False
+    ancho, alto = (int(n) for n in valor.split("x"))
+    try:
+        import webview
+        pantallas = list(webview.screens)
+    except Exception:
+        pantallas = []
+    if pantallas:
+        # La más grande: es donde la ventana tiene chance de entrar entera.
+        ancho_max = max(p.width for p in pantallas)
+        alto_max = max(p.height for p in pantallas) - 40      # barra de tareas
+        ancho, alto = min(ancho, ancho_max), min(alto, alto_max)
+    return max(ancho, MIN_SIZE[0]), max(alto, MIN_SIZE[1]), False
 
 
 def puerto_seguro():
@@ -358,11 +386,13 @@ def main():
     # botón "Descargar backup" no hace nada. Con esto: diálogo de guardado en
     # Windows, carpeta de descargas en Linux.
     webview.settings["ALLOW_DOWNLOADS"] = True
+    ancho, alto, maximizada = tamano_inicial()
     principal = webview.create_window(
         WINDOW_TITLE,
         flask_app,
-        width=WINDOW_SIZE[0],
-        height=WINDOW_SIZE[1],
+        width=ancho,
+        height=alto,
+        maximized=maximizada,
         min_size=MIN_SIZE,
         text_select=True,   # permitir seleccionar/copiar texto (notas, etc.)
         # Va acá y no en webview.start(): con un objeto Flask, la ventana levanta su propio
