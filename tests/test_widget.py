@@ -91,8 +91,59 @@ def test_el_widget_lista_las_notas_de_hoy_con_su_lapiz(cliente):
     db.add_note(HOY, "algo anotado", "#ef4444")
     html = cliente.get("/widget?p=nota").data.decode()
     assert "algo anotado" in html
-    assert "w-nota-lapiz" in html
+    assert "w-lapiz" in html
     assert 'data-refresco="notas"' in html
+
+
+def test_lo_de_hoy_arranca_colapsado(cliente):
+    """El widget tiene que ocupar lo mínimo: la lista está para consultarla de vez en cuando.
+
+    ⚠️ El <details> va FUERA de la zona de refresco: adentro, cada actualización de la lista le
+    cerraría el desplegable en la cara.
+    """
+    db.add_note(HOY, "algo anotado")
+    html = cliente.get("/widget?p=nota").data.decode()
+    detalles = html[html.index('id="w-notas-hoy"'):]
+    assert "<details" in html[:html.index('id="w-notas-hoy"')][-60:]
+    assert "open" not in html[html.index('<details'):html.index('id="w-notas-hoy"') + 20]
+    assert detalles.index('data-refresco="notas"') < detalles.index("</details>")
+
+
+def test_el_widget_deja_editar_una_tarea(cliente):
+    """Lo que se pidió primero: el lápiz también en las tareas."""
+    db.add_todo(HOY, "compar pan")
+    tid = db.get_todos_for_date(HOY)[0]["id"]
+    html = cliente.get("/widget").data.decode()
+    assert f"/widget/tarea/{tid}/editar" in html and "w-lapiz" in html
+
+    r = cliente.post(f"/widget/tarea/{tid}/editar", data={"text": "comprar pan"})
+    assert r.status_code == 204
+    assert db.get_todos_for_date(HOY)[0]["text"] == "comprar pan"
+
+
+def test_el_widget_edita_tambien_una_tarea_ATRASADA(cliente):
+    """Las sin cerrar son de otros días y el widget las muestra igual: se pueden editar."""
+    db.add_todo(VIEJA, "algo viejo")
+    tid = db.get_todos_for_date(VIEJA)[0]["id"]
+    assert cliente.post(f"/widget/tarea/{tid}/editar",
+                        data={"text": "algo viejo, corregido"}).status_code == 204
+    assert db.get_todos_for_date(VIEJA)[0]["text"] == "algo viejo, corregido"
+
+
+def test_el_widget_no_edita_una_tarea_que_no_muestra(cliente):
+    """Una de mañana no está en el widget: no se toca desde acá."""
+    manana = (date.today() + timedelta(days=1)).isoformat()
+    db.add_todo(manana, "la de mañana")
+    tid = db.get_todos_for_date(manana)[0]["id"]
+    assert cliente.post(f"/widget/tarea/{tid}/editar", data={"text": "pisada"}).status_code == 400
+    assert db.get_todos_for_date(manana)[0]["text"] == "la de mañana"
+
+
+def test_el_widget_no_guarda_una_tarea_vacia(cliente):
+    db.add_todo(HOY, "algo")
+    tid = db.get_todos_for_date(HOY)[0]["id"]
+    assert cliente.post(f"/widget/tarea/{tid}/editar", data={"text": "  "}).status_code == 400
+    assert db.get_todos_for_date(HOY)[0]["text"] == "algo"
 
 
 def test_editar_una_nota_desde_el_widget(cliente):

@@ -96,6 +96,25 @@ def rutina_toggle(event_id):
     return _volver("tareas")
 
 
+@bp.route("/widget/tarea/<int:todo_id>/editar", methods=["POST"])
+def tarea_editar(todo_id):
+    """Cambiar el texto de una tarea sin salir del widget (204, como el resto del AJAX).
+
+    Se acepta cualquier tarea que el widget MUESTRE: las de hoy y las que quedaron sin cerrar,
+    que son de otros días. `update_todo` solo toca el texto, así que no hay nada más que
+    preservar.
+    """
+    texto = request.form.get("text", "").strip()
+    hoy = date.today()
+    corte = services.overdue_cutoff(hoy, _setting("todo_overdue_from", "week"), _week_start)
+    visibles = {t["id"] for t in db.get_todos_for_date(hoy.isoformat())}
+    visibles |= {t["id"] for t in db.get_overdue_todos(corte.isoformat())}
+    if not texto or todo_id not in visibles:
+        return ("", 400)
+    db.update_todo(todo_id, texto[:200])
+    return ("", 204)
+
+
 @bp.route("/widget/nota/<int:note_id>", methods=["POST"])
 def nota_editar(note_id):
     """Editar el texto de una nota de hoy, sin salir del widget (204, como el resto del AJAX).

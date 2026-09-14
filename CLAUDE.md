@@ -142,7 +142,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 814 tests, ~45s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 818 tests, ~45s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -445,12 +445,21 @@ Windows la base que se estaba usando queda lockeada hasta que el GC recoja la co
   *"dejando el widget compacto y pequeño"*.
 - **El selector de color de la nota rápida** usa el mismo `name="color"` que el día y el
   calendario, así que pasa por `services.color_para_nota_nueva()` como todos.
-- **Las notas de hoy se listan y se editan ahí mismo** (el lápiz): Enter o clic afuera guardan,
-  Shift+Enter hace un salto y Escape cancela. Guarda por `fetch` a `/widget/nota/<id>` (204) y
-  actualiza el nodo a mano, porque `refresco.js` ignora las escrituras **propias** de la página.
-  ⚠️ La ruta **relee la nota para devolverle su color**: `update_note` reescribe la fila entera y
-  sin eso editar el texto le apagaba el color. Y busca el id **entre las de hoy**, que es lo
-  único que el widget muestra. Sumar esa zona además sacó la pestaña del "recarga entera".
+- **Las tareas y las notas se editan en línea** con el lápiz (`editarEnLinea`, un solo editor
+  para las dos): Enter o clic afuera guardan, Shift+Enter hace un salto y Escape cancela. Cada
+  fila dice a dónde postear (`data-editar`) y con qué campo (`data-campo`). Guarda por `fetch`
+  (204) y actualiza el nodo a mano, porque `refresco.js` ignora las escrituras **propias** de la
+  página. Las rutinas no llevan lápiz: se editan en la ventana grande.
+  ⚠️ `/widget/nota/<id>` **relee la nota para devolverle su color**: `update_note` reescribe la
+  fila entera y sin eso editar el texto le apagaba el color. Las dos rutas aceptan solo lo que el
+  widget **muestra** (las notas de hoy; las tareas de hoy **y las atrasadas**, que son de otros
+  días).
+- **"Lo de hoy" arranca colapsado** (`recordarColapsable`, el mismo helper del visor y de
+  Ajustes): el widget tiene que ocupar lo mínimo. ⚠️ El `<details>` va **fuera** de la zona de
+  refresco —adentro, actualizar la lista le cerraría el desplegable en la cara— y por eso el
+  contador del `<summary>` necesita **su propia zona**: sin ella se quedaba con el conteo viejo
+  mientras la lista sí se actualizaba, el mismo agujero que el "⚠️ Sin cerrar · N". Lo cazó
+  `hacer.ps1 refresco`, no un test.
 
 ### La regla de seguridad de la bandeja
 `tray.iniciar()` devuelve si pudo poner el icono, y **el cierre solo se intercepta si devolvió

@@ -49,12 +49,13 @@
   <p class="w-titulo w-alerta">⚠️ Sin cerrar · {{ atrasadas | length }}</p>
   <ul class="w-lista">
     {% for t in atrasadas %}
-    <li class="w-item">
+    <li class="w-item" data-editar="{{ url_for('widget.tarea_editar', todo_id=t.id) }}" data-campo="text">
       <form method="POST" action="{{ url_for('widget.tarea_toggle', todo_id=t.id) }}">
         <button class="w-check" title="Marcar como hecha"></button>
       </form>
-      <span class="w-txt">{{ t.text }}</span>
+      <span class="w-txt js-txt">{{ t.text }}</span>
       <span class="w-fecha">{{ t.todo_date | fechacorta }}</span>
+      <button type="button" class="w-lapiz" title="Editar" onclick="editarEnLinea(this)">&#9998;</button>
     </li>
     {% endfor %}
   </ul>
@@ -64,12 +65,14 @@
   {% if tareas_hoy %}
   <ul class="w-lista">
     {% for t in tareas_hoy %}
-    <li class="w-item {% if t.done %}w-hecha{% endif %}">
+    <li class="w-item {% if t.done %}w-hecha{% endif %}"
+        data-editar="{{ url_for('widget.tarea_editar', todo_id=t.id) }}" data-campo="text">
       <form method="POST" action="{{ url_for('widget.tarea_toggle', todo_id=t.id) }}">
         <button class="w-check {% if t.done %}w-check-on{% endif %}"
                 title="{{ 'Reabrir' if t.done else 'Marcar como hecha' }}">{% if t.done %}✓{% endif %}</button>
       </form>
-      <span class="w-txt">{{ t.text }}</span>
+      <span class="w-txt js-txt">{{ t.text }}</span>
+      <button type="button" class="w-lapiz" title="Editar" onclick="editarEnLinea(this)">&#9998;</button>
     </li>
     {% endfor %}
   </ul>
@@ -169,23 +172,33 @@
   {# Lo anotado hoy, editable ahí mismo con el lápiz. ⚠️ La zona envuelve el condicional y existe
      siempre, aunque quede vacía: si el conjunto de zonas cambiara, el refresco recargaría la
      pestaña entera en vez de actualizar esto solo. #}
-  <p class="w-titulo w-titulo-sep">Lo de hoy</p>
-  <div data-refresco="notas">
-    {% if notas_hoy %}
-    <ul class="w-notas">
-      {% for n in notas_hoy %}
-      <li class="w-nota {% if n.color %}w-nota-color{% endif %}"
-          {% if n.color %}style="--c: {{ n.color }};"{% endif %} data-id="{{ n.id }}">
-        <span class="w-nota-txt">{{ n.content }}</span>
-        <button type="button" class="w-nota-lapiz" title="Editar"
-                onclick="editarNota(this)">&#9998;</button>
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p class="w-vacio">Todavía no anotaste nada hoy.</p>
-    {% endif %}
-  </div>
+  {# Colapsado por default: el widget tiene que ocupar lo mínimo, y lo de hoy es para consultar
+     de vez en cuando. El <details> queda AFUERA de la zona de refresco, así actualizar la lista
+     no le cierra el desplegable. #}
+  <details class="w-detalles" id="w-notas-hoy">
+    {# ⚠️ El contador va en su PROPIA zona. El <summary> tiene que quedar afuera de la zona de la
+       lista (si no, refrescarla cierra el desplegable), y sin zona propia se quedaba con el
+       conteo viejo mientras la lista de adentro sí se actualizaba — el mismo agujero que el
+       "⚠️ Sin cerrar · N" de la pestaña de tareas. Lo cazó `hacer.ps1 refresco`. #}
+    <summary class="w-titulo w-titulo-sep"><span data-refresco="notas-titulo">Lo de hoy{% if notas_hoy %} · {{ notas_hoy | length }}{% endif %}</span></summary>
+    <div data-refresco="notas">
+      {% if notas_hoy %}
+      <ul class="w-notas">
+        {% for n in notas_hoy %}
+        <li class="w-nota {% if n.color %}w-nota-color{% endif %}"
+            {% if n.color %}style="--c: {{ n.color }};"{% endif %}
+            data-editar="{{ url_for('widget.nota_editar', note_id=n.id) }}" data-campo="content">
+          <span class="w-nota-txt js-txt">{{ n.content }}</span>
+          <button type="button" class="w-lapiz" title="Editar"
+                  onclick="editarEnLinea(this)">&#9998;</button>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="w-vacio">Todavía no anotaste nada hoy.</p>
+      {% endif %}
+    </div>
+  </details>
 
   {# Las notas especiales no entran en 340px: el camino es abrir el día en la ventana grande,
      que es lo que ya hace el clic en un día del calendario. #}
@@ -197,20 +210,22 @@
 </main>
 
 <script>
-// Editar una nota sin salir del widget: el lápiz la convierte en un campo con el cursor al
-// final, Enter o clic afuera guardan, Shift+Enter hace un salto de línea y Escape cancela.
+// Editar en línea, sin salir del widget: una tarea o una nota. El lápiz convierte el texto en un
+// campo con el cursor al final, Enter o clic afuera guardan, Shift+Enter hace un salto de línea
+// y Escape cancela. Cada fila dice a dónde postear (`data-editar`) y con qué nombre de campo
+// (`data-campo`), así el mismo editor sirve para las dos cosas.
 // Se guarda por fetch y se actualiza el nodo a mano: refresco.js ignora las escrituras PROPIAS
 // de la página, así que esta pestaña no se recarga sola (la ventana grande sí se entera).
-function editarNota(lapiz) {
-  const li = lapiz.closest('.w-nota');
-  const span = li.querySelector('.w-nota-txt');
+function editarEnLinea(lapiz) {
+  const fila = lapiz.closest('[data-editar]');
+  const span = fila && fila.querySelector('.js-txt');
   if (!span) return;                       // ya está en edición
   const original = span.textContent;
 
   const ta = document.createElement('textarea');
-  ta.className = 'w-nota-editor';
+  ta.className = 'w-editor';
   ta.value = original;
-  ta.rows = Math.max(2, Math.min(6, Math.ceil(original.length / 34)));
+  ta.rows = Math.max(1, Math.min(6, Math.ceil(original.length / 34)));
   span.replaceWith(ta);
   lapiz.style.display = 'none';
   ta.focus();
@@ -220,7 +235,7 @@ function editarNota(lapiz) {
   function salir(texto) {
     cerrado = true;
     const nuevo = document.createElement('span');
-    nuevo.className = 'w-nota-txt';
+    nuevo.className = span.className;
     nuevo.textContent = texto;
     ta.replaceWith(nuevo);
     lapiz.style.display = '';
@@ -229,19 +244,19 @@ function editarNota(lapiz) {
     if (cerrado) return;
     const texto = ta.value.trim();
     if (!texto || texto === original) { salir(original); return; }
-    salir(texto);                          // optimista: la nota ya se ve como quedó
-    fetch('/widget/nota/' + li.dataset.id, {
+    salir(texto);                          // optimista: ya se ve como quedó
+    fetch(fila.dataset.editar, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'content=' + encodeURIComponent(texto),
+      body: fila.dataset.campo + '=' + encodeURIComponent(texto),
     }).then(function (r) {
-      // Si el guardado falla, la nota NO puede quedar mostrando algo que no se guardó.
+      // Si el guardado falla, la fila NO puede quedar mostrando algo que no se guardó.
       if (!r.ok) throw new Error(r.status);
     }).catch(function () {
-      const s = li.querySelector('.w-nota-txt');
+      const s = fila.querySelector('.js-txt');
       if (s) s.textContent = original;
-      li.classList.add('w-nota-error');
-      li.title = 'No se pudo guardar el cambio';
+      fila.classList.add('w-editar-error');
+      fila.title = 'No se pudo guardar el cambio';
     });
   }
   ta.addEventListener('keydown', function (e) {
@@ -250,6 +265,12 @@ function editarNota(lapiz) {
   });
   ta.addEventListener('blur', guardar);
 }
+</script>
+<script src="{{ url_for('static', filename='js/colapsables.js') }}"></script>
+<script>
+// Arranca cerrado y recuerda cómo lo dejaste, como los colapsables del visor de tareas y de
+// Ajustes. Va después del <details>, que es lo que busca por id.
+recordarColapsable('w-notas-hoy', 'widgetNotasHoy', false);
 </script>
 
 {# ⚠️ tojson, y NO el valor entre comillas — ver la nota en base.html: las barras invertidas de
