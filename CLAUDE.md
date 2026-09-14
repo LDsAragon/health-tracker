@@ -142,7 +142,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 810 tests, ~45s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 814 tests, ~45s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -388,6 +388,13 @@ Segunda ventana de pywebview **en el mismo proceso**, `frameless` + `easy_drag` 
   todavía la tiene (`_principal_viva()`), o el clic en un día se pierde en silencio.
 - ⚠️ **La geometría del widget va a `APP_DIR/widget.json`, nunca a `settings`**: los ajustes
   sincronizan entre máquinas y el widget aparecería corrido o fuera de pantalla en la otra.
+- ⚠️ **Una posición guardada se valida contra los monitores, al guardarla y al abrir**
+  (`posicion_visible`, con `webview.screens`). Windows le pone **(-32000, -32000)** a una ventana
+  minimizada y pywebview lo dispara como un evento `moved`: **minimizar el widget una vez lo
+  mandaba fuera de toda pantalla para siempre**, y como `esta_abierto()` seguía devolviendo True
+  la app decía que estaba abierto mientras no se veía por ningún lado. Desenchufar el monitor
+  donde vivía hacía lo mismo. Al abrir, una posición imposible se descarta y se olvida
+  (`olvidar_posicion()` deja el tamaño), así la ventana nace donde la ponga el sistema.
 
 ### Una sola instancia
 Abrir Bitácora estando abierta **no lanza otra**: vuelve la que ya está, y donde la dejaste.

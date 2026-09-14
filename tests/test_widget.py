@@ -161,6 +161,47 @@ def test_la_geometria_va_a_un_archivo_y_no_a_settings(tmp_path, monkeypatch):
         claves = [r["key"] for r in c.execute("SELECT key FROM settings").fetchall()]
     assert not [k for k in claves if "widget" in k and k != "widget_autostart"]
 
+def test_no_se_guarda_la_posicion_de_una_ventana_MINIMIZADA(tmp_path, monkeypatch):
+    """⚠️ El bug que dejaba el widget abierto e invisible.
+
+    Windows le pone (-32000, -32000) a una ventana minimizada y pywebview lo dispara como un
+    evento `moved`: minimizar el widget guardaba esa posición y al siguiente arranque nacía
+    fuera de toda pantalla, con la app diciendo que estaba abierto.
+    """
+    monkeypatch.setenv("HT_PERFILES", str(tmp_path))
+    monkeypatch.setattr(widget, "_url_base", "http://127.0.0.1:1")
+    monkeypatch.setattr(widget, "_pantallas", lambda: [(0, 0, 1920, 1080)])
+
+    widget._al_mover(300, 200)
+    assert widget.leer_geometria() == {"x": 300, "y": 200}
+    widget._al_mover(-32000, -32000)                       # minimizar
+    assert widget.leer_geometria() == {"x": 300, "y": 200}  # la buena sobrevive
+
+
+def test_una_posicion_que_no_cae_en_ninguna_pantalla_se_descarta(tmp_path, monkeypatch):
+    """Vale para el centinela, para el monitor que se desenchufó y para un widget.json ajeno."""
+    monkeypatch.setattr(widget, "_pantallas", lambda: [(0, 0, 1920, 1080), (-1920, 0, 1920, 1080)])
+    assert widget.posicion_visible(100, 100) is True
+    assert widget.posicion_visible(-1800, 300) is True      # el monitor de la izquierda
+    assert widget.posicion_visible(-32000, -32000) is False
+    assert widget.posicion_visible(4000, 200) is False      # el monitor que ya no está
+    assert widget.posicion_visible(1910, 500) is False      # asomando 10px, nada que agarrar
+
+
+def test_sin_poder_preguntar_por_las_pantallas_igual_se_descarta_el_centinela(monkeypatch):
+    monkeypatch.setattr(widget, "_pantallas", lambda: [])
+    assert widget.posicion_visible(-32000, -32000) is False
+    assert widget.posicion_visible(100, 100) is True
+
+
+def test_olvidar_posicion_deja_el_tamano(tmp_path, monkeypatch):
+    monkeypatch.setenv("HT_PERFILES", str(tmp_path))
+    monkeypatch.setattr(widget, "_url_base", "http://127.0.0.1:1")
+    widget.guardar_geometria(x=-32000, y=-32000, w=400, h=600)
+    widget.olvidar_posicion()
+    assert widget.leer_geometria() == {"w": 400, "h": 600}
+
+
 def test_geometria_corrupta_no_tumba_nada(tmp_path, monkeypatch):
     monkeypatch.setenv("HT_PERFILES", str(tmp_path))
     (tmp_path / widget.GEOMETRIA).write_text("{ roto", encoding="utf-8")

@@ -73,13 +73,9 @@ def leer_geometria() -> dict:
     return {}
 
 
-def guardar_geometria(**campos):
+def _escribir_geometria(d: dict):
     """Escritura atómica, como profiles.guardar(): un JSON a medio escribir dejaría al widget
     sin saber dónde ponerse."""
-    if not hay_escritorio():
-        return
-    d = leer_geometria()
-    d.update({k: int(v) for k, v in campos.items() if isinstance(v, (int, float))})
     try:
         tmp = _ruta_geometria() + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
@@ -87,6 +83,54 @@ def guardar_geometria(**campos):
         os.replace(tmp, _ruta_geometria())
     except OSError:
         pass
+
+
+def guardar_geometria(**campos):
+    if not hay_escritorio():
+        return
+    d = leer_geometria()
+    d.update({k: int(v) for k, v in campos.items() if isinstance(v, (int, float))})
+    _escribir_geometria(d)
+
+
+def olvidar_posicion():
+    """Saca x/y y deja el tamaño: la posición guardada ya no cae en ninguna pantalla."""
+    d = leer_geometria()
+    if "x" in d or "y" in d:
+        _escribir_geometria({k: v for k, v in d.items() if k in ("w", "h")})
+
+
+# ⚠️ Cuánto del widget tiene que quedar dentro de una pantalla para poder agarrarlo. No alcanza
+# con que "toque": la ventana es frameless y se arrastra desde cualquier lado, pero si asoma una
+# franja de 3px no hay nada que agarrar.
+VISIBLE_X, VISIBLE_Y = 120, 40
+
+
+def _pantallas():
+    """[(x, y, ancho, alto)] de cada monitor. webview.screens anda sin ventana creada."""
+    try:
+        import webview
+        return [(p.x, p.y, p.width, p.height) for p in webview.screens]
+    except Exception:
+        return []
+
+
+def posicion_visible(x, y, w=ANCHO, h=ALTO) -> bool:
+    """¿Esa posición cae en algún monitor, con suficiente ventana adentro como para agarrarla?
+
+    ⚠️ Windows le pone **(-32000, -32000)** a una ventana minimizada y pywebview lo dispara como
+    un evento `moved`, así que minimizar el widget guardaba esa posición: al siguiente arranque
+    la ventana nacía fuera de toda pantalla y quedaba **abierta, invisible y sin forma de
+    traerla de vuelta** (la app decía que estaba abierta, que es lo peor del caso). El mismo
+    agujero lo abre desenchufar el monitor donde vivía, o traerse un widget.json de otra máquina.
+    """
+    pantallas = _pantallas()
+    if not pantallas:
+        # Sin poder preguntar, al menos descartar el centinela: mejor eso que nada.
+        return abs(int(x)) < 30000 and abs(int(y)) < 30000
+    return any(min(x + w, px + pw) - max(x, px) >= VISIBLE_X
+               and min(y + h, py + ph) - max(y, py) >= VISIBLE_Y
+               for px, py, pw, ph in pantallas)
 
 
 # ── La ventana ───────────────────────────────────────────────────────────────
@@ -121,21 +165,35 @@ def abrir():
                 _ventana = None
         import webview
         g = leer_geometria()
+        ancho, alto = g.get("w", ANCHO), g.get("h", ALTO)
+        x, y = g.get("x"), g.get("y")
+        # Una posición que hoy no existe en ninguna pantalla se descarta y se olvida: la ventana
+        # nace donde la pone el sistema, que es lo que pasaba la primera vez.
+        if x is not None and y is not None and not posicion_visible(x, y, ancho, alto):
+            x = y = None
+            olvidar_posicion()
         try:
             _ventana = webview.create_window(
                 TITULO, f"{_url_base}/widget",
-                width=g.get("w", ANCHO), height=g.get("h", ALTO),
-                x=g.get("x"), y=g.get("y"),
+                width=ancho, height=alto,
+                x=x, y=y,
                 frameless=True, easy_drag=True, on_top=True,
                 resizable=True, min_size=(260, 320), text_select=True,
             )
         except Exception:
             _ventana = None
             return False
-    _ventana.events.moved += lambda x, y: guardar_geometria(x=x, y=y)
+    _ventana.events.moved += _al_mover
     _ventana.events.resized += lambda w, h: guardar_geometria(w=w, h=h)
     _ventana.events.closed += _olvidar
     return True
+
+
+def _al_mover(x, y):
+    """Guardar la posición solo si es una posición de verdad — ver `posicion_visible`."""
+    g = leer_geometria()
+    if posicion_visible(x, y, g.get("w", ANCHO), g.get("h", ALTO)):
+        guardar_geometria(x=x, y=y)
 
 
 def _olvidar():
