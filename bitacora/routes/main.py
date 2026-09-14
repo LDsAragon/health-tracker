@@ -40,7 +40,6 @@ def calendar_view(year=None, month=None):
     dates           = [date(year, month, day) for day in range(1, month_days + 1)]
 
     events_by_date = services.events_by_date(recurring, completions, dates)
-    journal_cats   = db.get_journal_categories()
     journal_badges = services.journal_badges(db.get_journal_entries_range(month_start, month_end))
     todo_counts    = db.get_todo_counts_range(month_start, month_end)
 
@@ -60,7 +59,6 @@ def calendar_view(year=None, month=None):
         today=today.isoformat(),
         prev_year=prev_year, prev_month=prev_month,
         next_year=next_year, next_month=next_month,
-        journal_cats=journal_cats,
         journal_badges=journal_badges,
         todo_counts=todo_counts,
     )
@@ -82,7 +80,6 @@ def week_view(date_str):
     recurring       = db.get_recurring_events()
 
     events_by_date = services.events_by_date(recurring, completions, week_dates)
-    journal_cats   = db.get_journal_categories()
     journal_badges = services.journal_badges(db.get_journal_entries_range(start, end))
     todo_counts    = db.get_todo_counts_range(start, end)
     todos_by_date  = db.get_todos_range(start, end)
@@ -106,7 +103,6 @@ def week_view(date_str):
         prev_week=prev_week,
         next_week=next_week,
         anchor_month_url=url_for("main.calendar_view", year=anchor.year, month=anchor.month),
-        journal_cats=journal_cats,
         journal_badges=journal_badges,
         todo_counts=todo_counts,
         todos_by_date=todos_by_date,

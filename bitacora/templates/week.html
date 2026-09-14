@@ -149,54 +149,6 @@ slider.addEventListener('input', () => { apply(slider.value); localStorage.setIt
   });
 })();
 
-const JCATS = {{ journal_cats | tojson }};
-
-function toggleJForm(ds) {
-  document.getElementById('jform-' + ds).style.display = 'flex';
-  document.getElementById('jbtn-' + ds).style.display  = 'none';
-  document.getElementById('jcat-' + ds).focus();
-}
-function cancelJForm(ds) {
-  document.getElementById('jform-' + ds).style.display = 'none';
-  document.getElementById('jbtn-' + ds).style.display  = 'block';
-  document.getElementById('jcat-' + ds).value = '';
-  document.getElementById('jfields-' + ds).innerHTML = '';
-  document.getElementById('jtags-' + ds).value = '';
-}
-function updateJFields(ds, catId) {
-  const container = document.getElementById('jfields-' + ds);
-  if (!catId) { container.innerHTML = ''; return; }
-  const cat = JCATS.find(c => c.id == catId);
-  if (!cat || !cat.fields || !cat.fields.length) { container.innerHTML = ''; return; }
-  container.innerHTML = cat.fields.map(f => {
-    const type = f.type || 'text';
-    if (type === 'emotion-wheel') return buildEWPickerCompact(f.label);
-    if (type === 'duracion') return buildDuracionField(f.label, f.placeholder);
-    if (type === 'rango') return buildRangoField(f.label, f.placeholder);
-    return '<label class="cal-journal-field-label">' + f.label + '</label>' +
-      '<textarea data-label="' + f.label.replace(/"/g, '&quot;') + '"' +
-      ' placeholder="' + (f.placeholder || '').replace(/"/g, '&quot;') + '"' +
-      ' class="cal-journal-textarea" rows="2"></textarea>';
-  }).join('');
-}
-function submitJEntry(ds, url, next) {
-  const catId = document.getElementById('jcat-' + ds).value;
-  if (!catId) return;
-  const container = document.getElementById('jfields-' + ds);
-  const values = {};
-  container.querySelectorAll('textarea[data-label], input[data-label]').forEach(el => {
-    values[el.dataset.label] = el.value;
-  });
-  collectEWValues(container, values);
-  const tags = document.getElementById('jtags-' + ds).value;
-  const fd = new FormData();
-  fd.append('category_id', catId);
-  fd.append('values_json', JSON.stringify(values));
-  fd.append('tags', tags);
-  fd.append('next', next);
-  fetch(url, { method: 'POST', body: fd }).then(() => location.reload());
-}
-
 function previewCalColor(radio, color) {
   const inp = radio.closest('.cal-quick-form').querySelector('.cal-quick-input');
   if (color) { inp.style.setProperty('--c', color); inp.classList.add('cal-input-colored'); }

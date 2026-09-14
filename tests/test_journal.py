@@ -224,30 +224,11 @@ def test_agregar_entry_desde_dia(client):
         "category_id": cid,
         "values_json": json.dumps({"campo": "valor"}),
         "tags": "test",
-        "next": "day",
     })
     assert r.status_code == 302
     entries = db.get_journal_entries_for_date(DATE)
     assert len(entries) == 1
     assert entries[0]["tags"] == "test"
-
-
-def test_agregar_entry_redirige_a_calendario(client):
-    client.post("/journal/add", data={"name": "Test", "color": "#6366f1"})
-    cid = db.get_journal_categories()[0]["id"]
-    r = client.post(f"/day/{DATE}/journal/add", data={
-        "category_id": cid, "values_json": "{}", "next": "calendar",
-    })
-    assert "/calendar/" in r.headers["Location"]
-
-
-def test_agregar_entry_redirige_a_semana(client):
-    client.post("/journal/add", data={"name": "Test", "color": "#6366f1"})
-    cid = db.get_journal_categories()[0]["id"]
-    r = client.post(f"/day/{DATE}/journal/add", data={
-        "category_id": cid, "values_json": "{}", "next": "week",
-    })
-    assert "/week/" in r.headers["Location"]
 
 
 def test_editar_entry(client):
@@ -522,4 +503,18 @@ def test_el_selector_de_categoria_colapsa_al_elegir(client, test_db):
     assert 'id="jday-cat-elegida"' in html
     assert 'id="jday-cat-cambiar"' in html
     assert 'data-color="#6366f1"' in html
+
+
+def test_el_calendario_y_la_semana_no_traen_alta_de_notas_especiales(client, test_db):
+    """El alta de nota especial vive solo en el día (446638b: "vista muy cargada").
+
+    Cuando se sacó el formulario de esas dos celdas quedó vivo todo su JavaScript, llamando a
+    elementos que ya no existían: ~45 líneas por plantilla que nunca corrieron, más el JSON de
+    todas las categorías serializado en cada carga para nadie. Tripwire para que no vuelva.
+    """
+    _add_cat(test_db)
+    for url in ("/calendar/2026/6", f"/week/{DATE}"):
+        html = client.get(url).data.decode()
+        for muerto in ("toggleJForm", "updateJFields", "submitJEntry", "JCATS"):
+            assert muerto not in html, f"{muerto} en {url}"
 

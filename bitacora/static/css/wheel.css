@@ -35,14 +35,6 @@
 .ew-select:focus { outline: none; }
 .ew-select option { color: var(--text); background: var(--surface); }
 
-/* Versión compacta para celdas del calendario */
-.ew-compact .ew-select {
-  font-size: 11px;
-  padding: 3px 5px;
-  border-radius: 4px;
-}
-.ew-compact { display: flex; flex-direction: column; gap: 4px; }
-
 /* Display de emoción guardada (vista de entrada) */
 .ew-display {
   display: flex;

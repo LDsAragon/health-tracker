@@ -255,36 +255,6 @@ function buildEWPicker(label) {
   </div>`;
 }
 
-// Versión compacta para celdas del calendario
-function buildEWPickerCompact(label) {
-  const esc  = s => s.replace(/"/g, '&quot;');
-  const opts = Object.keys(EMOTION_WHEEL)
-    .map(e => `<option value="${e}">${e}</option>`).join('');
-  return `<div class="emotion-wheel-picker ew-compact" data-label="${esc(label)}">
-    <div class="ew-chips"></div>
-    <div class="ew-open-btns">
-      <button type="button" class="ew-open-btn"
-              onclick="openEWModal(this.closest('.emotion-wheel-picker'),'es')">🎯 Willcox</button>
-      <button type="button" class="ew-open-btn ew-open-btn-ek"
-              onclick="openEWModal(this.closest('.emotion-wheel-picker'),'ek')">🧭 Ekman</button>
-      <button type="button" class="ew-open-btn ew-open-btn-guided"
-              onclick="openEWModal(this.closest('.emotion-wheel-picker'),'guided')">🌿 Guiada</button>
-    </div>
-    <select class="ew-select ew-level1" onchange="ewL2(this)">
-      <option value="">Emoción base...</option>${opts}
-    </select>
-    <select class="ew-select ew-level2" style="display:none;" onchange="ewL3(this)">
-      <option value="">Más específico...</option>
-    </select>
-    <select class="ew-select ew-level3" style="display:none;">
-      <option value="">Aún más específico...</option>
-    </select>
-    <button type="button" class="ew-cascade-add" style="display:none;"
-            onclick="ewCascadeAdd(this.closest('.emotion-wheel-picker'))">+ Agregar emoción</button>
-    <input type="hidden" data-ew-value="">
-  </div>`;
-}
-
 // ── Recolectar valores de pickers en un contenedor ─────────────────────────
 
 function collectEWValues(container, values) {

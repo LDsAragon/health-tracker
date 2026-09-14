@@ -194,12 +194,6 @@ def journal_entry_add(date_str):
             "values_json": values_json,
             "tags":        tags,
         })
-    next_page = request.form.get("next")
-    if next_page == "calendar":
-        d = date.fromisoformat(date_str)
-        return redirect(url_for("main.calendar_view", year=d.year, month=d.month))
-    if next_page == "week":
-        return redirect(url_for("main.week_view", date_str=date_str))
     return _back_to_day(date_str)
 
 

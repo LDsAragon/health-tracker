@@ -268,7 +268,6 @@
         <form id="jday-form" method="POST"
               action="{{ url_for('day.journal_entry_add', date_str=date_str) }}"
               onsubmit="return prepareNewValues()">
-          <input type="hidden" name="next" value="day">
           <input type="hidden" name="values_json" id="jday-values-json">
           <div class="field-group">
             <label>Categoría</label>
