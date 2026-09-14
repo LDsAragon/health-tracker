@@ -140,7 +140,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 761 tests, ~63s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 784 tests, ~45s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
