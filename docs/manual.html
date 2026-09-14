@@ -376,6 +376,9 @@
   <p>Acá está el corazón configurable de Bitácora. Una <b>categoría</b> de nota especial es un
   formulario que diseñás vos: le ponés nombre, color y los campos que quieras. Después la cargás
   desde la vista del día, las veces que haga falta (podés registrar varias por día).</p>
+  <p>Al cargar una, elegís la categoría de la fila de colores y el formulario se arma solo: la
+  fila se guarda y queda a la vista solo la que elegiste, con el color tiñendo el formulario y un
+  <b>Cambiar</b> al lado por si te equivocaste. Si tenés una sola categoría, se elige sola.</p>
 
   <h3>Los tipos de campo</h3>
   <table>
@@ -444,6 +447,14 @@
     gráficos (sección 10).</li>
     <li><b>📈 Graficar:</b> cualquier campo medible se puede tildar para que aparezca
     automáticamente en Estadísticas. Sin tilde, no hay gráfico: vos decidís qué se mide.</li>
+    <li><b>Archivar:</b> si dejaste de registrar algo, <b>archivá</b> la categoría en vez de
+    borrarla: desaparece del formulario al cargar una nota nueva, pero todo lo que anotaste se
+    sigue viendo en su día, en el calendario y en Estadísticas. Se desarchiva con un clic.</li>
+    <li><b>Borrar sí se lleva todo:</b> eliminar una categoría borra también sus notas. La app te
+    dice cuántas son antes de hacerlo y guarda un backup automático por las dudas.</li>
+    <li><b>Los campos se ordenan</b> con las flechitas ↑ ↓ del editor, y cada uno muestra en
+    cuántas notas ya escribiste algo. Si quitás uno que tiene datos, la app te avisa antes de
+    guardar —lo anotado ahí dejaría de verse— y podés deshacerlo.</li>
   </ul>
 </section>
 
@@ -788,7 +799,9 @@
 
   <h3>Trucos</h3>
   <ul>
-    <li><b>El buscador</b> de la barra encuentra cualquier nota por su texto — tu memoria externa.</li>
+    <li><b>El buscador</b> de la barra encuentra cualquier nota por su texto — las rápidas y las
+    especiales, estas últimas también por sus etiquetas. Los resultados vienen en dos grupos, y
+    cada nota especial muestra el campo donde apareció lo que buscabas. Tu memoria externa.</li>
     <li><b>Ventana angosta:</b> llevá Bitácora a un costado del monitor; en menos de 600 px de
     ancho se vuelve agenda vertical, perfecta como compañera de jornada.</li>
     <li><b>Zoom + celdas:</b> combiná el zoom global con el deslizador de tamaño de celdas hasta

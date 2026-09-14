@@ -133,6 +133,8 @@ Prefijos de backup:
 - `health-prereset-<ts>` — antes de borrar todo
 - `health-prerestore-<ts>` — antes de restaurar un backup externo
 - `health-prerename-<ts>` — antes de migrar renombres de campos/opciones
+- `health-prejournal-<ts>` — antes de borrar una categoría de notas especiales (se lleva
+  todas sus entradas)
 - `health-preborrado-<slug>-<ts>` — antes de borrar todos los perfiles. **Este va a
   `APP_DIR/backups/`, no al del perfil**: la carpeta del perfil es justo lo que se borra
 - `health-preperfiles-<ts>` — antes de mudar la DB al layout de perfiles
@@ -140,7 +142,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 784 tests, ~45s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 800 tests, ~45s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -661,6 +663,43 @@ Lo que sí hace la pantalla es **ofrecerlo**, con un aviso por rutina
 - **"Dejarla como está" va a `localStorage` por `uid`**: es una preferencia de vista y no un dato,
   así que no ensucia el esquema ni viaja en el sync. Por `uid` y no por `id`, que es local a cada
   base.
+
+## Notas especiales
+
+Categorías (el "tipo" de nota, con sus campos) y entradas. La configuración vive en `/journal`;
+el alta, la vista y la edición, en la vista del día.
+
+- ⚠️ **El alta vive SOLO en el día.** El calendario y la semana muestran el badge de lo que
+  registraste, pero no dejan cargar (`446638b`, *"vista muy cargada"*). De esa decisión quedó vivo
+  todo el JS del formulario llamando a elementos que ya no existían —45 líneas por plantilla que
+  nunca corrieron— y las dos pantallas serializando las categorías a JSON para nadie. Limpiado, y
+  con un tripwire para que no vuelva.
+- **Elegida la categoría, el selector colapsa** al chip elegido + "Cambiar", y el formulario se
+  tiñe con su color. No es solo estética: con la fila entera a la vista, un clic distraído en otro
+  chip reconstruía los campos y **vaciaba lo escrito**. Hoy re-elegir la misma no reconstruye,
+  "Cambiar" no toca ni el hidden ni los campos, y con una sola categoría se elige sola.
+- ⚠️ **Archivar afecta dónde se ESCRIBE, nunca dónde se lee.** `get_journal_categories()` filtra
+  por `active` por default —lo correcto en el único lugar donde se elige una, el alta del día— y
+  todo lo que lee historia pide `incluir_archivadas=True`: `chartable_fields`, `tiempo_comparado`,
+  `emociones_frecuentes`, el `fieldinfo` de Estadísticas y la propia `/journal`. Al revés,
+  archivar haría desaparecer meses de gráficos y de resumen sin que nada avise. Hay un tripwire.
+- **Borrar una categoría se lleva todas sus notas**: snapshot previo (`health-prejournal-<ts>`) y
+  el número real en la confirmación, porque "y todas sus notas" no deja saber si son dos o
+  doscientas.
+- ⚠️ **Quitar un campo esconde lo guardado para siempre**: la vista y la edición iteran la
+  definición de la categoría, así que un valor sin campo no se ve en ningún lado. Por eso cada
+  fila del editor dice cuántas notas lo usan (`journal_field_usage()`) y el ✕ sobre una con datos
+  no borra: la marca con sus controles `disabled` —no viajan, y los arreglos paralelos quedan
+  igual de alineados— con un aviso inline y un Deshacer. Se va recién al guardar.
+- **Reordenar con ↑/↓ no es un renombre**: el `field_oldlabel[]` se mueve con su fila, así que
+  `_detect_label_renames` no ve nada. Antes, meter un campo en el medio obligaba a borrar y
+  recrear, que es justo lo que **no** migra.
+- ⚠️ **La búsqueda confirma en Python.** El `LIKE` sobre `values_json` es solo para acotar: ese
+  JSON guarda `{etiqueta: valor}`, así que un LIKE crudo devuelve toda categoría que tenga un
+  campo llamado "Notas" apenas buscás "notas". Se busca lo que escribiste, no cómo se llama el
+  casillero.
+- **No hay validación de "nota vacía"**: una categoría sin campos es un marcador legítimo ("hoy
+  medité"), y exigir contenido rompería ese uso.
 
 ## Confirmaciones: ninguna es del navegador
 
