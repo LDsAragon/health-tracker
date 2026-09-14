@@ -166,6 +166,27 @@
     <button class="w-btn w-btn-ancho">Guardar</button>
   </form>
 
+  {# Lo anotado hoy, editable ahí mismo con el lápiz. ⚠️ La zona envuelve el condicional y existe
+     siempre, aunque quede vacía: si el conjunto de zonas cambiara, el refresco recargaría la
+     pestaña entera en vez de actualizar esto solo. #}
+  <p class="w-titulo w-titulo-sep">Lo de hoy</p>
+  <div data-refresco="notas">
+    {% if notas_hoy %}
+    <ul class="w-notas">
+      {% for n in notas_hoy %}
+      <li class="w-nota {% if n.color %}w-nota-color{% endif %}"
+          {% if n.color %}style="--c: {{ n.color }};"{% endif %} data-id="{{ n.id }}">
+        <span class="w-nota-txt">{{ n.content }}</span>
+        <button type="button" class="w-nota-lapiz" title="Editar"
+                onclick="editarNota(this)">&#9998;</button>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="w-vacio">Todavía no anotaste nada hoy.</p>
+    {% endif %}
+  </div>
+
   {# Las notas especiales no entran en 340px: el camino es abrir el día en la ventana grande,
      que es lo que ya hace el clic en un día del calendario. #}
   <form method="POST" action="{{ url_for('widget.dia', date_str=hoy) }}" class="w-especial-form">
@@ -174,6 +195,62 @@
 {% endif %}
 
 </main>
+
+<script>
+// Editar una nota sin salir del widget: el lápiz la convierte en un campo con el cursor al
+// final, Enter o clic afuera guardan, Shift+Enter hace un salto de línea y Escape cancela.
+// Se guarda por fetch y se actualiza el nodo a mano: refresco.js ignora las escrituras PROPIAS
+// de la página, así que esta pestaña no se recarga sola (la ventana grande sí se entera).
+function editarNota(lapiz) {
+  const li = lapiz.closest('.w-nota');
+  const span = li.querySelector('.w-nota-txt');
+  if (!span) return;                       // ya está en edición
+  const original = span.textContent;
+
+  const ta = document.createElement('textarea');
+  ta.className = 'w-nota-editor';
+  ta.value = original;
+  ta.rows = Math.max(2, Math.min(6, Math.ceil(original.length / 34)));
+  span.replaceWith(ta);
+  lapiz.style.display = 'none';
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);   // seguir escribiendo donde quedó
+
+  let cerrado = false;
+  function salir(texto) {
+    cerrado = true;
+    const nuevo = document.createElement('span');
+    nuevo.className = 'w-nota-txt';
+    nuevo.textContent = texto;
+    ta.replaceWith(nuevo);
+    lapiz.style.display = '';
+  }
+  function guardar() {
+    if (cerrado) return;
+    const texto = ta.value.trim();
+    if (!texto || texto === original) { salir(original); return; }
+    salir(texto);                          // optimista: la nota ya se ve como quedó
+    fetch('/widget/nota/' + li.dataset.id, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'content=' + encodeURIComponent(texto),
+    }).then(function (r) {
+      // Si el guardado falla, la nota NO puede quedar mostrando algo que no se guardó.
+      if (!r.ok) throw new Error(r.status);
+    }).catch(function () {
+      const s = li.querySelector('.w-nota-txt');
+      if (s) s.textContent = original;
+      li.classList.add('w-nota-error');
+      li.title = 'No se pudo guardar el cambio';
+    });
+  }
+  ta.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); guardar(); }
+    else if (e.key === 'Escape') { e.preventDefault(); salir(original); }
+  });
+  ta.addEventListener('blur', guardar);
+}
+</script>
 
 {# ⚠️ tojson, y NO el valor entre comillas — ver la nota en base.html: las barras invertidas de
    la ruta de Windows se comían como escapes de JavaScript y la página se recargaba sin parar. #}

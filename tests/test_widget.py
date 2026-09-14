@@ -84,6 +84,52 @@ def test_no_guarda_una_nota_vacia(cliente):
     assert db.get_notes_for_date(HOY) == []
 
 
+# ── Editar una nota desde el widget ──────────────────────────────────────────
+
+def test_el_widget_lista_las_notas_de_hoy_con_su_lapiz(cliente):
+    """La pestaña de Nota solo dejaba escribir una nueva: lo anotado no se veía ni se tocaba."""
+    db.add_note(HOY, "algo anotado", "#ef4444")
+    html = cliente.get("/widget?p=nota").data.decode()
+    assert "algo anotado" in html
+    assert "w-nota-lapiz" in html
+    assert 'data-refresco="notas"' in html
+
+
+def test_editar_una_nota_desde_el_widget(cliente):
+    db.add_note(HOY, "a medio escribir")
+    nid = db.get_notes_for_date(HOY)[0]["id"]
+    r = cliente.post(f"/widget/nota/{nid}", data={"content": "a medio escribir, ya no"})
+    assert r.status_code == 204
+    assert db.get_notes_for_date(HOY)[0]["content"] == "a medio escribir, ya no"
+
+
+def test_editar_desde_el_widget_NO_le_borra_el_color_a_la_nota(cliente):
+    """⚠️ `update_note` reescribe la fila entera, color incluido.
+
+    Sin releer la nota para devolverle el suyo, editar el texto desde el widget le apagaba el
+    color a una nota que sí lo tenía — un dato del usuario perdido sin que nada avise.
+    """
+    db.add_note(HOY, "roja", "#ef4444")
+    nid = db.get_notes_for_date(HOY)[0]["id"]
+    cliente.post(f"/widget/nota/{nid}", data={"content": "sigue roja"})
+    assert db.get_notes_for_date(HOY)[0]["color"] == "#ef4444"
+
+
+def test_el_widget_solo_edita_notas_de_hoy(cliente):
+    """El widget muestra las de hoy: un id de otro día no se toca."""
+    db.add_note(VIEJA, "de hace veinte días")
+    nid = db.get_notes_for_date(VIEJA)[0]["id"]
+    assert cliente.post(f"/widget/nota/{nid}", data={"content": "pisada"}).status_code == 400
+    assert db.get_notes_for_date(VIEJA)[0]["content"] == "de hace veinte días"
+
+
+def test_el_widget_no_guarda_una_edicion_vacia(cliente):
+    db.add_note(HOY, "algo")
+    nid = db.get_notes_for_date(HOY)[0]["id"]
+    assert cliente.post(f"/widget/nota/{nid}", data={"content": "   "}).status_code == 400
+    assert db.get_notes_for_date(HOY)[0]["content"] == "algo"
+
+
 # ── Sin escritorio, las rutas de ventana no pueden explotar ──────────────────
 
 def test_las_acciones_de_ventana_no_explotan_sin_escritorio(cliente):

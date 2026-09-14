@@ -142,7 +142,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 805 tests, ~45s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 810 tests, ~45s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -438,6 +438,12 @@ Windows la base que se estaba usando queda lockeada hasta que el GC recoja la co
   *"dejando el widget compacto y pequeño"*.
 - **El selector de color de la nota rápida** usa el mismo `name="color"` que el día y el
   calendario, así que pasa por `services.color_para_nota_nueva()` como todos.
+- **Las notas de hoy se listan y se editan ahí mismo** (el lápiz): Enter o clic afuera guardan,
+  Shift+Enter hace un salto y Escape cancela. Guarda por `fetch` a `/widget/nota/<id>` (204) y
+  actualiza el nodo a mano, porque `refresco.js` ignora las escrituras **propias** de la página.
+  ⚠️ La ruta **relee la nota para devolverle su color**: `update_note` reescribe la fila entera y
+  sin eso editar el texto le apagaba el color. Y busca el id **entre las de hoy**, que es lo
+  único que el widget muestra. Sumar esa zona además sacó la pestaña del "recarga entera".
 
 ### La regla de seguridad de la bandeja
 `tray.iniciar()` devuelve si pudo poner el icono, y **el cierre solo se intercepta si devolvió

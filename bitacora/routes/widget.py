@@ -34,6 +34,7 @@ def vista():
         pestana=pest if pest in PESTANAS else "tareas",
         hoy=hoy.isoformat(),
         tareas_hoy=db.get_todos_for_date(hoy.isoformat()),
+        notas_hoy=db.get_notes_for_date(hoy.isoformat()),
         atrasadas=db.get_overdue_todos(corte.isoformat()),
         # Calendario compacto: los mismos datos que arma main.calendar_view
         anio=año, mes=mes, mes_nombre=MESES[mes],
@@ -93,6 +94,23 @@ def rutina_toggle(event_id):
     else:
         db.complete_event(event_id, hoy)
     return _volver("tareas")
+
+
+@bp.route("/widget/nota/<int:note_id>", methods=["POST"])
+def nota_editar(note_id):
+    """Editar el texto de una nota de hoy, sin salir del widget (204, como el resto del AJAX).
+
+    ⚠️ Se relee la nota para volver a mandar su color: `update_note` reescribe la fila entera, y
+    sin el color editar el texto desde acá se lo borraba. Y como se busca entre las de HOY, un id
+    de otro día no se toca: el widget solo muestra las de hoy.
+    """
+    texto = request.form.get("content", "").strip()
+    nota = next((n for n in db.get_notes_for_date(date.today().isoformat())
+                 if n["id"] == note_id), None)
+    if not nota or not texto:
+        return ("", 400)
+    db.update_note(note_id, texto, nota["color"])
+    return ("", 204)
 
 
 @bp.route("/widget/nota", methods=["POST"])
