@@ -49,10 +49,14 @@ const PANTALLAS = [
 const CON_BORRADOR = [
   { nombre: 'día',    path: `/day/${HOY}`,
     abrir: '#rapida-collapsed', campo: '#rapida-form .day-add-input' },
+  // ⚠️ El borrador va en una celda que NO sea la de hoy. Cada celda es su propia zona y una
+  // zona con algo tipeado adentro se saltea a propósito: dejando el borrador en la celda de hoy
+  // —que es la que el otro lado cambia— la auditoría se reprobaba a sí misma. Pasaba los lunes
+  // en la semana (la primera celda es hoy) y pasaría el día 1 en el mes.
   { nombre: 'mes',    path: `/calendar/${Y}/${Number(M)}`,
-    campo: '.cal-quick-input' },
+    campo: '.cal-cell:not(.is-today) .cal-quick-input' },
   { nombre: 'semana', path: `/week/${HOY}`,
-    campo: '.cal-quick-input' },
+    campo: '.cal-cell:not(.is-today) .cal-quick-input' },
 ];
 
 function python() {

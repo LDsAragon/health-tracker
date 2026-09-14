@@ -86,7 +86,7 @@ $COMANDOS = [ordered]@{
     }
     "refresco" = @{
         d = "Audita que las 14 pantallas se enteren de los cambios de la otra ventana (levanta su propio servidor)"
-        f = { & node "toolsefresco_audit.mjs" @Resto }
+        f = { & node "tools\refresco_audit.mjs" @Resto }
     }
     "servidor-prueba" = @{
         d = "Levanta Bitacora contra una base TEMPORAL, para probar sin tocar tus datos"
