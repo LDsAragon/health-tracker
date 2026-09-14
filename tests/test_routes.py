@@ -103,6 +103,40 @@ def test_calendario_mes_especifico(client):
 def test_vista_dia(client):
     assert client.get(f"/day/{DATE}").status_code == 200
 
+def test_las_pantallas_del_navbar_saben_volver(client):
+    """Tareas, Estadísticas y Búsqueda se abren desde el navbar y no tenían salida.
+
+    Sin un `.page-back .back-link` no hay botón para volver Y Escape tampoco hace nada: el
+    handler global de base.html busca exactamente ese enlace. Quedaban tres pantallas sin
+    retorno mientras las otras cinco del navbar sí lo tenían.
+    """
+    for url in ("/tareas", "/estadisticas", "/search?q=algo"):
+        html = client.get(url).data.decode()
+        assert 'class="page-back"' in html, url
+        assert "Calendario" in html, url          # sin origen, al calendario
+
+    for url in ("/tareas?back=%2Fday%2F2026-06-09", "/estadisticas?back=%2Fday%2F2026-06-09",
+                "/search?q=algo&back=%2Fday%2F2026-06-09"):
+        html = client.get(url).data.decode()
+        bloque = html[html.index('class="page-back"'):][:300]
+        assert '/day/2026-06-09' in bloque and "Volver" in bloque, url
+
+
+def test_el_visor_de_tareas_no_pierde_el_volver_al_filtrar(client):
+    """`back` viaja dentro de los filtros, así que los enlaces de filtro lo arrastran solos."""
+    html = client.get("/tareas?back=%2Fday%2F2026-06-09").data.decode()
+    # Los botones de estado y de período, más el hidden del buscador.
+    assert html.count("back=/day/2026-06-09") >= 3
+
+
+def test_volver_no_acepta_una_url_externa(client):
+    """safe_back corta el open-redirect: el enlace de vuelta no puede salir de la app."""
+    html = client.get("/tareas?back=https%3A%2F%2Fevil.example").data.decode()
+    bloque = html[html.index('class="page-back"'):][:300]
+    assert "evil.example" not in bloque
+    assert "Calendario" in bloque
+
+
 def test_el_dia_sin_rutinas_no_reserva_la_tercera_columna(client):
     """La columna del panel de rutinas medía sus 300px aunque el panel no estuviera.
 

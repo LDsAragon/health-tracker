@@ -2,6 +2,12 @@
 {% block title %}{% if query %}{{ query }} — Búsqueda{% else %}Buscar{% endif %}{% endblock %}
 
 {% block content %}
+{# Se llega desde el navbar: sin esto no había forma de volver, ni con Escape (el handler
+   global busca un `.page-back .back-link`). #}
+<div class="page-back" style="margin-bottom:14px;">
+  <a href="{{ back or url_for('main.home') }}" class="back-link">&#8592; {{ 'Volver' if back else 'Calendario' }}</a>
+</div>
+
 {% set total = results | length + especiales | length %}
 <div class="page-top">
   <h1 class="page-title">Búsqueda</h1>
@@ -14,6 +20,7 @@
 </div>
 
 <form class="search-form-main" action="{{ url_for('main.search_view') }}" method="GET">
+  <input type="hidden" name="back" value="{{ back or '' }}">
   <input type="text" name="q" class="search-input-main"
          value="{{ query or '' }}" placeholder="Buscar en las notas y en las notas especiales..."
          {% if not query %}autofocus{% endif %}>

@@ -6,6 +6,7 @@
 <input type="hidden" name="estado" value="{{ f.estado }}">
 <input type="hidden" name="periodo" value="{{ f.periodo }}">
 <input type="hidden" name="q" value="{{ f.q }}">
+<input type="hidden" name="back" value="{{ f.back }}">
 {% endmacro %}
 
 {% macro fila(t, f, today, manana, con_fecha=True) %}
@@ -47,6 +48,12 @@
 {% endmacro %}
 
 {% block content %}
+{# Se llega desde el navbar, así que sin esto no había forma de volver: ni un botón, ni Escape
+   (el handler global de base.html busca justamente un `.page-back .back-link`). #}
+<div class="page-back" style="margin-bottom:14px;">
+  <a href="{{ f.back or url_for('main.home') }}" class="back-link">&#8592; {{ 'Volver' if f.back else 'Calendario' }}</a>
+</div>
+
 <div class="page-top">
   <h1 class="page-title">📋 Tareas</h1>
   <p class="page-sub">Todas las listas del día, juntas. Nada se mueve solo: lo que quedó sin cerrar
@@ -111,19 +118,20 @@
 <div class="todos-filtros">
   <div class="stats-range">
     {% for val, lbl in estados %}
-    <a href="{{ url_for('todos.todos_view', estado=val, periodo=f.periodo, q=f.q or None) }}"
+    <a href="{{ url_for('todos.todos_view', estado=val, periodo=f.periodo, q=f.q or None, back=f.back or None) }}"
        class="stats-range-btn {% if f.estado == val %}active{% endif %}">{{ lbl }}</a>
     {% endfor %}
   </div>
   <div class="stats-range">
     {% for val, lbl, _titulo in periodos %}
-    <a href="{{ url_for('todos.todos_view', estado=f.estado, periodo=val, q=f.q or None) }}"
+    <a href="{{ url_for('todos.todos_view', estado=f.estado, periodo=val, q=f.q or None, back=f.back or None) }}"
        class="stats-range-btn {% if f.periodo == val %}active{% endif %}">{{ lbl }}</a>
     {% endfor %}
   </div>
   <form method="GET" action="{{ url_for('todos.todos_view') }}" class="todos-buscar">
     <input type="hidden" name="estado" value="{{ f.estado }}">
     <input type="hidden" name="periodo" value="{{ f.periodo }}">
+    <input type="hidden" name="back" value="{{ f.back }}">
     <input type="text" name="q" class="todos-buscar-input" placeholder="Buscar en tareas…"
            value="{{ f.q }}">
   </form>

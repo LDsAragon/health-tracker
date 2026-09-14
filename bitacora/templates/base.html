@@ -27,6 +27,10 @@
     {% endif %}
 
     <form class="nav-search" action="{{ url_for('main.search_view') }}" method="GET">
+      {# Buscando de nuevo desde la propia búsqueda, el "volver" tiene que seguir apuntando a
+         donde entraste y no encadenarse a la búsqueda anterior. #}
+      <input type="hidden" name="back"
+             value="{{ (back or '') if request.endpoint == 'main.search_view' else request.full_path }}">
       <input type="text" name="q" class="nav-search-input"
              placeholder="Buscar notas..."
              value="{{ request.args.get('q', '') if request.endpoint == 'main.search_view' else '' }}">
@@ -42,13 +46,13 @@
         Notas especiales
       </a>
       {% if settings.show_todos != 'hide' %}
-      <a href="{{ url_for('todos.todos_view') }}"
+      <a href="{{ url_for('todos.todos_view', back=request.full_path) }}"
          class="nav-link {% if request.endpoint and request.endpoint.startswith('todos.') %}active{% endif %}">
         📋 Tareas<span data-refresco="atrasadas-nav">{% if overdue_count %}<span class="nav-badge">{{ overdue_count }}</span>{% endif %}</span>
       </a>
       {% endif %}
       {% if settings.show_stats != 'hide' %}
-      <a href="{{ url_for('main.stats_view') }}"
+      <a href="{{ url_for('main.stats_view', back=request.full_path) }}"
          class="nav-link {% if request.endpoint == 'main.stats_view' %}active{% endif %}">
         📈 Estadísticas
       </a>

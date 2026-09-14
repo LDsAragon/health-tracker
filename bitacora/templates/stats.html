@@ -2,6 +2,12 @@
 {% block title %}Estadísticas{% endblock %}
 
 {% block content %}
+{# Se llega desde el navbar: sin esto no había forma de volver, ni con Escape (el handler
+   global busca un `.page-back .back-link`). #}
+<div class="page-back" style="margin-bottom:14px;">
+  <a href="{{ back or url_for('main.home') }}" class="back-link">&#8592; {{ 'Volver' if back else 'Calendario' }}</a>
+</div>
+
 <div class="page-top">
   <h1 class="page-title">📈 Estadísticas</h1>
   {# El subtítulo decía "solo lo que marcaste para graficar", que era exacto y era el problema:
@@ -13,7 +19,7 @@
    usaba el suyo guardado). Cada tarjeta dice de qué período habla. #}
 <div class="stats-range">
   {% for val, lbl in periodos %}
-  <a href="{{ url_for('main.stats_view', range=val) }}"
+  <a href="{{ url_for('main.stats_view', range=val, back=back or None) }}"
      class="stats-range-btn {% if periodo == val %}active{% endif %}">{{ lbl }}</a>
   {% endfor %}
 </div>

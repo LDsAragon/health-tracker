@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, jsonif
 from bitacora import database as db
 from bitacora import services
 from bitacora.appconfig import LAST_WEEK_SEEN_KEY
-from bitacora.helpers import _setting, _week_start
+from bitacora.helpers import _setting, _week_start, safe_back
 
 bp = Blueprint("todos", __name__)
 
@@ -28,13 +28,19 @@ ALERTA_MAX = 8
 
 
 def _filtros():
-    """Filtros del visor, saneados por whitelist. Lee args y form para sobrevivir a los POST."""
+    """Filtros del visor, saneados por whitelist. Lee args y form para sobrevivir a los POST.
+
+    `back` viaja acá adentro y no aparte: así lo arrastran solos los enlaces de filtro, el
+    buscador y `_back_to_todos()`, y el "Volver" sigue apuntando a donde entraste después de
+    filtrar o de mover una tarea.
+    """
     estado = request.values.get("estado", "pendientes")
     periodo = request.values.get("periodo", PERIODO_DEFAULT)
     return {
         "estado": estado if estado in dict(ESTADOS) else "pendientes",
         "periodo": periodo if periodo in dict((v, t) for v, _, t in PERIODOS) else PERIODO_DEFAULT,
         "q": request.values.get("q", "").strip(),
+        "back": safe_back(request.values.get("back", ""), ""),
     }
 
 

@@ -181,6 +181,7 @@ PERIODOS = [("mes", "Este mes"), ("30", "30 días"), ("90", "3 meses"),
 @bp.route("/estadisticas")
 def stats_view():
     today = date.today()
+    back = safe_back(request.args.get("back"))
     # ⚠️ Un SOLO período para toda la pantalla. Antes este selector mandaba sobre los gráficos
     # automáticos y la adherencia, pero cada gráfico personalizado usaba su `charts.range_days`
     # guardado: dos tarjetas al lado mostraban ventanas distintas sin decirlo. La columna se
@@ -295,7 +296,8 @@ def stats_view():
                            periodo=periodo, periodos=PERIODOS, periodo_texto=periodo_texto,
                            tiempo=tiempo,
                            resumen=db.resumen_comparado(start, end),
-                           emociones=db.emociones_frecuentes(start, end))
+                           emociones=db.emociones_frecuentes(start, end),
+                           back=back)
 
 
 @bp.route("/estadisticas/grafico/add", methods=["POST"])
@@ -440,7 +442,9 @@ def reset_db_route():
 @bp.route("/search")
 def search_view():
     query   = request.args.get("q", "").strip()
+    back    = safe_back(request.args.get("back"))
     results = db.search_notes(query) if query else []
     # Las notas especiales también son notas: el buscador decía "todas" y solo miraba las rápidas.
     especiales = db.search_journal_entries(query) if query else []
-    return render_template("search.html", query=query, results=results, especiales=especiales)
+    return render_template("search.html", query=query, results=results, especiales=especiales,
+                           back=back)
