@@ -441,4 +441,6 @@ def reset_db_route():
 def search_view():
     query   = request.args.get("q", "").strip()
     results = db.search_notes(query) if query else []
-    return render_template("search.html", query=query, results=results)
+    # Las notas especiales también son notas: el buscador decía "todas" y solo miraba las rápidas.
+    especiales = db.search_journal_entries(query) if query else []
+    return render_template("search.html", query=query, results=results, especiales=especiales)

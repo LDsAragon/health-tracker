@@ -2,11 +2,12 @@
 {% block title %}{% if query %}{{ query }} — Búsqueda{% else %}Buscar{% endif %}{% endblock %}
 
 {% block content %}
+{% set total = results | length + especiales | length %}
 <div class="page-top">
   <h1 class="page-title">Búsqueda</h1>
   {% if query %}
   <p class="page-sub">
-    {{ results|length }} resultado{% if results|length != 1 %}s{% endif %} para
+    {{ total }} resultado{% if total != 1 %}s{% endif %} para
     "<strong>{{ query }}</strong>"
   </p>
   {% endif %}
@@ -14,24 +15,52 @@
 
 <form class="search-form-main" action="{{ url_for('main.search_view') }}" method="GET">
   <input type="text" name="q" class="search-input-main"
-         value="{{ query or '' }}" placeholder="Buscar en todas las notas..."
+         value="{{ query or '' }}" placeholder="Buscar en las notas y en las notas especiales..."
          {% if not query %}autofocus{% endif %}>
   <button type="submit" class="btn-primary">Buscar</button>
 </form>
 
 {% if query %}
   {% if results %}
+  {% if especiales %}<h2 class="stats-section">📝 Notas rápidas · {{ results | length }}</h2>{% endif %}
   <div class="search-results">
     {% for note in results %}
     <a href="{{ url_for('day.day_view', date_str=note.note_date) }}"
        class="search-result-item {% if note.color %}search-result-colored{% endif %}"
        {% if note.color %}style="--c: {{ note.color }};"{% endif %}>
-      <span class="search-result-date">{{ note.note_date }}</span>
+      <span class="search-result-date">{{ note.note_date | fechacorta }}</span>
       <p class="search-result-text">{{ note.content }}</p>
     </a>
     {% endfor %}
   </div>
-  {% else %}
+  {% endif %}
+
+  {% if especiales %}
+  {% if results %}<h2 class="stats-section">📊 Notas especiales · {{ especiales | length }}</h2>{% endif %}
+  <div class="search-results">
+    {% for e in especiales %}
+    <a href="{{ url_for('day.day_view', date_str=e.entry_date) }}"
+       class="search-result-item search-result-colored" style="--c: {{ e.category_color }};">
+      <span class="search-result-date">{{ e.entry_date | fechacorta }}
+        <span class="chip chip-journal" style="--c: {{ e.category_color }};">{{ e.category_name }}</span>
+      </span>
+      {# Los campos que coincidieron; si lo que coincidió fue un tag, el primero con algo, o la
+         tarjeta no mostraría una palabra de la nota. El resto se ve entrando al día. El `ek::`
+         es la marca interna de la rueda de Ekman, no algo que el usuario escribió. #}
+      {% for c in e.coincidencias or ([e.contexto] if e.contexto else []) %}
+      <p class="search-result-text"><span class="search-jlabel">{{ c.label }}</span>{{ c.value | replace('ek::', '') | replace(' | ', ' · ') }}</p>
+      {% endfor %}
+      {% if e.tags_match %}
+      <div class="day-journal-tags">
+        {% for t in e.tags_match %}<span class="day-journal-tag">{{ t }}</span>{% endfor %}
+      </div>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if not results and not especiales %}
   <p class="empty-msg" style="margin-top:24px;">No se encontraron notas con "{{ query }}".</p>
   {% endif %}
 {% endif %}

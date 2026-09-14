@@ -187,6 +187,53 @@ def get_journal_entries_range(start: str, end: str) -> dict:
     return result
 
 
+def search_journal_entries(query: str) -> list:
+    """Notas especiales cuyo CONTENIDO o cuyos tags coincidan con lo buscado.
+
+    ⚠️ El LIKE sobre `values_json` es solo para acotar, y la coincidencia se confirma después
+    sobre los valores parseados: adentro de ese JSON también están las ETIQUETAS de los campos,
+    así que buscar "notas" traería toda categoría que tenga un campo llamado "Notas". Se busca lo
+    que escribiste, no cómo se llama el casillero.
+    """
+    q = (query or "").strip()
+    if not q:
+        return []
+    like = f"%{q}%"
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT je.*, jc.name AS category_name, jc.color AS category_color
+               FROM journal_entries je
+               JOIN journal_categories jc ON je.category_id = jc.id
+               WHERE je.values_json LIKE ? OR je.tags LIKE ?
+               ORDER BY je.entry_date DESC, je.created_at DESC""",
+            (like, like),
+        ).fetchall()
+
+    ql = q.lower()
+    result = []
+    for r in rows:
+        d = dict(r)
+        try:
+            vals = json.loads(d["values_json"] or "{}")
+        except ValueError:
+            vals = {}
+        coincidencias = [{"label": k, "value": str(v)}
+                         for k, v in vals.items() if ql in str(v).lower()]
+        tags = [t.strip() for t in (d["tags"] or "").split(",") if t.strip()]
+        tags_match = [t for t in tags if ql in t.lower()]
+        if not coincidencias and not tags_match:
+            continue
+        d["values"] = vals
+        d["coincidencias"] = coincidencias
+        d["tags_match"] = tags_match
+        # Si lo que coincidió fue un tag, ningún campo entra en `coincidencias` y la tarjeta
+        # quedaría sin una sola palabra de la nota. Va el primer campo con algo, de contexto.
+        d["contexto"] = next(({"label": k, "value": str(v)} for k, v in vals.items()
+                              if str(v).strip()), None)
+        result.append(d)
+    return result
+
+
 def add_journal_entry(data: dict):
     with get_db() as conn:
         conn.execute(

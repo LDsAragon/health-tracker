@@ -660,3 +660,42 @@ def test_una_categoria_archivada_se_sigue_pudiendo_editar(client, test_db):
     html = client.get("/journal").data.decode()
     assert "Archivadas" in html and "Desarchivar" in html
 
+
+# ── Búsqueda ─────────────────────────────────────────────────────────────────
+
+def test_la_busqueda_encuentra_una_nota_especial_por_su_texto(client, test_db):
+    cid = _add_cat(test_db)
+    _add_entry(test_db, cid, values={"¿Qué sentí?": "una ansiedad rara antes de la reunión"})
+    html = client.get("/search?q=ansiedad").data.decode()
+    assert "una ansiedad rara" in html
+    assert "Emociones" in html                 # con el chip de su categoría
+    assert "1 resultado" in html
+
+
+def test_la_busqueda_encuentra_una_nota_especial_por_su_tag(client, test_db):
+    cid = _add_cat(test_db)
+    _add_entry(test_db, cid, values={"¿Qué sentí?": "tranquilo"}, tags="trabajo, tarde")
+    assert "tranquilo" in client.get("/search?q=trabajo").data.decode()
+
+
+def test_la_busqueda_NO_matchea_la_etiqueta_de_un_campo(client, test_db):
+    """⚠️ Tripwire del LIKE sobre values_json.
+
+    Ese JSON guarda {etiqueta: valor}, así que un LIKE crudo devuelve toda categoría que tenga
+    un campo con esa palabra en el nombre. Se busca lo que escribiste, no cómo se llama el
+    casillero.
+    """
+    cid = _add_cat(test_db)
+    _add_entry(test_db, cid, values={"¿Qué sentí?": "tranquilo"})
+    assert db.search_journal_entries("sentí") == []
+    assert "No se encontraron notas" in client.get("/search?q=sent%C3%AD").data.decode()
+
+
+def test_la_busqueda_sigue_encontrando_las_notas_rapidas(client, test_db):
+    db.add_note(DATE, "una nota rápida cualquiera")
+    cid = _add_cat(test_db)
+    _add_entry(test_db, cid, values={"¿Qué sentí?": "una nota especial cualquiera"})
+    html = client.get("/search?q=cualquiera").data.decode()
+    assert "nota rápida cualquiera" in html and "nota especial cualquiera" in html
+    assert "2 resultados" in html
+
