@@ -354,6 +354,10 @@ select.journal-cat-select {
   flex: 1;                /* el mismo aire que .day-card-notes */
   padding: 16px 20px;
 }
+/* Sin notas del día, ese padding es una franja vacía entre el título y el formulario de alta.
+   ⚠️ No puede ser `:empty` (Jinja deja saltos de línea adentro) ni una clase del servidor: el
+   refresco reemplaza el innerHTML de esta zona y no el nodo, así que la clase quedaría vieja. */
+.day-journal-list:not(:has(> *)) { padding: 0; }
 
 .day-journal-entry {
   background: color-mix(in srgb, var(--c, #6366f1) 8%, var(--surface));
@@ -617,6 +621,12 @@ select.journal-cat-select {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+/* Elegida la categoría, el formulario se tiñe con su color — el mismo borde de 3px que lleva la
+   nota especial ya guardada (.day-journal-entry). */
+#jday-form-wrap.jday-form-cat {
+  border-left: 3px solid var(--c, var(--accent));
+  padding-left: 13px;
 }
 
 /* ── JOURNAL in CALENDAR CELLS ────────────────────────────────────────── */

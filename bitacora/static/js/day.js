@@ -130,10 +130,60 @@ function _jcatNorm(s) {
 function selectJCat(btn) {
   document.querySelectorAll('#jday-cat-chips .jcat-chip').forEach(b =>
     b.classList.toggle('jcat-chip-sel', b === btn));
-  document.getElementById('jday-cat').value = btn.dataset.id;
-  const error = document.getElementById('jday-cat-error');
+  const hidden = document.getElementById('jday-cat');
+  const error  = document.getElementById('jday-cat-error');
   if (error) error.style.display = 'none';
-  updateDayFields(btn.dataset.id);
+  // Re-elegir la que ya estaba NO reconstruye los campos: eso vaciaría lo que ya escribiste.
+  if (hidden.value !== btn.dataset.id) {
+    hidden.value = btn.dataset.id;
+    updateDayFields(btn.dataset.id);
+  }
+  _jcatColapsar(btn);
+}
+
+// Colapsar / expandir el selector. El estado "elegida" muestra solo el chip que clickeaste (el
+// mismo elemento, con el mismo estilo) y tiñe el formulario con el color de la categoría, que es
+// lo que ata visualmente "estoy escribiendo una nota de Sueño".
+function _jcatColapsar(btn) {
+  const chips = document.getElementById('jday-cat-chips');
+  const eleg  = document.getElementById('jday-cat-elegida');
+  const chip  = document.getElementById('jday-cat-chip');
+  if (!chips || !eleg || !chip) return;
+  const color = btn.dataset.color || '#6366f1';
+  chip.textContent = btn.dataset.name;
+  chip.style.setProperty('--c', color);
+  chips.style.display = 'none';
+  const f = document.getElementById('jday-cat-filter');
+  if (f) { f.style.display = 'none'; f.value = ''; filterJCats(''); }
+  eleg.style.display = 'flex';
+  // Con una sola categoría no hay nada que cambiar.
+  const cambiar = document.getElementById('jday-cat-cambiar');
+  if (cambiar) {
+    cambiar.style.display =
+      document.querySelectorAll('#jday-cat-chips .jcat-chip').length > 1 ? '' : 'none';
+  }
+  const wrap = document.getElementById('jday-form-wrap');
+  if (wrap) { wrap.style.setProperty('--c', color); wrap.classList.add('jday-form-cat'); }
+}
+function _jcatExpandir() {
+  const chips = document.getElementById('jday-cat-chips');
+  const eleg  = document.getElementById('jday-cat-elegida');
+  const f     = document.getElementById('jday-cat-filter');
+  if (chips) chips.style.display = '';
+  if (f) f.style.display = '';
+  if (eleg) eleg.style.display = 'none';
+}
+// No toca el hidden ni los campos: arrepentirse de cambiar no puede borrar lo que escribiste.
+function cambiarJCat() { _jcatExpandir(); }
+
+// Con una sola categoría se elige sola: pedir un clic entre una opción no decide nada. Corre al
+// abrir el alta y también al cargar, porque con `journal_form_default = open` nadie la abre.
+function _jcatAutoElegir() {
+  const wrap = document.getElementById('jday-form-wrap');
+  if (!wrap || wrap.style.display === 'none') return;
+  const chips  = document.querySelectorAll('#jday-cat-chips .jcat-chip');
+  const hidden = document.getElementById('jday-cat');
+  if (chips.length === 1 && hidden && !hidden.value) selectJCat(chips[0]);
 }
 function filterJCats(q) {
   q = _jcatNorm(q.trim());
@@ -154,14 +204,15 @@ function _setEspecial(open) {
   const t = document.getElementById('jday-toggle');
   if (w) w.style.display = open ? 'block' : 'none';
   if (t) t.style.display = open ? 'none' : 'block';
-  if (!open) {
-    const c = document.getElementById('jday-cat'); if (c) c.value = '';
-    const fl = document.getElementById('jday-fields'); if (fl) fl.innerHTML = '';
-    document.querySelectorAll('#jday-cat-chips .jcat-chip-sel').forEach(b =>
-      b.classList.remove('jcat-chip-sel'));
-    const ff = document.getElementById('jday-cat-filter');
-    if (ff) { ff.value = ''; filterJCats(''); }
-  }
+  if (open) { _jcatAutoElegir(); return; }
+  const c = document.getElementById('jday-cat'); if (c) c.value = '';
+  const fl = document.getElementById('jday-fields'); if (fl) fl.innerHTML = '';
+  document.querySelectorAll('#jday-cat-chips .jcat-chip-sel').forEach(b =>
+    b.classList.remove('jcat-chip-sel'));
+  const ff = document.getElementById('jday-cat-filter');
+  if (ff) { ff.value = ''; filterJCats(''); }
+  _jcatExpandir();
+  if (w) { w.style.removeProperty('--c'); w.classList.remove('jday-form-cat'); }
 }
 function openEspecial()    { _setEspecial(true);  _setRapida(false); }
 function closeEspecial()   { _setEspecial(false); _setRapida(true);  }
@@ -215,7 +266,10 @@ function restaurarRuedas(raiz) {
   });
 }
 
-window.addEventListener('DOMContentLoaded', function () { restaurarRuedas(document); });
+window.addEventListener('DOMContentLoaded', function () {
+  restaurarRuedas(document);
+  _jcatAutoElegir();
+});
 
 // ⚠️ Las notas especiales son una zona `data-refresco`: cuando el refresco reemplaza su
 // contenido, las ruedas que vengan adentro llegan sin restaurar. Es el único init por elemento

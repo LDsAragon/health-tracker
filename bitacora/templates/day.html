@@ -280,9 +280,17 @@
             <div class="jcat-chips" id="jday-cat-chips">
               {% for cat in journal_cats %}
               <button type="button" class="jcat-chip" style="--c: {{ cat.color }};"
-                      data-id="{{ cat.id }}" data-name="{{ cat.name }}"
+                      data-id="{{ cat.id }}" data-name="{{ cat.name }}" data-color="{{ cat.color }}"
                       onclick="selectJCat(this)">{{ cat.name }}</button>
               {% endfor %}
+            </div>
+            {# Elegida la categoría, la fila entera se colapsa acá: la lista completa arriba de los
+               campos distrae mientras escribís, y un clic distraído en otro chip reconstruía el
+               formulario y borraba lo cargado. Cambiar pasa a ser un paso explícito. #}
+            <div class="jcat-elegida" id="jday-cat-elegida" style="display:none;">
+              <span class="jcat-chip jcat-chip-sel" id="jday-cat-chip"></span>
+              <button type="button" class="jcat-cambiar" id="jday-cat-cambiar"
+                      onclick="cambiarJCat()">Cambiar</button>
             </div>
             <input type="hidden" name="category_id" id="jday-cat">
             {# La categoría se elige con chips y viaja en un hidden, y a un hidden HTML5 no le

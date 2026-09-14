@@ -507,3 +507,19 @@ def test_la_lista_de_especiales_se_renderiza_vacia(client, test_db):
     _add_cat(test_db)
     html = client.get(f"/day/{DATE}").data.decode()
     assert 'class="day-journal-list"' in html
+
+
+# ── El selector de categoría del alta ────────────────────────────────────────
+
+def test_el_selector_de_categoria_colapsa_al_elegir(client, test_db):
+    """Elegida la categoría, la fila de chips se reemplaza por el chip elegido + "Cambiar".
+
+    Lo arma el JS, así que acá se fija lo que necesita para poder hacerlo: la fila de destino y
+    el color de cada chip (el formulario se tiñe con él).
+    """
+    _add_cat(test_db)
+    html = client.get(f"/day/{DATE}").data.decode()
+    assert 'id="jday-cat-elegida"' in html
+    assert 'id="jday-cat-cambiar"' in html
+    assert 'data-color="#6366f1"' in html
+

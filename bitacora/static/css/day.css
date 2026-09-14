@@ -703,6 +703,22 @@ body.day-redimensionando:has(.day-alto-grip.arrastrando) { cursor: row-resize; }
   border-color: var(--c, #6366f1);
 }
 
+/* Estado "ya elegiste": queda el mismo chip que clickeaste y el resto se va. */
+.jcat-elegida { display: flex; align-items: center; gap: 8px; }
+.jcat-elegida .jcat-chip { cursor: default; }
+.jcat-cambiar {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.jcat-cambiar:hover { color: var(--accent); border-color: var(--accent); }
+
 /* Mascotita */
 .pet-overlay {
   position: fixed; inset: 0;
