@@ -97,6 +97,29 @@ def count_journal_entries_by_category() -> dict:
     return {r["category_id"]: r["n"] for r in rows}
 
 
+def journal_field_usage() -> dict:
+    """{cat_id: {etiqueta: cuántas entradas tienen algo guardado ahí}}.
+
+    Quitar un campo de la categoría esconde para siempre lo anotado: tanto la vista como la
+    edición iteran la definición, así que un valor sin campo no se ve en ningún lado. Esto es lo
+    que permite decirlo ANTES de quitarlo, que es cuando sirve.
+    """
+    uso: dict = {}
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT category_id, values_json FROM journal_entries").fetchall()
+    for r in rows:
+        try:
+            vals = json.loads(r["values_json"] or "{}")
+        except ValueError:
+            continue
+        por_cat = uso.setdefault(r["category_id"], {})
+        for label, v in vals.items():
+            if str(v).strip():
+                por_cat[label] = por_cat.get(label, 0) + 1
+    return uso
+
+
 def delete_journal_category(cat_id: int):
     """⚠️ Se lleva TODAS las notas de la categoría. Backup previo, como cualquier camino
     destructivo de la app: hasta un renombre de campo hace el suyo (migrate_entry_values)."""

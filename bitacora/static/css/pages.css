@@ -264,14 +264,54 @@ input:focus { outline: none; border-color: var(--accent); }
   border-bottom: 1px solid var(--border);
   margin-bottom: 2px;
 }
-.journal-fields-legend span:nth-child(2) { flex: 0 0 130px; }
-.journal-fields-legend span:nth-child(4) { flex: 0 0 26px; text-align: center; }
-.journal-fields-legend span:nth-child(5) { flex: 0 0 28px; }
+/* Por clase y no por posición: la leyenda y la fila tienen que seguir alineadas cuando se suma
+   una columna, y con nth-child cada columna nueva corría todas las demás en silencio. */
+.journal-fields-legend .col-tipo   { flex: 0 0 130px; }
+.journal-fields-legend .col-chart  { flex: 0 0 26px; text-align: center; }
+.journal-fields-legend .col-quitar { flex: 0 0 28px; }
+.journal-fields-legend .col-orden,
+.journal-field-row .field-orden { flex: 0 0 34px; display: flex; gap: 1px; }
+.journal-fields-legend .col-usos,
+.journal-field-row .field-usos {
+  flex: 0 0 34px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
 
 .journal-field-row {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;        /* el aviso de "se quita al guardar" baja a su propia línea */
+}
+
+.btn-orden {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1;
+  padding: 4px 3px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.btn-orden:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Marcada para quitarse: todavía se ve lo que se va, y se puede deshacer. */
+.field-row-baja input,
+.field-row-baja select,
+.field-row-baja .field-chart { opacity: .45; text-decoration: line-through; }
+.field-baja-aviso {
+  flex: 1 0 100%;
+  margin: 0 0 2px 42px;
+  font-size: 11px;
+  color: var(--warning, #eab308);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .journal-cat-select,

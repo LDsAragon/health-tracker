@@ -12,6 +12,7 @@ def journal_view():
     categories = db.get_journal_categories()
     return render_template("journal.html", categories=categories,
                            usos=db.count_journal_entries_by_category(),
+                           usos_campos=db.journal_field_usage(),
                            back=safe_back(request.args.get("back")))
 
 

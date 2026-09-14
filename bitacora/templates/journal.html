@@ -67,14 +67,17 @@
       </div>
       <p style="font-size:11px;color:var(--muted);margin:-4px 0 8px;">El campo <b>Ayuda</b> configura el tipo: <b>Opciones</b> → opciones separadas por coma &nbsp;·&nbsp; <b>Número</b> → unidad (kg, vasos…) &nbsp;·&nbsp; <b>Escala</b> → etiquetas opcionales (ej. <code>😣,😐,😄</code>) o vacío para 1–5.</p>
       <div class="journal-fields-legend">
+        <span class="col-orden"></span>
         <span style="flex:1.2">Nombre del campo</span>
-        <span>Tipo</span>
+        <span class="col-tipo">Tipo</span>
         <span style="flex:1">Ayuda / configuración</span>
-        <span title="Incluir en Estadísticas">📈</span>
-        <span></span>
+        <span class="col-chart" title="Incluir en Estadísticas">📈</span>
+        <span class="col-usos" title="Notas que ya tienen algo guardado en este campo">Notas</span>
+        <span class="col-quitar"></span>
       </div>
       <div id="jcat-add-fields" class="journal-fields-builder">
-        <div class="journal-field-row">
+        <div class="journal-field-row" data-usos="0">
+          <span class="field-orden"><button type="button" class="btn-orden" onclick="moveField(this,-1)" title="Subir">&#8593;</button><button type="button" class="btn-orden" onclick="moveField(this,1)" title="Bajar">&#8595;</button></span>
           <input type="text" name="field_label[]" placeholder="Nombre del campo (ej: ¿Qué sentí?)" style="flex:1.2;">
           <select name="field_type[]" class="journal-type-select">
             {% for slug, label in field_types %}
@@ -85,6 +88,7 @@
           <label class="field-chart" title="Graficar en Estadísticas" style="cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:2px;">
             <input type="checkbox" onchange="this.nextElementSibling.value=this.checked?'1':'0'"><input type="hidden" name="field_chart[]" value="0">📈
           </label>
+          <span class="field-usos"></span>
           <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar campo">&#10005;</button>
         </div>
       </div>
@@ -170,16 +174,23 @@
             <button type="button" class="btn-undo" onclick="addField('jcat-edit-fields-{{ cat.id }}')">+ Agregar campo</button>
           </div>
           <div class="journal-fields-legend">
-            <span style="flex:1.2">Nombre del campo</span>
-            <span>Tipo</span>
-            <span style="flex:1">Ayuda / configuración</span>
-            <span title="Incluir en Estadísticas">📈</span>
-            <span></span>
+          <span class="col-orden"></span>
+          <span style="flex:1.2">Nombre del campo</span>
+          <span class="col-tipo">Tipo</span>
+          <span style="flex:1">Ayuda / configuración</span>
+          <span class="col-chart" title="Incluir en Estadísticas">📈</span>
+          <span class="col-usos" title="Notas que ya tienen algo guardado en este campo">Notas</span>
+          <span class="col-quitar"></span>
           </div>
           <div id="jcat-edit-fields-{{ cat.id }}" class="journal-fields-builder">
             {% for f in cat.fields %}
             {% set ftype = f.get('type', 'text') %}
-            <div class="journal-field-row">
+            {# `data-usos` es cuántas notas tienen algo guardado en este campo: quitarlo las
+               esconde para siempre (la vista y la edición iteran la definición), así que el
+               número va a la vista antes de tocar nada y el ✕ pide confirmar en la fila. #}
+            {% set u = usos_campos.get(cat.id, {}).get(f.label, 0) %}
+            <div class="journal-field-row" data-usos="{{ u }}">
+              <span class="field-orden"><button type="button" class="btn-orden" onclick="moveField(this,-1)" title="Subir">&#8593;</button><button type="button" class="btn-orden" onclick="moveField(this,1)" title="Bajar">&#8595;</button></span>
               <input type="hidden" name="field_oldlabel[]" value="{{ f.label }}">
               <input type="text" name="field_label[]" value="{{ f.label }}" placeholder="Nombre del campo" style="flex:1.2;">
               <select name="field_type[]" class="journal-type-select">
@@ -191,6 +202,7 @@
               <label class="field-chart" title="Graficar en Estadísticas" style="cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:2px;">
                 <input type="checkbox" {% if f.get('chart') %}checked{% endif %} onchange="this.nextElementSibling.value=this.checked?'1':'0'"><input type="hidden" name="field_chart[]" value="{{ '1' if f.get('chart') else '0' }}">📈
               </label>
+              <span class="field-usos" {% if u %}title="{{ u }} nota{{ 's' if u != 1 }} con algo guardado en este campo"{% endif %}>{{ u or '' }}</span>
               <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>
             </div>
             {% endfor %}
@@ -241,7 +253,12 @@ function _fieldRow(label, type, ph, chart) {
     '<option value="' + v + '"' + (v === type ? ' selected' : '') + '>' + t + '</option>').join('');
   const row = document.createElement('div');
   row.className = 'journal-field-row';
+  row.dataset.usos = '0';                       // una fila nueva no tiene nada guardado
   row.innerHTML =
+    '<span class="field-orden">' +
+      '<button type="button" class="btn-orden" onclick="moveField(this,-1)" title="Subir">&#8593;</button>' +
+      '<button type="button" class="btn-orden" onclick="moveField(this,1)" title="Bajar">&#8595;</button>' +
+    '</span>' +
     '<input type="hidden" name="field_oldlabel[]" value="">' +
     '<input type="text" name="field_label[]" value="' + esc(label) + '" placeholder="Nombre del campo" style="flex:1.2;">' +
     '<select name="field_type[]" class="journal-type-select">' + opts + '</select>' +
@@ -249,6 +266,7 @@ function _fieldRow(label, type, ph, chart) {
     '<label class="field-chart" title="Graficar en Estadísticas" style="cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:2px;">' +
       '<input type="checkbox"' + (chart ? ' checked' : '') + ' onchange="this.nextElementSibling.value=this.checked?\'1\':\'0\'">' +
       '<input type="hidden" name="field_chart[]" value="' + (chart ? '1' : '0') + '">📈</label>' +
+    '<span class="field-usos"></span>' +
     '<button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>';
   return row;
 }
@@ -313,8 +331,44 @@ function applyPreset(key) {
   p.fields.forEach(f => c.appendChild(_fieldRow(f.label, f.type, f.ph, f.chart)));
 }
 
+// Los campos se posteaban como arreglos paralelos y solo se podían agregar al final: para meter
+// uno en el medio había que borrar y recrear, que es justo lo que NO migra lo ya guardado.
+// Reordenar no toca ninguna etiqueta, así que mover la fila alcanza y no hay nada que migrar.
+function moveField(btn, dir) {
+  const row  = btn.closest('.journal-field-row');
+  const otra = dir < 0 ? row.previousElementSibling : row.nextElementSibling;
+  if (!otra) return;
+  row.parentNode.insertBefore(dir < 0 ? row : otra, dir < 0 ? otra : row);
+}
+
+// Quitar un campo con datos no lo saca de una: los valores guardados dejan de verse en todos
+// lados (la vista y la edición iteran la definición) y eso no puede pasar sin avisar. La fila
+// queda marcada con sus controles `disabled` —así no viajan y _parse_fields() no los ve, con los
+// arreglos paralelos igual de alineados— y se va recién al guardar. El aviso es inline, al lado
+// de lo que está por perderse, no un diálogo.
 function removeField(btn) {
-  btn.closest('.journal-field-row').remove();
+  const row = btn.closest('.journal-field-row');
+  const n   = parseInt(row.dataset.usos || '0', 10);
+  if (!n) { row.remove(); return; }
+  row.classList.add('field-row-baja');
+  row.querySelectorAll('input, select').forEach(el => { el.disabled = true; });
+  btn.style.display = 'none';
+  const aviso = document.createElement('p');
+  aviso.className = 'field-baja-aviso';
+  aviso.innerHTML = 'Se quita al guardar · <b>' + n + '</b> nota' + (n === 1 ? '' : 's') +
+    ' tiene' + (n === 1 ? '' : 'n') + ' algo guardado acá y dejaría' + (n === 1 ? '' : 'n') +
+    ' de verse. ' +
+    '<button type="button" class="btn-undo" onclick="undoRemoveField(this)">Deshacer</button>';
+  row.appendChild(aviso);
+}
+
+function undoRemoveField(btn) {
+  const row = btn.closest('.journal-field-row');
+  row.classList.remove('field-row-baja');
+  row.querySelectorAll('input, select').forEach(el => { el.disabled = false; });
+  const quitar = row.querySelector('.btn-delete');
+  if (quitar) quitar.style.display = '';
+  row.querySelector('.field-baja-aviso').remove();
 }
 
 function editJCat(id) {

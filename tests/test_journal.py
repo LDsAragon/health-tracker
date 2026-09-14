@@ -557,3 +557,52 @@ def test_el_conteo_por_categoria_no_mezcla_categorias(test_db):
     _add_entry(test_db, otro, entry_date=DATE2)
     assert db.count_journal_entries_by_category() == {uno: 1, otro: 2}
 
+
+# ── El editor de campos ──────────────────────────────────────────────────────
+
+def test_la_fila_de_un_campo_dice_cuantas_notas_lo_usan(client, test_db):
+    """Quitar un campo esconde para siempre lo guardado, y antes no había forma de saberlo."""
+    cid = _add_cat(test_db)
+    _add_entry(test_db, cid, values={"¿Qué sentí?": "ansioso", "¿Qué pensé?": ""})
+    _add_entry(test_db, cid, entry_date=DATE2, values={"¿Qué sentí?": "tranquilo"})
+    assert db.journal_field_usage() == {cid: {"¿Qué sentí?": 2}}   # el vacío no cuenta
+    assert 'data-usos="2"' in client.get("/journal").data.decode()
+
+
+def test_reordenar_campos_no_se_lee_como_un_renombre(client, test_db):
+    """Mover una fila mueve su `field_oldlabel[]` con ella, así que no hay nada que migrar.
+
+    Si se leyera como renombre, reordenar dos campos intercambiaría los valores guardados de
+    todas las entradas — justo el daño que el orden venía a evitar.
+    """
+    cid = _add_cat(test_db)
+    _add_entry(test_db, cid, values={"¿Qué sentí?": "ansioso", "¿Qué pensé?": "nada"})
+    client.post(f"/journal/{cid}/edit", data={
+        "name": "Emociones", "color": "#6366f1",
+        "field_oldlabel[]":    ["¿Qué pensé?", "¿Qué sentí?"],
+        "field_label[]":       ["¿Qué pensé?", "¿Qué sentí?"],
+        "field_type[]":        ["text", "text"],
+        "field_placeholder[]": ["", ""],
+        "field_chart[]":       ["0", "0"],
+    })
+    assert [f["label"] for f in db.get_journal_categories()[0]["fields"]] ==         ["¿Qué pensé?", "¿Qué sentí?"]
+    vals = db.get_journal_entries_for_date(DATE)[0]["values"]
+    assert vals == {"¿Qué sentí?": "ansioso", "¿Qué pensé?": "nada"}
+
+
+def test_una_fila_que_no_viaja_quita_el_campo_y_deja_el_resto_alineado(client, test_db):
+    """Es lo que hace el ✕ confirmado: la fila entera va `disabled`, así que no postea ninguno de
+    sus arreglos paralelos y los índices de los demás campos siguen coincidiendo."""
+    cid = _add_cat(test_db)
+    client.post(f"/journal/{cid}/edit", data={
+        "name": "Emociones", "color": "#6366f1",
+        "field_oldlabel[]":    ["¿Qué pensé?"],
+        "field_label[]":       ["¿Qué pensé?"],
+        "field_type[]":        ["text"],
+        "field_placeholder[]": ["Pensamientos..."],
+        "field_chart[]":       ["0"],
+    })
+    fields = db.get_journal_categories()[0]["fields"]
+    assert [f["label"] for f in fields] == ["¿Qué pensé?"]
+    assert fields[0]["placeholder"] == "Pensamientos..."
+
