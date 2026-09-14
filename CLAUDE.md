@@ -941,8 +941,13 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
   `1fr` en el medio, esa columna se comía todo el sobrante y la card quedaba lejísimos del panel.
   Así el conjunto mide lo que necesita, queda centrado y el sobrante va **afuera** — que es el
   espacio que se gana al ensanchar. El tope del arrastre sale de la pantalla
-  (`(ancho - card - gaps) / 2`, hasta 900) y no es un número fijo: en un monitor de 2560 da ~856
-  por lado, y con el 560 fijo que tenía quedaba media pantalla sin usar.
+  (`(ancho - CARD_MIN - gaps) / 2`, hasta 900) y no es un número fijo: con el 560 fijo que tenía
+  quedaba media pantalla sin usar.
+  ⚠️ **Lo que ese tope le reserva a la card es su mínimo legible (520), no sus 760.**
+  Reservándole los 760, achicar la ventana se lo cobraba siempre al panel: en 1372px quedaba en
+  262 y las tareas se leían **a una palabra por línea**, con scroll interno. Y se sentía
+  permanente porque solo se salía de ahí con el doble clic que resetea — que es justo el estado
+  que se ve bien, porque sin ancho pedido el grid achica la card y deja los paneles en su lugar.
 - ⚠️ **La fila de una tarea (`.todo-row`) envuelve**: el panel es angosto por elección del
   usuario, y al mínimo las acciones —que son `flex-shrink: 0`— se salían del panel (41px afuera)
   dejando el texto en 55px, o sea cinco líneas de una palabra. Con `flex-wrap: wrap` bajan a una

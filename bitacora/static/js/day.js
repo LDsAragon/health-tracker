@@ -357,17 +357,22 @@ window.BITACORA_REINIT.push(restaurarRuedas);
   }
 
   // ── El ancho, compartido por los dos paneles ──────────────────────────────
-  // El tope sale de la pantalla y no es un número fijo: el conjunto mide 2 paneles + la card
-  // (760) + los gaps, así que lo que sobra se reparte entre los dos lados. En un monitor de
-  // 2560 eso da ~856 por lado; con un 560 fijo quedaba media pantalla sin usar.
-  const ANCHO_MIN = 200, ANCHO_TOPE = 900, CARD = 760, GAPS = 40;
+  // El tope sale de la pantalla y no es un número fijo: lo que sobra después de la card se
+  // reparte entre los dos lados. En un monitor de 2560 eso da ~900 por lado; con un 560 fijo
+  // quedaba media pantalla sin usar.
+  // ⚠️ Lo que se le reserva a la card es su MÍNIMO legible (CARD_MIN), no su ancho de lectura
+  // (760). Reservándole los 760, al achicar la ventana el que pagaba era siempre el panel: en
+  // una ventana de 1372 quedaba en 262px y las tareas se leían a una palabra por línea, con
+  // scroll interno. La card sí se lee bien más angosta, y es lo que el grid hace solo cuando
+  // nadie arrastró nada — que es justamente el estado que se veía bien.
+  const ANCHO_MIN = 200, ANCHO_TOPE = 900, CARD_MIN = 520, GAPS = 40;
   const gripAncho = document.getElementById('day-side-grip');
   const panelIzq = gripAncho && gripAncho.closest('.day-side');
   arrastrable({
     grip: gripAncho, eje: 'x', variable: '--day-side', pref: 'day_side_width',
     minimo: ANCHO_MIN,
     maximo: () => Math.max(ANCHO_MIN, Math.min(ANCHO_TOPE,
-      Math.floor((document.documentElement.clientWidth - 48 - CARD - GAPS) / 2))),
+      Math.floor((document.documentElement.clientWidth - 48 - CARD_MIN - GAPS) / 2))),
     medir: () => panelIzq.getBoundingClientRect().width,
   });
 
