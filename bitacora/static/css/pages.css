@@ -672,6 +672,19 @@ select.journal-cat-select {
   flex-direction: column;
   gap: 10px;
 }
+/* Los campos de la categoría elegida arrancan separados del selector: pegados al chip se leían
+   como parte de él. Y el mismo aire entre ellos, que venían sin nada y la etiqueta de uno caía
+   encima del input del anterior.
+   El `:empty` no es de más: sin categoría elegida el JS deja el div vacío (innerHTML = '', sin
+   espacios), y el margen metería un hueco entre Categoría y Tags sin nada en el medio. */
+#jday-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;          /* entre un campo y el siguiente */
+  margin-top: 18px;   /* más que el de arriba: el salto del selector a los campos es mayor */
+}
+#jday-fields:empty { margin-top: 0; }
+
 /* Elegida la categoría, el formulario se tiñe con su color — el mismo borde de 3px que lleva la
    nota especial ya guardada (.day-journal-entry). */
 #jday-form-wrap.jday-form-cat {
