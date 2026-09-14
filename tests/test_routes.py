@@ -702,13 +702,20 @@ def test_visor_abre_en_hoy(client):
     assert "de hace 20 dias" not in html.split("stats-section")[-1]
 
 def test_periodo_hoy_es_una_ventana_exacta(client):
-    """Ni ayer ni mañana: el botón lista exactamente lo que dice."""
+    """Ni ayer ni mañana: el botón lista exactamente lo que dice.
+
+    ⚠️ Se mira solo el LISTADO (lo que va después del último `stats-section`), como
+    `test_visor_abre_en_hoy`. El bloque de atrasadas ignora el período a propósito, así que un
+    lunes "de ayer" cae del otro lado del corte semanal y aparece ahí: mirando la página entera
+    este test fallaba un día de cada siete, contradiciendo al de acá abajo.
+    """
     db.add_todo((HOY - timedelta(days=1)).isoformat(), "de ayer")
     db.add_todo(HOY.isoformat(), "de hoy")
     db.add_todo((HOY + timedelta(days=1)).isoformat(), "de manana")
-    r = client.get("/tareas?periodo=hoy&estado=todas")
-    assert b"de hoy" in r.data
-    assert b"de ayer" not in r.data and b"de manana" not in r.data
+    html = client.get("/tareas?periodo=hoy&estado=todas").data.decode()
+    listado = html.split("stats-section")[-1]
+    assert "de hoy" in listado
+    assert "de ayer" not in listado and "de manana" not in listado
 
 def test_periodo_proximas_lista_solo_futuro(client):
     db.add_todo(HOY.isoformat(), "de hoy")
