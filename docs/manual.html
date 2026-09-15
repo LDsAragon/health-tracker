@@ -384,6 +384,17 @@
   fila se guarda y queda a la vista solo la que elegiste, con el color tiñendo el formulario y un
   <b>Cambiar</b> al lado por si te equivocaste. Si tenés una sola categoría, se elige sola.</p>
 
+  <h3>Cómo se arma una categoría</h3>
+  <p>El formulario de <b>Notas especiales</b> va en el orden del trabajo. Primero
+  <b>Empezá desde una plantilla</b>: siete puntos de partida de un clic (o <b>Sin plantilla</b>,
+  si la querés armar entera). Después el <b>nombre y el color</b> — si ya escribiste un nombre, la
+  plantilla no te lo pisa. Y al final los <b>campos</b>: uno por fila, con su nombre, su tipo y un
+  tilde si querés graficarlo.</p>
+  <p>Cuando el tipo necesita que le completes algo —las opciones de una lista, la unidad de un
+  número, las etiquetas de una escala, el texto de ayuda de un texto libre— aparece
+  <b>debajo del campo</b>, diciendo qué espera y con un ejemplo. Los tipos que no necesitan nada
+  (duración, rango horario, sí/no, rueda de emociones) no muestran nada.</p>
+
   <h3>Los tipos de campo</h3>
   <table>
     <tr><th>Tipo</th><th>Qué guarda</th><th>Cómo se usa</th></tr>
@@ -397,7 +408,7 @@
       <td>1 a N puntos</td>
       <td>Botones en fila. Sin etiquetas: puntitos que se "llenan" hasta el elegido + muestra "N/total".
       Con etiquetas ("Mal,Regular,Bien"): cada botón lleva su texto y al elegir se resalta abajo.
-      Definís etiquetas o emojis en el campo Ayuda, separadas por coma.</td>
+      Las etiquetas o emojis se escriben debajo del campo, separadas por coma.</td>
     </tr>
     <tr>
       <td><b>Sí / No</b></td>
@@ -407,13 +418,14 @@
     <tr>
       <td><b>Opciones</b></td>
       <td>Una de tu lista</td>
-      <td>Botones horizontales con tus opciones (definidas en Ayuda, separadas por coma). Re-clic = deseleccionar.</td>
+      <td>Botones horizontales con tus opciones, que escribís debajo del campo separadas por coma.
+      Re-clic = deseleccionar.</td>
     </tr>
     <tr>
       <td><b>Número</b></td>
       <td>Cantidad con unidad</td>
       <td>Input numérico con botones <b>−</b> / <b>+</b> para sumar o restar de a uno sin teclado.
-      La unidad (kg, vasos…) va en el campo Ayuda.</td>
+      La unidad (kg, vasos…) se escribe debajo del campo.</td>
     </tr>
     <tr>
       <td><b>Duración</b></td>
@@ -435,13 +447,14 @@
     </tr>
   </table>
 
-  <p class="small muted">El campo "Ayuda" cumple doble función: texto de ejemplo al cargar,
-  y configuración del campo en escala ("Mal,Regular,Bien"), opciones ("Desayuno,Almuerzo,Cena") y número ("kg").</p>
+  <p class="small muted">Si cambiás un campo a un tipo que no necesita configuración, lo que
+  habías escrito no se borra: queda guardado y vuelve a aparecer si volvés al tipo de antes.</p>
 
   <h3>Plantillas rápidas</h3>
-  <p>Para no arrancar de cero hay 7 presets de un clic: <b>🎡 Emociones · 😴 Sueño · 📚 Estudio ·
+  <p>Son los 7 botones de arriba de todo: <b>🎡 Emociones · 😴 Sueño · 📚 Estudio ·
   🍎 Alimentación · 👥 Social · 🎨 Aficiones · 💼 Trabajo</b>. Prellenan el formulario y los
-  ajustás antes de guardar — son punto de partida, no molde.</p>
+  ajustás antes de guardar — son punto de partida, no molde. <b>Sin plantilla</b> vuelve a dejarlo
+  en blanco.</p>
 
   <h3>Detalles con intención</h3>
   <ul>
@@ -565,7 +578,7 @@
   ordenada de mayor a menor y en formato legible ("42 h 30 min") — el número listo para usar.</p>
 
   <div class="card"><span class="t">Receta: horas trabajadas por empleador.</span>
-  ① Notas especiales → plantilla 💼 Trabajo → editá la lista de proyectos en el campo Ayuda de
+  ① Notas especiales → plantilla 💼 Trabajo → editá la lista de proyectos debajo del campo
   "Proyecto" → guardá. ② Cada bloque de trabajo: nota especial con Proyecto + Franja (o Horas).
   ③ Estadísticas → nuevo gráfico → campo Horas, "+ sumar" Franja, desglosar por Proyecto,
   por semana. Resultado: barras apiladas semana a semana y el total exacto por cliente para

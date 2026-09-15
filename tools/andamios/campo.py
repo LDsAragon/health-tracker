@@ -39,14 +39,18 @@ def main():
     p_blo = ruta("bitacora", "static", "js", "field-blocks.js")
     builder = f"build{camel(a.tipo)}Field"
 
-    abortar_si_existe(p_cat, f'("{a.tipo}"', f"el tipo '{a.tipo}'")
+    abortar_si_existe(p_cat, f'"slug": "{a.tipo}"', f"el tipo '{a.tipo}'")
     abortar_si_existe(p_reg, f"'{a.tipo}'", f"el tipo '{a.tipo}'")
     if builder in leer(p_blo):
         sys.exit(f"ERROR: la función {builder} ya existe en field-blocks.js.")
 
     # ── 1. El catálogo del backend ───────────────────────────────────────────
+    # `config` es lo que el usuario escribe para terminar de definir el campo (las opciones de
+    # una lista, la unidad de un número). Nace en None —el tipo no pide nada— porque inventarle
+    # una etiqueta sería adivinar de qué se configura un tipo que todavía no existe.
     insertar_en_ancla(p_cat, "# ANDAMIO: campos",
-                      f'("{a.tipo}",{" " * max(1, 14 - len(a.tipo))}"{a.etiqueta}"),')
+                      f'{{"slug": "{a.tipo}",{" " * max(1, 14 - len(a.tipo))}'
+                      f'"label": "{a.etiqueta}", "config": None}},')
 
     # ── 2. El despacho del front ─────────────────────────────────────────────
     insertar_en_ancla(p_reg, "// ANDAMIO: campos",
@@ -79,9 +83,12 @@ function {builder}(label, ph) {{
     print()
     print("Falta a mano:")
     print(f"  1. Escribir el cuerpo de {builder}() — el stub es un input de texto.")
-    print("  2. Si querés un display propio, sumar un {% elif %} en templates/day.html.")
+    print("  2. Si el tipo se configura (opciones, unidad, etiquetas), cambiarle el `config`")
+    print("     None de fieldtypes.py por su etiqueta y su ejemplo: con None el editor de")
+    print("     categorías no le muestra ninguna caja, que es lo correcto si no la necesita.")
+    print("  3. Si querés un display propio, sumar un {% elif %} en templates/day.html.")
     print("     Sin eso hereda el genérico de la cadena y se ve el valor crudo.")
-    print("  3. Correr los tests: .\\hacer.ps1 tests -k journal")
+    print("  4. Correr los tests: .\\hacer.ps1 tests -k journal")
 
 
 if __name__ == "__main__":

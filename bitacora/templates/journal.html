@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import campos_nota, fila_campo %}
 {% block title %}Notas especiales{% endblock %}
 
 {% set COLORS = note_colors %}
@@ -14,87 +15,57 @@
 </div>
 
 <!-- ── Agregar categoría ── -->
+{# El orden es el del trabajo: de dónde salís, cómo se llama, qué campos tiene. Las plantillas
+   estaban ABAJO del nombre y el color y los pisaban al aplicarse — escribías el nombre, tocabas
+   una plantilla y lo perdías —, y por eso hacía falta una línea avisando lo que hacían. Arriba no
+   hace falta decirlo. #}
 <div class="rec-form-wrap">
   <form class="rec-form" method="POST" action="{{ url_for('journal.journal_category_add') }}"
         id="jcat-add-form" onsubmit="return validateJournalForm('jcat-add-form')">
     <input type="hidden" name="back" value="{{ back or '' }}">
 
-    <div class="field-row">
-      <div class="field-group">
-        <label for="jcat-name">Nombre de la categoría</label>
-        <input type="text" id="jcat-name" name="name" placeholder="ej: Emociones, Alimentación..." required>
-      </div>
-      <div class="field-group" style="flex:0 0 auto;">
-        <label>Color</label>
-        <div class="color-row">
-          {% for c in COLORS %}
-          <label class="color-opt">
-            <input type="radio" name="color" value="{{ c }}" {% if loop.first %}checked{% endif %}>
-            <span class="color-circle" style="background:{{ c }};"></span>
-          </label>
-          {% endfor %}
-        </div>
-      </div>
+    <div class="jcat-paso">
+      <h3 class="jcat-paso-titulo">Empezá desde una plantilla</h3>
+      {# Los chips los arma el JS desde JCAT_PRESETS: el nombre, el color y el icono de cada
+         plantilla viven en un solo lugar. Sin JS no hay plantillas, que es como estaba. #}
+      <div class="jcat-chips" id="jcat-plantillas"></div>
     </div>
 
-    <div class="field-group">
-      <label>
-        <input type="checkbox" name="show_in_calendar" value="1" checked style="margin-right:6px;accent-color:var(--accent);">
+    {# Sin título de paso: las etiquetas de los campos ya dicen qué es cada cosa, y un título
+       arriba de "Nombre de la categoría" sería la misma frase dos veces. #}
+    <div class="jcat-paso">
+      <div class="field-row">
+        <div class="field-group">
+          <label for="jcat-name">Nombre de la categoría</label>
+          <input type="text" id="jcat-name" name="name" placeholder="ej: Emociones, Alimentación..." required>
+        </div>
+        <div class="field-group" style="flex:0 0 auto;">
+          <label>Color</label>
+          <div class="color-row">
+            {% for c in COLORS %}
+            <label class="color-opt">
+              <input type="radio" name="color" value="{{ c }}" {% if loop.first %}checked{% endif %}>
+              <span class="color-circle" style="background:{{ c }};"></span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <label class="jcat-badge">
+        <input type="checkbox" name="show_in_calendar" value="1" checked>
         Mostrar badge en el calendario
       </label>
     </div>
 
-    <!-- Plantillas rápidas (presets compuestos de campos genéricos) -->
-    <div class="field-group">
-      <label>Plantillas rápidas</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button type="button" class="btn-undo" onclick="applyPreset('emociones')">🎡 Emociones</button>
-        <button type="button" class="btn-undo" onclick="applyPreset('sueno')">😴 Sueño</button>
-        <button type="button" class="btn-undo" onclick="applyPreset('estudio')">📚 Estudio</button>
-        <button type="button" class="btn-undo" onclick="applyPreset('alimentacion')">🍎 Alimentación</button>
-        <button type="button" class="btn-undo" onclick="applyPreset('social')">👥 Social</button>
-        <button type="button" class="btn-undo" onclick="applyPreset('aficiones')">🎨 Aficiones</button>
-        <button type="button" class="btn-undo" onclick="applyPreset('trabajo')">💼 Trabajo</button>
-      </div>
-      <p style="font-size:11px;color:var(--muted);margin:6px 0 0;">Prellenan los campos abajo · podés ajustarlos antes de guardar.</p>
-    </div>
-
-    <!-- Builder de campos -->
-    <div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <label>Campos de la nota</label>
+    <div class="jcat-paso">
+      <div class="jcat-paso-head">
+        <h3 class="jcat-paso-titulo">Campos de la nota</h3>
         <button type="button" class="btn-undo" onclick="addField('jcat-add-fields')">+ Agregar campo</button>
       </div>
-      <p style="font-size:11px;color:var(--muted);margin:-4px 0 8px;">El campo <b>Ayuda</b> configura el tipo: <b>Opciones</b> → opciones separadas por coma &nbsp;·&nbsp; <b>Número</b> → unidad (kg, vasos…) &nbsp;·&nbsp; <b>Escala</b> → etiquetas opcionales (ej. <code>😣,😐,😄</code>) o vacío para 1–5.</p>
-      <div class="journal-fields-legend">
-        <span class="col-orden"></span>
-        <span style="flex:1.2">Nombre del campo</span>
-        <span class="col-tipo">Tipo</span>
-        <span style="flex:1">Ayuda / configuración</span>
-        <span class="col-chart" title="Incluir en Estadísticas">📈</span>
-        <span class="col-usos" title="Notas que ya tienen algo guardado en este campo">Notas</span>
-        <span class="col-quitar"></span>
-      </div>
-      <div id="jcat-add-fields" class="journal-fields-builder">
-        <div class="journal-field-row" data-usos="0">
-          <span class="field-orden"><button type="button" class="btn-orden" onclick="moveField(this,-1)" title="Subir">&#8593;</button><button type="button" class="btn-orden" onclick="moveField(this,1)" title="Bajar">&#8595;</button></span>
-          <input type="text" name="field_label[]" placeholder="Nombre del campo (ej: ¿Qué sentí?)" style="flex:1.2;">
-          <select name="field_type[]" class="journal-type-select">
-            {% for slug, label in field_types %}
-            <option value="{{ slug }}">{{ label }}</option>
-            {% endfor %}
-          </select>
-          <input type="text" name="field_placeholder[]" placeholder="Ayuda / opciones / unidad" style="flex:1;">
-          <label class="field-chart" title="Graficar en Estadísticas" style="cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:2px;">
-            <input type="checkbox" onchange="this.nextElementSibling.value=this.checked?'1':'0'"><input type="hidden" name="field_chart[]" value="0">📈
-          </label>
-          <span class="field-usos"></span>
-          <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar campo">&#10005;</button>
-        </div>
-      </div>
+      {{ campos_nota(field_types, 'jcat-add-fields') }}
     </div>
 
-    <div id="jcat-add-error" class="form-error" style="display:none;"></div>
+    <div id="jcat-add-error" class="form-error jcat-form-error" style="display:none;"></div>
     <button type="submit" class="btn-primary">Agregar categoría</button>
   </form>
 </div>
@@ -180,45 +151,15 @@
           </label>
         </div>
 
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <label>Campos</label>
+        <div class="jcat-paso">
+          <div class="jcat-paso-head">
+            <h3 class="jcat-paso-titulo">Campos</h3>
             <button type="button" class="btn-undo" onclick="addField('jcat-edit-fields-{{ cat.id }}')">+ Agregar campo</button>
           </div>
-          <div class="journal-fields-legend">
-          <span class="col-orden"></span>
-          <span style="flex:1.2">Nombre del campo</span>
-          <span class="col-tipo">Tipo</span>
-          <span style="flex:1">Ayuda / configuración</span>
-          <span class="col-chart" title="Incluir en Estadísticas">📈</span>
-          <span class="col-usos" title="Notas que ya tienen algo guardado en este campo">Notas</span>
-          <span class="col-quitar"></span>
-          </div>
-          <div id="jcat-edit-fields-{{ cat.id }}" class="journal-fields-builder">
-            {% for f in cat.fields %}
-            {% set ftype = f.get('type', 'text') %}
-            {# `data-usos` es cuántas notas tienen algo guardado en este campo: quitarlo las
-               esconde para siempre (la vista y la edición iteran la definición), así que el
-               número va a la vista antes de tocar nada y el ✕ pide confirmar en la fila. #}
-            {% set u = usos_campos.get(cat.id, {}).get(f.label, 0) %}
-            <div class="journal-field-row" data-usos="{{ u }}">
-              <span class="field-orden"><button type="button" class="btn-orden" onclick="moveField(this,-1)" title="Subir">&#8593;</button><button type="button" class="btn-orden" onclick="moveField(this,1)" title="Bajar">&#8595;</button></span>
-              <input type="hidden" name="field_oldlabel[]" value="{{ f.label }}">
-              <input type="text" name="field_label[]" value="{{ f.label }}" placeholder="Nombre del campo" style="flex:1.2;">
-              <select name="field_type[]" class="journal-type-select">
-                {% for slug, label in field_types %}
-                <option value="{{ slug }}" {% if ftype == slug %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-              <input type="text" name="field_placeholder[]" value="{{ f.get('placeholder', '') }}" placeholder="Ayuda / opciones / unidad" style="flex:1;">
-              <label class="field-chart" title="Graficar en Estadísticas" style="cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:2px;">
-                <input type="checkbox" {% if f.get('chart') %}checked{% endif %} onchange="this.nextElementSibling.value=this.checked?'1':'0'"><input type="hidden" name="field_chart[]" value="{{ '1' if f.get('chart') else '0' }}">📈
-              </label>
-              <span class="field-usos" {% if u %}title="{{ u }} nota{{ 's' if u != 1 }} con algo guardado en este campo"{% endif %}>{{ u or '' }}</span>
-              <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>
-            </div>
-            {% endfor %}
-          </div>
+          {# Acá sí va la columna de usos: quitar un campo con notas guardadas las esconde para
+             siempre (la vista y la edición iteran la definición de la categoría), así que el
+             número está a la vista antes de tocar nada. #}
+          {{ campos_nota(field_types, 'jcat-edit-fields-' ~ cat.id, cat.fields, usos_campos.get(cat.id, {})) }}
         </div>
 
         {% set optfields = cat.fields | selectattr('type', 'equalto', 'opciones') | list %}
@@ -241,7 +182,7 @@
         </div>
         {% endif %}
 
-        <div id="jcat-edit-error-{{ cat.id }}" class="form-error" style="display:none;"></div>
+        <div id="jcat-edit-error-{{ cat.id }}" class="form-error jcat-form-error" style="display:none;"></div>
         <div style="display:flex;gap:8px;">
           <button type="submit" class="btn-primary">Guardar</button>
           <button type="button" class="btn-cancel" onclick="cancelJCat({{ cat.id }})">Cancelar</button>
@@ -290,91 +231,55 @@
 </div>
 {% endif %}
 
-<script>
-const FIELD_TYPES = {{ field_types | tojson }};   // fuente única: fieldtypes.py
+{# La fila que el JS clona para agregar un campo o aplicar una plantilla. Se rinde una sola vez y
+   con el mismo macro que las filas de verdad: el marcado de una fila estaba también escrito a mano
+   en JavaScript, y esa copia era la que divergía. El contenido de un <template> no se postea. #}
+<template id="jcat-row-tpl">{{ fila_campo(field_types) }}</template>
 
-function _fieldRow(label, type, ph, chart) {
-  const esc = s => (s || '').replace(/"/g, '&quot;');
-  const opts = FIELD_TYPES.map(([v, t]) =>
-    '<option value="' + v + '"' + (v === type ? ' selected' : '') + '>' + t + '</option>').join('');
-  const row = document.createElement('div');
-  row.className = 'journal-field-row';
-  row.dataset.usos = '0';                       // una fila nueva no tiene nada guardado
-  row.innerHTML =
-    '<span class="field-orden">' +
-      '<button type="button" class="btn-orden" onclick="moveField(this,-1)" title="Subir">&#8593;</button>' +
-      '<button type="button" class="btn-orden" onclick="moveField(this,1)" title="Bajar">&#8595;</button>' +
-    '</span>' +
-    '<input type="hidden" name="field_oldlabel[]" value="">' +
-    '<input type="text" name="field_label[]" value="' + esc(label) + '" placeholder="Nombre del campo" style="flex:1.2;">' +
-    '<select name="field_type[]" class="journal-type-select">' + opts + '</select>' +
-    '<input type="text" name="field_placeholder[]" value="' + esc(ph) + '" placeholder="Ayuda (opcional)" style="flex:1;">' +
-    '<label class="field-chart" title="Graficar en Estadísticas" style="cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:2px;">' +
-      '<input type="checkbox"' + (chart ? ' checked' : '') + ' onchange="this.nextElementSibling.value=this.checked?\'1\':\'0\'">' +
-      '<input type="hidden" name="field_chart[]" value="' + (chart ? '1' : '0') + '">📈</label>' +
-    '<span class="field-usos"></span>' +
-    '<button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar">&#10005;</button>';
+<script>
+// Catálogo de tipos con su configuración: bitacora/fieldtypes.py es la fuente única.
+const FIELD_TYPES = {{ field_types | tojson }};
+const TIPO_CONFIG = Object.fromEntries(FIELD_TYPES.map(t => [t.slug, t.config]));
+
+// ── La sub-línea de configuración ──────────────────────────────────────────
+// Lo que se escribe ahí cambia con el tipo —las opciones, la unidad, las etiquetas, el texto de
+// ayuda— y cuatro tipos no usan ninguna. Era una columna fija que significaba cuatro cosas a la
+// vez, y por eso hacía falta un párrafo arriba de la tabla explicándolas todas juntas.
+function tipoElegido(select) { aplicarConfig(select.closest('.journal-field-row')); }
+
+function aplicarConfig(row) {
+  const cfg  = TIPO_CONFIG[row.querySelector('select[name="field_type[]"]').value];
+  const wrap = row.querySelector('.campo-config');
+  wrap.hidden = !cfg;
+  limpiarError(row);
+  // Al esconderse, el valor NO se borra: cambiar de tipo sin querer no tiene que costarte lo que
+  // escribiste. Es seguro porque mientras el tipo la use la configuración siempre está a la
+  // vista, así que un resto viejo se ve y se corrige en vez de guardarse a ciegas.
+  if (!cfg) return;
+  wrap.querySelector('.campo-config-label').textContent = cfg.label;
+  wrap.querySelector('input').placeholder = cfg.ph || '';
+}
+
+function limpiarError(row) {
+  const err = row.querySelector('.campo-config-error');
+  if (err) { err.hidden = true; err.textContent = ''; }
+}
+
+document.addEventListener('input', e => {
+  if (e.target.matches('.campo-config input')) limpiarError(e.target.closest('.journal-field-row'));
+});
+
+// ── Filas ──────────────────────────────────────────────────────────────────
+function nuevaFila(contenedor) {
+  const row = document.getElementById('jcat-row-tpl').content.firstElementChild.cloneNode(true);
+  contenedor.appendChild(row);
+  aplicarConfig(row);
   return row;
 }
 
 function addField(containerId) {
-  const container = document.getElementById(containerId);
-  const row = _fieldRow('', 'text', '');
-  container.appendChild(row);
-  row.querySelector('input').focus();
-}
-
-// Presets dedicados (widgets) compuestos de los campos genéricos
-const JCAT_PRESETS = {
-  trabajo: { name: 'Trabajo', color: '#14b8a6', fields: [
-    { label: 'Proyecto', type: 'opciones', ph: 'ClienteA, ClienteB, Proyecto propio' },
-    { label: 'Franja',   type: 'rango',    ph: '' },
-    { label: 'Horas',    type: 'duracion', ph: '' },
-    { label: 'Notas',    type: 'text',     ph: 'en qué trabajé...' }
-  ]},
-  emociones: { name: 'Emociones', color: '#ec4899', fields: [
-    { label: 'Emoción',          type: 'emotion-wheel', ph: '' },
-    { label: '¿Qué la disparó?', type: 'text',          ph: 'situación, pensamiento...' },
-    { label: '¿Cómo la manejé?', type: 'text',          ph: '' }
-  ]},
-  sueno: { name: 'Sueño', color: '#3b82f6', fields: [
-    { label: 'Acostarse → Levantarse', type: 'rango',  ph: '' },
-    { label: 'Calidad',                type: 'escala', ph: '' },
-    { label: 'Notas',                  type: 'text',   ph: 'cómo dormí, despertares...' }
-  ]},
-  estudio: { name: 'Estudio', color: '#a855f7', fields: [
-    { label: 'Tiempo estudiado', type: 'duracion', ph: '' },
-    { label: 'Qué estudié',      type: 'text',     ph: 'tema, materia...' },
-    { label: 'Foco',             type: 'escala',   ph: '' }
-  ]},
-  alimentacion: { name: 'Alimentación', color: '#22c55e', fields: [
-    { label: 'Momento',     type: 'opciones', ph: 'Desayuno, Almuerzo, Merienda, Cena, Snack' },
-    { label: '¿Qué comí?',  type: 'text',     ph: '' },
-    { label: 'Saciedad',    type: 'escala',   ph: '' },
-    { label: 'Antojos',     type: 'text',     ph: '' }
-  ]},
-  social: { name: 'Social', color: '#f97316', fields: [
-    { label: '¿Con quién?',       type: 'opciones', ph: 'Familia, Amigos, Pareja, Trabajo, Solo' },
-    { label: 'Actividad',         type: 'text',     ph: '' },
-    { label: 'Tiempo compartido', type: 'duracion', ph: '' },
-    { label: '¿Cómo me sentí?',   type: 'escala',   ph: '' }
-  ]},
-  aficiones: { name: 'Aficiones', color: '#6366f1', fields: [
-    { label: 'Afición',         type: 'text',     ph: 'qué hice' },
-    { label: 'Tiempo dedicado', type: 'duracion', ph: '' },
-    { label: 'Disfrute',        type: 'escala',   ph: '' }
-  ]},
-};
-
-function applyPreset(key) {
-  const p = JCAT_PRESETS[key];
-  if (!p) return;
-  document.getElementById('jcat-name').value = p.name;
-  const radio = document.querySelector('#jcat-add-form input[name="color"][value="' + p.color + '"]');
-  if (radio) radio.checked = true;
-  const c = document.getElementById('jcat-add-fields');
-  c.innerHTML = '';
-  p.fields.forEach(f => c.appendChild(_fieldRow(f.label, f.type, f.ph, f.chart)));
+  nuevaFila(document.getElementById(containerId))
+    .querySelector('input[name="field_label[]"]').focus();
 }
 
 // Los campos se posteaban como arreglos paralelos y solo se podían agregar al final: para meter
@@ -417,6 +322,90 @@ function undoRemoveField(btn) {
   row.querySelector('.field-baja-aviso').remove();
 }
 
+// ── Plantillas ─────────────────────────────────────────────────────────────
+// Categorías armadas con los campos genéricos. El nombre, el color y el icono de cada una viven
+// acá y nada más que acá: los chips los arma este mismo archivo desde esta tabla.
+const JCAT_PRESETS = {
+  emociones: { name: 'Emociones', icono: '🎡', color: '#ec4899', fields: [
+    { label: 'Emoción',          type: 'emotion-wheel', ph: '' },
+    { label: '¿Qué la disparó?', type: 'text',          ph: 'situación, pensamiento...' },
+    { label: '¿Cómo la manejé?', type: 'text',          ph: '' }
+  ]},
+  sueno: { name: 'Sueño', icono: '😴', color: '#3b82f6', fields: [
+    { label: 'Acostarse → Levantarse', type: 'rango',  ph: '' },
+    { label: 'Calidad',                type: 'escala', ph: '' },
+    { label: 'Notas',                  type: 'text',   ph: 'cómo dormí, despertares...' }
+  ]},
+  estudio: { name: 'Estudio', icono: '📚', color: '#a855f7', fields: [
+    { label: 'Tiempo estudiado', type: 'duracion', ph: '' },
+    { label: 'Qué estudié',      type: 'text',     ph: 'tema, materia...' },
+    { label: 'Foco',             type: 'escala',   ph: '' }
+  ]},
+  alimentacion: { name: 'Alimentación', icono: '🍎', color: '#22c55e', fields: [
+    { label: 'Momento',     type: 'opciones', ph: 'Desayuno, Almuerzo, Merienda, Cena, Snack' },
+    { label: '¿Qué comí?',  type: 'text',     ph: '' },
+    { label: 'Saciedad',    type: 'escala',   ph: '' },
+    { label: 'Antojos',     type: 'text',     ph: '' }
+  ]},
+  social: { name: 'Social', icono: '👥', color: '#f97316', fields: [
+    { label: '¿Con quién?',       type: 'opciones', ph: 'Familia, Amigos, Pareja, Trabajo, Solo' },
+    { label: 'Actividad',         type: 'text',     ph: '' },
+    { label: 'Tiempo compartido', type: 'duracion', ph: '' },
+    { label: '¿Cómo me sentí?',   type: 'escala',   ph: '' }
+  ]},
+  aficiones: { name: 'Aficiones', icono: '🎨', color: '#6366f1', fields: [
+    { label: 'Afición',         type: 'text',     ph: 'qué hice' },
+    { label: 'Tiempo dedicado', type: 'duracion', ph: '' },
+    { label: 'Disfrute',        type: 'escala',   ph: '' }
+  ]},
+  trabajo: { name: 'Trabajo', icono: '💼', color: '#14b8a6', fields: [
+    { label: 'Proyecto', type: 'opciones', ph: 'ClienteA, ClienteB, Proyecto propio' },
+    { label: 'Franja',   type: 'rango',    ph: '' },
+    { label: 'Horas',    type: 'duracion', ph: '' },
+    { label: 'Notas',    type: 'text',     ph: 'en qué trabajé...' }
+  ]},
+};
+
+function _chipPlantilla(key, texto, color) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'jcat-chip' + (key ? '' : ' jcat-chip-sel');
+  b.dataset.plantilla = key;
+  b.style.setProperty('--c', color);
+  b.textContent = texto;
+  b.onclick = () => applyPreset(key);
+  return b;
+}
+
+function chipsPlantillas() {
+  const cont = document.getElementById('jcat-plantillas');
+  if (!cont) return;
+  cont.appendChild(_chipPlantilla('', 'Sin plantilla', 'var(--muted)'));
+  Object.entries(JCAT_PRESETS).forEach(([key, p]) =>
+    cont.appendChild(_chipPlantilla(key, p.icono + ' ' + p.name, p.color)));
+}
+
+function applyPreset(key) {
+  const cont = document.getElementById('jcat-add-fields');
+  document.querySelectorAll('#jcat-plantillas .jcat-chip').forEach(b =>
+    b.classList.toggle('jcat-chip-sel', b.dataset.plantilla === key));
+  cont.innerHTML = '';
+  const p = JCAT_PRESETS[key];
+  if (!p) { nuevaFila(cont); return; }               // "Sin plantilla": vuelve a una fila limpia
+  const nombre = document.getElementById('jcat-name');
+  if (!nombre.value.trim()) nombre.value = p.name;   // lo que ya escribiste gana
+  const radio = document.querySelector('#jcat-add-form input[name="color"][value="' + p.color + '"]');
+  if (radio) radio.checked = true;
+  p.fields.forEach(f => {
+    const row = nuevaFila(cont);
+    row.querySelector('input[name="field_label[]"]').value = f.label;
+    row.querySelector('select[name="field_type[]"]').value = f.type;
+    row.querySelector('.campo-config input').value = f.ph || '';
+    aplicarConfig(row);
+  });
+}
+
+// ── Edición inline y validación ────────────────────────────────────────────
 function editJCat(id) {
   document.getElementById('jcat-item-' + id).style.display = 'none';
   document.getElementById('jcat-edit-' + id).style.display = 'block';
@@ -429,13 +418,34 @@ function cancelJCat(id) {
 
 function validateJournalForm(formId) {
   const form = document.getElementById(formId);
+  const err  = form.querySelector('.jcat-form-error');
   const name = form.querySelector('input[name="name"]');
   if (!name || !name.value.trim()) {
-    const err = form.querySelector('.form-error');
     if (err) { err.textContent = 'El nombre es requerido.'; err.style.display = 'block'; }
     return false;
   }
-  return true;
+  if (err) err.style.display = 'none';
+
+  // Un campo de Opciones sin opciones no se puede completar al cargar la nota, y hasta ahora se
+  // guardaba igual. El aviso va al lado de lo que falta, no en un diálogo.
+  let ok = true;
+  form.querySelectorAll('.journal-field-row').forEach(row => {
+    const tipo  = row.querySelector('select[name="field_type[]"]');
+    const cfg   = TIPO_CONFIG[tipo.value];
+    const label = row.querySelector('input[name="field_label[]"]');
+    const input = row.querySelector('.campo-config input');
+    if (tipo.disabled || !cfg || !cfg.requerida) return;   // disabled = fila marcada para quitarse
+    if (!label.value.trim() || input.value.trim()) return; // una fila sin nombre no se guarda
+    const e = row.querySelector('.campo-config-error');
+    e.textContent = 'Sin opciones no vas a poder completar el campo al cargar la nota.';
+    e.hidden = false;
+    if (ok) input.focus();
+    ok = false;
+  });
+  return ok;
 }
+
+chipsPlantillas();
+document.querySelectorAll('.journal-field-row').forEach(row => aplicarConfig(row));
 </script>
 {% endblock %}

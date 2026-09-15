@@ -160,7 +160,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 831 tests, ~50s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 837 tests, ~50s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -719,6 +719,43 @@ Lo que sí hace la pantalla es **ofrecerlo**, con un aviso por rutina
 Categorías (el "tipo" de nota, con sus campos) y entradas. La configuración vive en `/journal`;
 el alta, la vista y la edición, en la vista del día.
 
+### Cómo se arma una categoría (`/journal`)
+
+La pantalla estaba llena de texto de ayuda —cinco párrafos alrededor de un formulario chico— y el
+texto era el síntoma: el formulario no se podía explicar solo. Tres cosas lo arreglaron, y ninguna
+es "achicar el texto".
+
+- ⚠️ **La configuración de un campo la declara el TIPO**, en `fieldtypes.FIELD_TYPES`
+  (`{"slug", "label", "config"}`). `config` es `{"label", "ph"}` —cómo se llama y qué ejemplo
+  lleva— o **`None`** para los cuatro tipos que no usan ninguna (`duracion`, `rango`, `sino`,
+  `emotion-wheel`: `field-registry.js` ni se la pasa a sus builders). Antes era **una columna
+  fija que significaba cuatro cosas distintas** (el texto de ayuda, la lista de opciones, la
+  unidad, las etiquetas de la escala) y nada en otras cuatro, así que hacía falta un párrafo
+  arriba de la tabla explicando todos los casos juntos. Hoy la configuración baja a una
+  **sub-línea que aparece solo cuando el tipo la usa**, con su etiqueta al lado, y el párrafo se
+  borró. `field-blocks.js` sigue documentando cómo se *interpreta* lo escrito, pero el nombre y
+  el ejemplo salen del catálogo.
+- ⚠️ **Al cambiar a un tipo sin configuración el valor NO se borra**, solo se esconde: equivocarse
+  de tipo no puede costarte lo que escribiste. Es seguro porque la otra mitad de la regla es que
+  **mientras el tipo la use, la configuración siempre está a la vista** — un resto viejo se ve y
+  se corrige, nunca se guarda a ciegas.
+- **Las plantillas van primero.** Estaban abajo del nombre y el color y los **pisaban** al
+  aplicarse: escribías el nombre, tocabas 😴 Sueño y lo perdías. Arriba son el punto de partida y
+  no hay nada que pisar; además **lo que ya escribiste gana** (la plantilla no reemplaza un nombre
+  tipeado) y hay un chip **"Sin plantilla"** para volver a una categoría limpia, que antes no
+  existía. Los chips los arma el JS desde `JCAT_PRESETS`, así el nombre, el color y el icono de
+  cada plantilla viven en un solo lugar.
+- ⚠️ **El marcado de una fila estaba TRES veces**: el alta, la edición y otra copia armada a mano
+  en JavaScript — y la de JS era la que divergía. Hoy lo rinde el macro `campos_nota`
+  (`_macros.html`, como `campos_rutina`) y el JS **clona un `<template>`** que sale del mismo
+  macro. El contenido de un `<template>` no se postea, así que no ensucia ningún formulario.
+- La columna **"Notas"** (cuántas notas usan el campo) es **solo de la edición**: una categoría
+  nueva no tiene ninguna, así que en el alta estaría siempre vacía. Lo mismo las flechas ↑/↓, que
+  se esconden con una sola fila (`:only-child`, sin JS).
+- **Un campo `opciones` sin opciones no se puede completar** al cargar la nota (el día muestra
+  *"Definí las opciones…"*) y hasta ahora se guardaba igual. Se valida al enviar, **inline y al
+  lado de lo que falta** —nunca un diálogo—, que es la misma regla que `#weekday-error`.
+
 - ⚠️ **El alta vive SOLO en el día.** El calendario y la semana muestran el badge de lo que
   registraste, pero no dejan cargar (`446638b`, *"vista muy cargada"*). De esa decisión quedó vivo
   todo el JS del formulario llamando a elementos que ya no existían —45 líneas por plantilla que
@@ -961,7 +998,7 @@ sin tocar nada, e imprimen al terminar qué falta a mano.
 | `nuevo …` | Qué toca | Qué queda a mano |
 |---|---|---|
 | `ajuste` | `appconfig.SETTINGS`, un control en `templates/settings.html`, la fila del manual y la lista de `tests/test_ajustes.py` | leer el ajuste donde haga falta; el `data-recargar` si cambia el navbar |
-| `campo` | `fieldtypes.FIELD_TYPES`, `static/js/field-registry.js` y un builder stub en `field-blocks.js` | el cuerpo del builder; el display propio en `day.html` (opcional) |
+| `campo` | `fieldtypes.FIELD_TYPES` (con `config: None`), `static/js/field-registry.js` y un builder stub en `field-blocks.js` | el cuerpo del builder; el `config` si el tipo se configura; el display propio en `day.html` (opcional) |
 | `ruta` | `routes/<n>.py`, `templates/<n>.html`, `tests/test_<n>.py` y las dos listas de `app.py` | el contenido de la pantalla; el enlace del navbar |
 
 ⚠️ **Insertan en anclas** (`# ANDAMIO: ...`, `{# ANDAMIO: ... #}`), y si el ancla no está —o está

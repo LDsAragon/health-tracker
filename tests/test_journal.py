@@ -3,6 +3,7 @@ Tests para el sistema de journal — categorías y entradas.
 """
 import json
 from bitacora import database as db
+from bitacora.fieldtypes import FIELD_TYPES
 
 DATE = "2026-06-09"
 DATE2 = "2026-06-10"
@@ -699,3 +700,58 @@ def test_la_busqueda_sigue_encontrando_las_notas_rapidas(client, test_db):
     assert "nota rápida cualquiera" in html and "nota especial cualquiera" in html
     assert "2 resultados" in html
 
+
+# ── El editor de campos: la configuración la manda el tipo ───────────────────
+# El rediseño de la pantalla salió de que el formulario necesitaba párrafos para explicarse. Estos
+# fijan lo que los sacó: que el dato esté en el catálogo y que cada fila lo diga cuando aplica.
+
+def test_cada_tipo_declara_si_lleva_configuracion():
+    """Los cuatro que la ignoran van con `config: None` — `field-registry.js` ni se la pasa a sus
+    builders, así que ofrecerles una caja era ofrecer algo que no hace nada."""
+    por_slug = {t["slug"]: t for t in FIELD_TYPES}
+    for slug in ("duracion", "rango", "sino", "emotion-wheel"):
+        assert por_slug[slug]["config"] is None, slug
+    for slug in ("text", "escala", "opciones", "numero"):
+        assert por_slug[slug]["config"]["label"], slug
+    # Sin opciones, el campo no se puede completar al cargar la nota: es la única obligatoria.
+    assert por_slug["opciones"]["config"]["requerida"] is True
+
+
+def test_la_pantalla_lleva_la_configuracion_de_cada_tipo(client, test_db):
+    """Va a la página con el catálogo: la sub-línea toma de ahí su etiqueta y su ejemplo."""
+    html = client.get("/journal").data.decode()
+    for etiqueta in ("Opciones, separadas por coma", "Unidad", "Texto de ayuda",
+                     "Desayuno, Almuerzo, Cena"):
+        assert etiqueta in html, etiqueta
+
+
+def test_el_alta_ya_no_explica_la_configuracion_en_un_parrafo(client, test_db):
+    """Tripwire del rediseño: una sola columna significaba cuatro cosas según el tipo y nada en
+    otros cuatro, así que hacía falta un párrafo arriba de la tabla explicando todos los casos
+    juntos. Hoy cada fila lo dice al lado, y solo cuando aplica."""
+    html = client.get("/journal").data.decode()
+    for muerto in ("Ayuda / configuración", "Ayuda / opciones / unidad", "El campo <b>Ayuda</b>"):
+        assert muerto not in html, muerto
+
+
+def test_la_columna_de_notas_es_solo_de_la_edicion(client, test_db):
+    """Una categoría nueva no tiene ninguna nota: en el alta esa columna estaría siempre vacía."""
+    _add_cat(test_db)
+    html = client.get("/journal").data.decode()
+    assert html.count("journal-fields sin-usos") == 1      # el alta
+    assert html.count('class="journal-fields"') == 1       # la edición de la única categoría
+
+
+def test_el_marcado_de_una_fila_esta_una_sola_vez(client, test_db):
+    """Estaba tres veces —el alta, la edición y otra copia armada a mano en JavaScript— y la de JS
+    era la que divergía. Hoy el macro rinde la fila y el JS clona su <template>."""
+    html = client.get("/journal").data.decode()
+    assert 'id="jcat-row-tpl"' in html
+    assert "_fieldRow" not in html
+
+
+def test_las_plantillas_van_antes_del_nombre(client, test_db):
+    """Estaban abajo del nombre y el color y los pisaban al aplicarse: escribías el nombre, tocabas
+    una plantilla y lo perdías. Arriba son el punto de partida y no hay nada que pisar."""
+    html = client.get("/journal").data.decode()
+    assert html.index('id="jcat-plantillas"') < html.index('id="jcat-name"')

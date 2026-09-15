@@ -85,3 +85,69 @@
   </div>
 </div>
 {%- endmacro %}
+
+
+{# ── El editor de campos de una categoría de nota especial ──────────────────────────────────
+   Una fila por campo: nombre, tipo, si va a Estadísticas y la cruz para quitarlo. La
+   configuración —que cambia de significado con el tipo, ver bitacora/fieldtypes.py— baja a una
+   sub-línea propia que aparece SOLO si el tipo la usa.
+
+   ⚠️ Vive en un macro porque el marcado de la fila estaba TRES veces: el alta, la edición y otra
+   copia armada a mano en JavaScript para agregar filas y aplicar plantillas. Es la misma trampa
+   que ya se pagó en Rutinas (`campos_rutina`, acá arriba): tres copias divergen, y acá la que
+   divergía era la de JS. Por eso la fila vacía se rinde una vez en un `<template>` y el JS la
+   CLONA en vez de rehacerla — el contenido de un `<template>` no se postea, así que no ensucia
+   ningún formulario.
+
+   `usos` ({etiqueta: cuántas notas la usan}) lo tiene solo la edición: una categoría nueva no
+   tiene ninguna, así que en el alta esa columna estaría siempre vacía. #}
+
+{% macro fila_campo(field_types, f=None, u=0) -%}
+{% set ftype = f.get('type', 'text') if f else 'text' %}
+<div class="journal-field-row" data-usos="{{ u }}">
+  <span class="field-orden"><button type="button" class="btn-orden" onclick="moveField(this,-1)" title="Subir">&#8593;</button><button type="button" class="btn-orden" onclick="moveField(this,1)" title="Bajar">&#8595;</button></span>
+  {# Siempre presente, vacío en una fila nueva: los arreglos paralelos que lee _parse_fields
+     tienen que quedar alineados, y un oldlabel vacío no se lee como renombre. #}
+  <input type="hidden" name="field_oldlabel[]" value="{{ f.label if f else '' }}">
+  <input type="text" name="field_label[]" class="campo-nombre"
+         value="{{ f.label if f else '' }}" placeholder="Nombre del campo (ej: ¿Qué sentí?)">
+  <select name="field_type[]" class="journal-type-select" onchange="tipoElegido(this)">
+    {% for t in field_types %}
+    <option value="{{ t.slug }}" {% if ftype == t.slug %}selected{% endif %}>{{ t.label }}</option>
+    {% endfor %}
+  </select>
+  <label class="field-chart" title="Incluir en Estadísticas">
+    <input type="checkbox" {% if f and f.get('chart') %}checked{% endif %}
+           onchange="this.nextElementSibling.value=this.checked?'1':'0'"><input
+           type="hidden" name="field_chart[]" value="{{ '1' if f and f.get('chart') else '0' }}">
+  </label>
+  <span class="field-usos" {% if u %}title="{{ u }} nota{{ 's' if u != 1 }} con algo guardado en este campo"{% endif %}>{{ u or '' }}</span>
+  <button type="button" class="btn-delete" onclick="removeField(this)" title="Quitar campo">&#10005;</button>
+  {# La etiqueta y el ejemplo los pone tipoElegido() desde el catálogo; acá van vacíos para que
+     no haya dos fuentes de la misma frase. #}
+  <div class="campo-config" hidden>
+    <label class="campo-config-label"></label>
+    <input type="text" name="field_placeholder[]" value="{{ f.get('placeholder', '') if f else '' }}">
+    <p class="form-error campo-config-error" hidden></p>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro campos_nota(field_types, cont_id, fields=None, usos=None) -%}
+<div class="journal-fields{% if usos is none %} sin-usos{% endif %}">
+  <div class="journal-fields-legend">
+    <span class="col-orden"></span>
+    <span class="col-campo">Campo</span>
+    <span class="col-tipo">Tipo</span>
+    <span class="col-chart" title="Incluir en Estadísticas">Gráfico</span>
+    <span class="col-usos" title="Notas que ya tienen algo guardado en este campo">Notas</span>
+    <span class="col-quitar"></span>
+  </div>
+  <div id="{{ cont_id }}" class="journal-fields-builder">
+    {% for f in fields or [] %}
+    {{ fila_campo(field_types, f, (usos or {}).get(f.label, 0)) }}
+    {% endfor %}
+    {% if not fields %}{{ fila_campo(field_types) }}{% endif %}
+  </div>
+</div>
+{%- endmacro %}

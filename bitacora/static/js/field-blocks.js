@@ -3,7 +3,10 @@
 // canónico. collectValues() lee el hidden. En edición el form llega como shell (.field-block + hidden)
 // y restoreFieldBlocks() construye el control y lo rellena.
 //
-// Config por campo = el texto del campo "Ayuda" (placeholder), sin tocar la DB:
+// Config por campo = lo que el usuario escribe en la sub-línea de configuración del editor de
+// categorías (viaja en `placeholder`, sin tocar la DB). Cómo se llama esa sub-línea y qué
+// ejemplo muestra lo dice bitacora/fieldtypes.py, que es la fuente única; acá está nada más
+// que cómo se interpreta lo escrito:
 //   escala   → vacío: 1–5 numérico (puntos).  "Mal,Bien" o "😣,😐,😄": escala con etiquetas.
 //   opciones → lista separada por coma: "Desayuno, Almuerzo, Cena".
 //   numero   → la unidad: "kg", "vasos".
