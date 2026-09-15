@@ -8,6 +8,7 @@ from bitacora.escritorio import updater
 from bitacora.appconfig import (THEMES, SETTINGS, VENTANA_PRESETS, es_resolucion,
                                 valor_valido)
 from bitacora.helpers import _setting, _first_weekday, _week_start, _dow_names, safe_back, MESES
+from bitacora.fieldtypes import TIPOS_GRAFICABLES
 from bitacora.filters import dur_fmt_filter
 
 bp = Blueprint("main", __name__)
@@ -182,7 +183,6 @@ def settings_set():
 
 # ── Estadísticas ─────────────────────────────────────────────────────────────────
 
-_CHARTABLE_TYPES = ("numero", "escala", "duracion", "rango", "sino", "opciones")
 
 # El período de la pantalla. "mes" es el mes calendario en curso: la gente piensa en meses, no en
 # ventanas de 30 días, y es el único de largo variable (por eso no es un número).
@@ -286,7 +286,7 @@ def stats_view():
     builder_cats = [
         {"id": c["id"], "name": c["name"],
          "fields": [{"label": f["label"], "type": f.get("type", "text")}
-                    for f in c.get("fields", []) if f.get("type") in _CHARTABLE_TYPES],
+                    for f in c.get("fields", []) if f.get("type") in TIPOS_GRAFICABLES],
          "group_fields": [f["label"] for f in c.get("fields", []) if f.get("type") == "opciones"]}
         for c in cats
     ]

@@ -755,3 +755,23 @@ def test_las_plantillas_van_antes_del_nombre(client, test_db):
     una plantilla y lo perdías. Arriba son el punto de partida y no hay nada que pisar."""
     html = client.get("/journal").data.decode()
     assert html.index('id="jcat-plantillas"') < html.index('id="jcat-name"')
+
+
+def test_los_tipos_graficables_salen_del_catalogo_y_no_de_una_lista_suelta():
+    """`TIPOS_GRAFICABLES` tiene que ser exactamente lo que `build_series()` sabe graficar. Era una
+    tupla escrita a mano en `routes/main.py`, lejos del motor y lejos del catálogo."""
+    from bitacora.fieldtypes import TIPOS_GRAFICABLES
+    from bitacora.database.stats import NUMERIC_TYPES
+    assert set(TIPOS_GRAFICABLES) == set(NUMERIC_TYPES) | {"sino", "opciones"}
+
+
+def test_un_campo_de_texto_tildado_no_produce_ningun_grafico(test_db):
+    """El porqué de que el tilde no se ofrezca ahí: el motor devuelve una serie vacía y la pantalla
+    la saltea, así que tildarlo no hacía nada en ningún estado."""
+    cid = _add_cat(test_db, fields_json=json.dumps([
+        {"label": "Notas", "type": "text", "chart": True},
+        {"label": "Ánimo", "type": "escala", "chart": True},
+    ]))
+    _add_entry(test_db, cid, values={"Notas": "un texto largo", "Ánimo": "4"})
+    assert db.build_series(cid, "Notas", "text", DATE, DATE)["data"] == []
+    assert db.build_series(cid, "Ánimo", "escala", DATE, DATE)["data"] == [4]

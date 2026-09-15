@@ -301,7 +301,10 @@ input:focus { outline: none; border-color: var(--accent); }
 .journal-fields-legend .col-tipo,
 .journal-field-row .journal-type-select { flex: 0 0 150px; }
 .journal-fields-legend .col-chart,
-.journal-field-row .field-chart { flex: 0 0 56px; }
+.journal-field-row .field-chart { flex: 0 0 96px; }
+/* El tipo no se puede graficar: el casillero se va pero la columna se queda, o las filas
+   quedarían desalineadas entre sí. */
+.sin-grafico .field-chart { visibility: hidden; }
 .journal-fields-legend .col-chart  { text-align: center; }
 .journal-fields-legend .col-quitar { flex: 0 0 28px; }
 .journal-fields-legend .col-orden,

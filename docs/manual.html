@@ -462,8 +462,11 @@
     ves "este día registré Sueño y Emociones" sin entrar.</li>
     <li><b>Etiquetas:</b> toda nota especial admite tags libres, que después sirven para filtrar
     gráficos (sección 10).</li>
-    <li><b>📈 Graficar:</b> cualquier campo medible se puede tildar para que aparezca
-    automáticamente en Estadísticas. Sin tilde, no hay gráfico: vos decidís qué se mide.</li>
+    <li><b>En Estadísticas:</b> tildá un campo y su gráfico aparece solo en Estadísticas, sin
+    configurar nada. Sin tilde no hay gráfico automático, pero <b>igual podés armarlo a mano</b>
+    desde el constructor: el tilde es un atajo, no un permiso. El casillero se ofrece nada más que
+    en los campos que se pueden medir — en un texto libre o en la rueda de emociones no habría
+    nada que graficar.</li>
     <li><b>Archivar:</b> si dejaste de registrar algo, <b>archivá</b> la categoría en vez de
     borrarla: desaparece del formulario al cargar una nota nueva, pero todo lo que anotaste se
     sigue viendo en su día, en el calendario y en Estadísticas. Se desarchiva con un clic.</li>
@@ -558,10 +561,11 @@
   <p>La regla de oro sigue en pie para los gráficos: <b>no aparece ninguno que no hayas pedido.</b>
   Sin tableros precargados ni métricas-por-las-dudas. Hay dos maneras de pedir:</p>
 
-  <h3>1 · El tilde 📈 (automático)</h3>
-  <p>Marcaste "graficar" en un campo de una categoría → su evolución aparece sola: línea para
-  números y tiempos, barras para sí/no, distribución para opciones, siempre en el período que
-  elegiste arriba.</p>
+  <h3>1 · El tilde (automático)</h3>
+  <p>Tildaste <b>En Estadísticas</b> en un campo de una categoría → su evolución aparece sola:
+  línea para números y tiempos, barras para sí/no, distribución para opciones, siempre en el
+  período que elegiste arriba. Es un atajo para no configurar nada; los campos sin tilde se
+  grafican igual desde el constructor.</p>
 
   <h3>2 · El constructor (a medida)</h3>
   <p>"➕ Nuevo gráfico personalizado" te deja armar exactamente lo que necesitás:</p>

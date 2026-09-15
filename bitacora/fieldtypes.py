@@ -15,18 +15,24 @@ static/js/field-registry.js (`window.FIELD_BUILDERS`) + su display en day.html.
 """
 
 FIELD_TYPES = [
-    {"slug": "text", "label": "Texto libre",
+    {"slug": "text", "label": "Texto libre", "grafico": False,
      "config": {"label": "Texto de ayuda", "ph": "ej: ¿cómo te fue?"}},
-    {"slug": "emotion-wheel", "label": "🎡 Rueda de emociones", "config": None},
-    {"slug": "duracion",      "label": "⏱️ Duración",            "config": None},
-    {"slug": "rango",         "label": "🕒 Rango horario",       "config": None},
-    {"slug": "escala", "label": "📊 Escala",
+    {"slug": "emotion-wheel", "label": "🎡 Rueda de emociones", "config": None, "grafico": False},
+    {"slug": "duracion",      "label": "⏱️ Duración",            "config": None, "grafico": True},
+    {"slug": "rango",         "label": "🕒 Rango horario",       "config": None, "grafico": True},
+    {"slug": "escala", "label": "📊 Escala", "grafico": True,
      "config": {"label": "Etiquetas (opcional)", "ph": "😣, 😐, 😄 — vacío: del 1 al 5"}},
-    {"slug": "sino",          "label": "☑️ Sí / No",             "config": None},
-    {"slug": "opciones", "label": "🔘 Opciones",
+    {"slug": "sino",          "label": "☑️ Sí / No",             "config": None, "grafico": True},
+    {"slug": "opciones", "label": "🔘 Opciones", "grafico": True,
      "config": {"label": "Opciones, separadas por coma", "ph": "Desayuno, Almuerzo, Cena",
                 "requerida": True}},
-    {"slug": "numero", "label": "🔢 Número",
+    {"slug": "numero", "label": "🔢 Número", "grafico": True,
      "config": {"label": "Unidad", "ph": "kg, vasos, km"}},
     # ANDAMIO: campos — `hacer.ps1 nuevo campo` inserta aca. No mover ni borrar.
 ]
+
+# Los que Estadísticas sabe graficar. Se deriva del catálogo y no se escribe a mano: era una
+# tupla suelta en `routes/main.py` y el editor de categorías ofrecía el tilde 📈 en TODOS los
+# campos, así que en texto libre y en la rueda se podía tildar algo que no hacía nada —
+# `build_series()` devuelve una serie vacía y la pantalla la saltea.
+TIPOS_GRAFICABLES = tuple(t["slug"] for t in FIELD_TYPES if t.get("grafico"))

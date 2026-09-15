@@ -749,6 +749,15 @@ es "achicar el texto".
   en JavaScript — y la de JS era la que divergía. Hoy lo rinde el macro `campos_nota`
   (`_macros.html`, como `campos_rutina`) y el JS **clona un `<template>`** que sale del mismo
   macro. El contenido de un `<template>` no se postea, así que no ensucia ningún formulario.
+- ⚠️ **El tilde de Estadísticas es un atajo, no un permiso**, y por eso la columna se llama
+  **"En Estadísticas"** y no "Gráfico": tildado agrega un gráfico automático, y **sin tildar el
+  campo se grafica igual desde el constructor**, que lista los campos por tipo y se olvida del
+  flag. Se ofrece solo en `TIPOS_GRAFICABLES` —derivado del catálogo, antes era una tupla suelta
+  en `routes/main.py`— porque en `text` y `emotion-wheel` `build_series()` devuelve una serie
+  vacía: ahí el tilde **no hacía nada en ninguno de los dos estados**. Al cambiar a un tipo que no
+  se grafica el valor **sí se apaga** (al revés que la configuración): un flag que ninguna pantalla
+  puede honrar es un dato que miente, `chartable_fields()` lo devolvería igual, y recuperarlo es
+  un clic.
 - La columna **"Notas"** (cuántas notas usan el campo) es **solo de la edición**: una categoría
   nueva no tiene ninguna, así que en el alta estaría siempre vacía. Lo mismo las flechas ↑/↓, que
   se esconden con una sola fila (`:only-child`, sin JS).

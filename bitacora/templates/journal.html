@@ -239,7 +239,8 @@
 <script>
 // Catálogo de tipos con su configuración: bitacora/fieldtypes.py es la fuente única.
 const FIELD_TYPES = {{ field_types | tojson }};
-const TIPO_CONFIG = Object.fromEntries(FIELD_TYPES.map(t => [t.slug, t.config]));
+const TIPO_CONFIG  = Object.fromEntries(FIELD_TYPES.map(t => [t.slug, t.config]));
+const TIPO_GRAFICO = Object.fromEntries(FIELD_TYPES.map(t => [t.slug, t.grafico]));
 
 // ── La sub-línea de configuración ──────────────────────────────────────────
 // Lo que se escribe ahí cambia con el tipo —las opciones, la unidad, las etiquetas, el texto de
@@ -248,7 +249,9 @@ const TIPO_CONFIG = Object.fromEntries(FIELD_TYPES.map(t => [t.slug, t.config]))
 function tipoElegido(select) { aplicarConfig(select.closest('.journal-field-row')); }
 
 function aplicarConfig(row) {
-  const cfg  = TIPO_CONFIG[row.querySelector('select[name="field_type[]"]').value];
+  const tipo = row.querySelector('select[name="field_type[]"]').value;
+  graficable(row, tipo);
+  const cfg  = TIPO_CONFIG[tipo];
   const wrap = row.querySelector('.campo-config');
   wrap.hidden = !cfg;
   limpiarError(row);
@@ -258,6 +261,19 @@ function aplicarConfig(row) {
   if (!cfg) return;
   wrap.querySelector('.campo-config-label').textContent = cfg.label;
   wrap.querySelector('input').placeholder = cfg.ph || '';
+}
+
+// El tilde de Estadísticas solo sirve en los tipos que el motor sabe graficar: en un texto libre
+// o en la rueda, `build_series()` devuelve una serie vacía y la pantalla la saltea, así que
+// tildarlo no hacía nada. Acá el valor SÍ se apaga al esconderse —al revés que la configuración—
+// porque un tilde que ninguna pantalla puede honrar es un dato que miente: `chartable_fields()`
+// lo devolvería y Estadísticas armaría una serie vacía en cada carga. Y recuperarlo es un clic.
+function graficable(row, tipo) {
+  const ok = !!TIPO_GRAFICO[tipo];
+  row.classList.toggle('sin-grafico', !ok);
+  if (ok) return;
+  row.querySelector('.field-chart input[type="checkbox"]').checked = false;
+  row.querySelector('input[name="field_chart[]"]').value = '0';
 }
 
 function limpiarError(row) {

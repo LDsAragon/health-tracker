@@ -116,7 +116,7 @@
     <option value="{{ t.slug }}" {% if ftype == t.slug %}selected{% endif %}>{{ t.label }}</option>
     {% endfor %}
   </select>
-  <label class="field-chart" title="Incluir en Estadísticas">
+  <label class="field-chart" title="Le agrega un gráfico de este campo a Estadísticas sin configurar nada. Sin tilde igual podés armarlo a mano desde el constructor.">
     <input type="checkbox" {% if f and f.get('chart') %}checked{% endif %}
            onchange="this.nextElementSibling.value=this.checked?'1':'0'"><input
            type="hidden" name="field_chart[]" value="{{ '1' if f and f.get('chart') else '0' }}">
@@ -139,7 +139,7 @@
     <span class="col-orden"></span>
     <span class="col-campo">Campo</span>
     <span class="col-tipo">Tipo</span>
-    <span class="col-chart" title="Incluir en Estadísticas">Gráfico</span>
+    <span class="col-chart" title="Le agrega un gráfico de este campo a Estadísticas sin configurar nada. Sin tilde igual podés armarlo a mano desde el constructor.">En Estadísticas</span>
     <span class="col-usos" title="Notas que ya tienen algo guardado en este campo">Notas</span>
     <span class="col-quitar"></span>
   </div>
