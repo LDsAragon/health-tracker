@@ -452,3 +452,36 @@ def test_los_colores_cubren_TODAS_las_emociones_base_de_las_dos_ruedas():
     ekman = dict(re.findall(r'es:\s*"([^"]+)",\s*color:\s*"(#[0-9a-fA-F]{6})"', ekman_js))
     assert len(ekman) == 5, ekman
     assert EMOTION_COLORS["ekman"] == ekman
+
+
+# ── El automático junta por día ──────────────────────────────────────────────
+# Dibujaba un punto POR NOTA: con dos bloques de trabajo el mismo día quedaban dos puntos sobre la
+# misma fecha y la línea se leía como ruido. `grouped_series` ya juntaba por bucket, así que el
+# mismo campo se veía distinto según por dónde entraras.
+
+def test_dos_notas_del_mismo_dia_suman_el_tiempo(test_db):
+    cid = _cat(test_db, [{"label": "Horas", "type": "duracion"}])
+    _entry(cid, "2026-06-01", {"Horas": "150"})
+    _entry(cid, "2026-06-01", {"Horas": "120"})
+    _entry(cid, "2026-06-02", {"Horas": "60"})
+    s = db.build_series(cid, "Horas", "duracion", "2026-06-01", "2026-06-30")
+    assert s["labels"] == ["2026-06-01", "2026-06-02"]
+    assert s["data"] == [270, 60]
+
+
+def test_dos_notas_del_mismo_dia_promedian_la_escala(test_db):
+    """Sumar una escala del 1 al 5 daría un 9 que no significa nada."""
+    cid = _cat(test_db, [{"label": "Ánimo", "type": "escala"}])
+    _entry(cid, "2026-06-01", {"Ánimo": "4"})
+    _entry(cid, "2026-06-01", {"Ánimo": "5"})
+    s = db.build_series(cid, "Ánimo", "escala", "2026-06-01", "2026-06-30")
+    assert s["data"] == [4.5]
+
+
+def test_la_serie_automatica_no_repite_fechas(test_db):
+    """El tripwire: una fecha repetida en las labels es el bug de volver a dibujar por nota."""
+    cid = _cat(test_db, [{"label": "Peso", "type": "numero"}])
+    for v in ("80", "81", "79"):
+        _entry(cid, "2026-06-01", {"Peso": v})
+    s = db.build_series(cid, "Peso", "numero", "2026-06-01", "2026-06-30")
+    assert len(s["labels"]) == len(set(s["labels"])) == 1

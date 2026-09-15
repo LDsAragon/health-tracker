@@ -163,7 +163,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 840 tests, ~50s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 843 tests, ~50s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -898,6 +898,15 @@ miraban) y **ningún número era comparativo** — un `0 / 15 · 0%` no dice si 
   hizo falta SQL nuevo. Es lo que hace que la pantalla cuente algo el día uno, sin configurar nada.
   "Un día con algo anotado" incluye nota, tarea o nota especial; **tildar una rutina no cuenta**:
   es cumplir algo que ya estaba planeado, no anotar.
+- ⚠️ **El gráfico automático da UN valor por día** (`stats._por_dia`, con `AGREGACION_DIARIA`):
+  suma el tiempo y los números, promedia la escala —sumar del 1 al 5 no significaría nada— y el
+  sí/no y las opciones ya contaban solos. Antes dibujaba **un punto por nota**, así que una
+  categoría con dos notas el mismo día ponía dos puntos sobre la misma fecha y la línea se leía
+  como ruido: medido en el ejemplo, "Horas" daba 33 puntos en 22 días. Y el mismo campo se veía
+  distinto según por dónde entraras, porque `grouped_series` —el camino del constructor— sí
+  juntaba por bucket. `numeric_series` sigue devolviendo los valores crudos: la agregación es de
+  `build_series`, que es quien arma lo que se dibuja.
+
 - ⚠️ **Un delta contra un período anterior sin datos no es una mejora.** Si antes no usabas la app,
   un "▲ +23" es ruido que se lee como un logro. Sin datos previos el delta viaja `None` y la
   pantalla muestra un guion (`resumen_comparado`, `tiempo_comparado`). La adherencia usa la misma

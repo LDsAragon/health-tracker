@@ -47,11 +47,14 @@ def sembrar(db):
         "fields_json": json.dumps([
             {"label": "Proyecto", "type": "opciones", "chart": True,
              "placeholder": ", ".join(PROYECTOS)},
-            # Sin tilde: la línea diaria de las dos sería el mismo bloque medido dos veces.
-            # Van al constructor, sumadas y agrupadas por cliente, y siguen alimentando solas
-            # la tarjeta "Tiempo por actividad", que no mira el tilde.
+            # Franja sin tilde: mide el mismo bloque que Horas, así que tildar las dos daría dos
+            # gráficos calcados. Igual va al constructor sumada con Horas, y las dos alimentan
+            # solas la tarjeta "Tiempo por actividad", que no mira el tilde.
             {"label": "Franja", "type": "rango"},
-            {"label": "Horas",  "type": "duracion"},
+            # Horas sí: es el caso con VARIAS notas por día, o sea el que muestra que el
+            # automático ahora junta el día (dos bloques de 150 y 120 dan un punto de 4,5 h y no
+            # dos puntos sobre la misma fecha).
+            {"label": "Horas",  "type": "duracion", "chart": True},
             {"label": "Notas",  "type": "text", "placeholder": "en qué trabajé..."},
         ]),
     })
@@ -154,12 +157,13 @@ def resumen() -> str:
     return """Datos de ejemplo sembrados. En Estadisticas tendrias que ver:
   automaticos (el tilde En Estadisticas), donde el valor de cada dia se lee solo
     Trabajo - Proyecto   barras: cuantas veces cada cliente
+    Trabajo - Horas      linea de horas trabajadas por dia (suma los bloques del dia)
     Cuerpo - Peso        linea de kg por dia
     Cuerpo - Animo       linea de 1 a 5 por dia
     Sueno - Acostarse    linea de horas dormidas por dia
   del constructor, que es lo que el tilde no sabe hacer
     Horas por cliente, por semana   barras apiladas + tabla de totales
     Horas trabajadas por mes        barras por mes
-  sin tilde a proposito: Trabajo - Franja, Trabajo - Horas y Cuerpo - Entrene
-    una linea o una barra POR DIA no dice nada sobre esos tres; las horas siguen
-    apareciendo solas en la tarjeta Tiempo por actividad, que no mira el tilde"""
+  sin tilde a proposito: Trabajo - Franja y Cuerpo - Entrene
+    la franja mide el mismo bloque que Horas y el si/no con una nota por dia son
+    todas barras de altura 1; las dos siguen apareciendo en Tiempo por actividad"""

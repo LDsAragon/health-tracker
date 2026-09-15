@@ -43,6 +43,28 @@ def numeric_series(cat_id, field_label, ftype, start, end):
     return out
 
 
+# Cómo se junta lo de un mismo día cuando hay más de una nota. El gráfico automático dibujaba un
+# punto POR NOTA: con dos bloques de trabajo el mismo día quedaban dos puntos sobre la misma fecha
+# y la línea se leía como ruido —el caso se ve enseguida en `tools/datos_demo.py`—. Suma para lo
+# que se acumula (el tiempo, las cantidades) y promedio para la escala, donde sumar del 1 al 5 no
+# significaría nada. `grouped_series` ya juntaba por bucket: esto es lo que faltaba para que el
+# camino automático y el del constructor digan lo mismo del mismo campo.
+AGREGACION_DIARIA = {"duracion": "suma", "rango": "suma", "numero": "suma", "escala": "promedio"}
+
+
+def _por_dia(pares, ftype):
+    """[(fecha, valor)] con UN valor por fecha."""
+    acum = {}
+    for d, v in pares:
+        acum.setdefault(d, []).append(v)
+    out = []
+    for d in sorted(acum):
+        vals = acum[d]
+        junto = sum(vals) / len(vals) if AGREGACION_DIARIA.get(ftype) == "promedio" else sum(vals)
+        out.append((d, round(junto, 2) if isinstance(junto, float) else junto))
+    return out
+
+
 def bool_counts(cat_id, field_label, start, end):
     """{date_str: conteo de 'sí' (valor '1')} por día."""
     entries = get_journal_entries_range(start, end)
@@ -143,9 +165,9 @@ def grouped_series(cat_id, value_fields, group_label, start, end, bucket="day", 
 
 
 def build_series(cat_id, field_label, ftype, start, end):
-    """Datos listos para Chart.js: {kind, labels, data}."""
+    """Datos listos para Chart.js: {kind, labels, data}. Un valor POR DÍA (ver `_por_dia`)."""
     if ftype in NUMERIC_TYPES:
-        s = numeric_series(cat_id, field_label, ftype, start, end)
+        s = _por_dia(numeric_series(cat_id, field_label, ftype, start, end), ftype)
         return {"kind": "line", "labels": [d for d, _ in s], "data": [v for _, v in s]}
     if ftype == "sino":
         c = bool_counts(cat_id, field_label, start, end)
