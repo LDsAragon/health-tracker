@@ -392,10 +392,7 @@
 
   {% if perfiles_msg == 'creado' %}<div class="datos-banner datos-ok">✓ Perfil creado.</div>
   {% elif perfiles_msg == 'renombrado' %}<div class="datos-banner datos-ok">✓ Perfil renombrado.</div>
-  {% elif perfiles_msg == 'borrado' %}<div class="datos-banner datos-ok">✓ Perfil eliminado.</div>
   {% elif perfiles_msg == 'err-nombre' %}<div class="datos-banner datos-err">✗ Poné un nombre.</div>
-  {% elif perfiles_msg == 'err-frase' %}<div class="datos-banner datos-err">✗ La frase no coincide: no se borró nada.</div>
-  {% elif perfiles_msg == 'err-borrar' %}<div class="datos-banner datos-err">✗ No se puede borrar el perfil activo ni el único que queda.</div>
   {% endif %}
 
   <div class="perfil-list">
@@ -425,28 +422,10 @@
     <button type="submit" class="btn-primary">Crear perfil</button>
   </form>
 
-  {% if perfiles | length > 1 %}
-  <div class="danger-zone" style="margin-top:20px; padding:14px; border-radius:var(--r);">
-    <label style="color:var(--red);">Eliminar un perfil</label>
-    <p class="page-sub" style="margin:6px 0 10px;">Borra ese diario entero: sus notas, rutinas,
-      tareas y backups. No se puede deshacer. Si borrás el que estás usando, la app pasa sola a
-      otro de los que tengas.</p>
-    <form method="POST" action="{{ url_for('perfiles.borrar') }}"
-          data-confirmar="¿Eliminar ese perfil y todos sus datos?" data-confirmar-ok="Eliminar el perfil"
-            onsubmit="return false;"
-          style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-      <input type="hidden" name="back" value="{{ back or '' }}">
-      {# Incluye el perfil activo: si lo borrás, la app pasa sola al que quede. #}
-      <select name="slug" id="borrar-perfil-slug" class="journal-type-select" style="max-width:200px;">
-        {% for p in perfiles %}
-        <option value="{{ p.slug }}">{{ p.nombre }}{% if p.slug == perfil_activo.slug %} (el que estás usando){% endif %}</option>
-        {% endfor %}
-      </select>
-      <input type="text" name="confirm_text" placeholder="Escribí BORRAR PERFIL" autocomplete="off">
-      <button type="submit" class="btn-danger">Eliminar</button>
-    </form>
-  </div>
-  {% endif %}
+  <p class="page-sub" style="margin:14px 0 0;">Para <b>eliminar</b> un perfil, andá a
+    <a href="{{ url_for('main.export_view', back=request.full_path) }}"
+       style="text-decoration:underline;"><b>Datos &rarr; Zona peligrosa</b></a>. Se elimina el
+    que estés usando, así que si querés borrar otro, pasate primero a él con <b>Usar este</b>.</p>
 </div>
 {% endif %}
 {% endblock %}

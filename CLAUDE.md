@@ -160,7 +160,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 832 tests, ~50s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 831 tests, ~50s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -438,11 +438,21 @@ Abrir Bitácora estando abierta **no lanza otra**: vuelve la que ya está, y don
   alcanza para traerla al frente.
 
 ### Borrado: tres acciones, tres frases
+Las tres viven **solo en Datos → Zona peligrosa**, una debajo de la otra y de menor a mayor daño.
+
 | Acción | Qué hace | Frase |
 |---|---|---|
 | Vaciar este perfil (`/reset`) | `reset_db()` del perfil activo; los otros no se tocan | `BORRAR DATOS` |
-| Eliminar un perfil (`/perfiles/borrar`) | Saca del índice + `rmtree`. Acepta el activo | `BORRAR PERFIL` |
+| Eliminar este perfil (`/perfiles/borrar`) | Saca del índice + `rmtree`. Es siempre el activo | `BORRAR PERFIL` |
 | Borrar todos (`/perfiles/borrar-todos`) | Arrasa `perfiles/` y deja uno vacío | `BORRAR TODOS LOS PERFILES` |
+
+⚠️ **Eliminar un perfil estuvo también en Ajustes, con un `<select>` para elegir cuál, y se sacó**
+(pedido del usuario, sep 2026): Ajustes es para configurar y las tres formas de borrar tienen que
+estar juntas, o una queda en una pantalla donde nadie la busca. Ajustes se queda con crear,
+renombrar y cambiar de perfil, más una línea que dice a dónde se fue el borrado — sacarlo callado
+deja a alguien buscándolo. La consecuencia aceptada es que **para borrar otro perfil hay que pasarse
+a él primero** con "Usar este". Por eso `/perfiles/borrar` **vuelve siempre a Datos** y ya no lee el
+campo `volver_a`, y en `settings.html` no quedan los banners de ese borrado.
 
 ⚠️ **`BORRAR TODO` ya no coincide con nada, a propósito.** Vaciaba *un* perfil pero sonaba a que
 borraba todo. Dársela a la acción nueva habría hecho que el hábito de tipearla borre los tres

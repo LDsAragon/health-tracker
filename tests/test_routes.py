@@ -912,30 +912,33 @@ def test_con_dos_perfiles_se_ofrecen_las_tres_acciones(client, tmp_path, monkeyp
     for frase in ("BORRAR DATOS", "BORRAR PERFIL", "BORRAR TODOS LOS PERFILES"):
         assert frase in html, frase
 
-def test_ajustes_ofrece_borrar_el_perfil_activo(client, tmp_path, monkeypatch):
-    """El selector de borrado excluía el activo. Ahora lo incluye, como pidió Matías: la misma
-    capacidad en los dos lados. Hay que mirar DENTRO del selector: el slug del activo también
-    aparece en el form de "Usar este", así que buscarlo en todo el HTML no probaría nada."""
-    profs = _con_perfiles(tmp_path, monkeypatch, cuantos=2)
+def test_eliminar_un_perfil_se_ofrece_solo_en_datos(client, tmp_path, monkeypatch):
+    """Estuvo en las dos pantallas y se dejó en una sola. Ajustes queda para crear, renombrar y
+    cambiar de perfil; las tres formas de borrar viven juntas en la zona peligrosa de Datos."""
+    _con_perfiles(tmp_path, monkeypatch, cuantos=2)
+    assert "/perfiles/borrar" not in client.get("/ajustes").data.decode()
+    assert "/perfiles/borrar" in client.get("/export").data.decode()
+
+def test_ajustes_dice_donde_se_elimina_un_perfil(client, tmp_path, monkeypatch):
+    """Sacar el bloque sin decir a dónde se fue deja a alguien buscándolo en la pantalla equivocada."""
+    _con_perfiles(tmp_path, monkeypatch, cuantos=2)
     html = client.get("/ajustes").data.decode()
-    ini = html.index('id="borrar-perfil-slug"')
-    selector = html[ini:html.index("</select>", ini)]
-    assert f'value="{profs.activo()["slug"]}"' in selector
-    assert "el que estás usando" in selector
+    assert "eliminar</b> un perfil" in html and "/export" in html
 
-def test_borrar_el_perfil_desde_datos_vuelve_a_datos(client, tmp_path, monkeypatch):
-    """Sin el campo volver_a, borrar desde Datos te dejaba en Ajustes, que no es donde estabas."""
-    profs = _con_perfiles(tmp_path, monkeypatch, cuantos=2)
-    r = client.post("/perfiles/borrar", data={"slug": profs.activo()["slug"],
-                                              "confirm_text": "BORRAR PERFIL",
-                                              "volver_a": "datos"})
-    assert "/export" in r.headers["Location"] and "perfil-borrado" in r.headers["Location"]
-
-def test_borrar_el_perfil_desde_ajustes_vuelve_a_ajustes(client, tmp_path, monkeypatch):
+def test_borrar_un_perfil_siempre_vuelve_a_datos(client, tmp_path, monkeypatch):
+    """La vuelta no depende de un campo del formulario: se borra desde un solo lado."""
     profs = _con_perfiles(tmp_path, monkeypatch, cuantos=2)
     r = client.post("/perfiles/borrar", data={"slug": profs.activo()["slug"],
                                               "confirm_text": "BORRAR PERFIL"})
-    assert "/ajustes" in r.headers["Location"]
+    assert "/export" in r.headers["Location"] and "perfil-borrado" in r.headers["Location"]
+
+def test_la_frase_equivocada_al_borrar_un_perfil_avisa_en_datos(client, tmp_path, monkeypatch):
+    profs = _con_perfiles(tmp_path, monkeypatch, cuantos=2)
+    antes = {p["slug"] for p in profs.listar()}
+    r = client.post("/perfiles/borrar", data={"slug": profs.activo()["slug"],
+                                              "confirm_text": "BORRAR TODO"})
+    assert "/export" in r.headers["Location"] and "perfil-err" in r.headers["Location"]
+    assert {p["slug"] for p in profs.listar()} == antes
 
 
 # ── Paneles del día redimensionables ────────────────────────────────────────

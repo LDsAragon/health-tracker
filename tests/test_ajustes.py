@@ -99,14 +99,16 @@ def test_ningun_ajuste_quedo_como_dropdown(client):
     assert [s for s in selects if s in SETTINGS] == []
 
 
-def test_el_select_de_borrar_perfil_no_se_toco(client, monkeypatch, tmp_path):
-    """El rediseño saca los <select> de *ajustes*; el de elegir perfil es una lista de datos."""
+def test_ajustes_no_ofrece_borrar_un_perfil(client, monkeypatch, tmp_path):
+    """Borrar un perfil vive en un solo lugar, Datos, junto a las otras dos formas de borrar.
+    Estuvo en los dos lados y se sacó de acá: Ajustes es para configurar, no para destruir."""
     monkeypatch.setenv("HT_PERFILES", str(tmp_path))
     from bitacora import profiles
     profiles.usar(profiles.crear("Principal")["slug"])
-    profiles.crear("Segundo")                      # el bloque de borrado pide dos
+    profiles.crear("Segundo")                      # con uno solo el bloque tampoco aparecía
     html = client.get("/ajustes").data.decode()
-    assert 'id="borrar-perfil-slug"' in html
+    assert "/perfiles/borrar" not in html
+    assert "BORRAR PERFIL" not in html
 
 
 # ── Secciones colapsables ────────────────────────────────────────────────────

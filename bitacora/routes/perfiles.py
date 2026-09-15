@@ -13,11 +13,8 @@ FRASE_BORRAR_TODOS = "BORRAR TODOS LOS PERFILES"
 
 
 def _volver(back, msg=""):
-    """Vuelve a la pantalla desde la que se posteó. Sin esto, borrar el perfil desde Datos te
-    dejaba en Ajustes, que no es donde estabas."""
-    if request.form.get("volver_a") == "datos":
-        return redirect(url_for("main.export_view", datos=f"perfil-{msg or 'ok'}",
-                                back=safe_back(back)))
+    """Crear y renombrar viven en Ajustes, que es adonde vuelven. Borrar no pasa por acá: se
+    hace solo desde Datos y vuelve ahí."""
     return redirect(url_for("main.settings_view", back=safe_back(back), perfiles=msg or None))
 
 
@@ -46,11 +43,17 @@ def renombrar():
 
 @bp.route("/perfiles/borrar", methods=["POST"])
 def borrar():
-    """Borrar un perfil es borrar un diario entero: pide escribir la frase, como /reset."""
+    """Borrar un perfil es borrar un diario entero: pide escribir la frase, como /reset.
+
+    Se ofrece en un solo lugar, Datos → Zona peligrosa, junto a las otras dos formas de borrar;
+    por eso la vuelta es siempre ahí y no depende de un campo del formulario.
+    """
+    back = safe_back(request.form.get("back"))
     if request.form.get("confirm_text", "").strip() != BORRAR_FRASE:
-        return _volver(request.form.get("back"), "err-frase")
+        return redirect(url_for("main.export_view", datos="perfil-err-frase", back=back))
     ok, _msg = profiles.borrar(request.form.get("slug", ""))
-    return _volver(request.form.get("back"), "borrado" if ok else "err-borrar")
+    return redirect(url_for("main.export_view",
+                            datos="perfil-borrado" if ok else "perfil-err-borrar", back=back))
 
 
 @bp.route("/perfiles/borrar-todos", methods=["POST"])
