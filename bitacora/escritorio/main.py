@@ -313,6 +313,39 @@ def _a_la_bandeja(ventana):
     return False
 
 
+def preparar_datos():
+    """Deja la base lista para LEERLA: migraciones, perfil activo, backup diario y esquema.
+
+    Va en una función aparte y no suelta dentro de `main()` para que el arranque de los datos
+    se pueda correr —y testear— sin abrir ninguna ventana.
+    """
+    from bitacora import database as db
+    from bitacora import profiles
+
+    _migrate_first_run()
+    try:
+        _migrate_a_perfiles()
+    except Exception:
+        with open(APP_DIR / "error.log", "a", encoding="utf-8") as f:
+            f.write("migración a perfiles falló (se sigue con el layout viejo):\n"
+                    + traceback.format_exc())
+    profiles.aplicar()
+    try:
+        _auto_backup()
+    except Exception:
+        with open(APP_DIR / "error.log", "a", encoding="utf-8") as f:
+            f.write("auto-backup falló:\n" + traceback.format_exc())
+
+    # ⚠️ El esquema se crea ACÁ, y no en el primer request como en el modo navegador: el
+    # arranque de la ventana LEE la base antes de que exista ningún request —el tamaño con el
+    # que abrir (`tamano_inicial`), y después el ajuste de bandeja y el toast de tareas—. En
+    # una instalación nueva todavía no hay tablas, así que eso moría con "no such table:
+    # settings" y la app NO ABRÍA: pasó en una máquina nueva de verdad. Va después del
+    # auto-backup para no respaldar una base recién creada y vacía. Es idempotente y no cuesta
+    # nada: la guarda de `user_version` sale antes.
+    db.init_db()
+
+
 def main():
     _unblock_dlls()
     _migrate_from_old_appdata()
@@ -337,20 +370,7 @@ def main():
             pass
         return
 
-    _migrate_first_run()
-    from bitacora import profiles
-    try:
-        _migrate_a_perfiles()
-    except Exception:
-        with open(APP_DIR / "error.log", "a", encoding="utf-8") as f:
-            f.write("migración a perfiles falló (se sigue con el layout viejo):\n"
-                    + traceback.format_exc())
-    profiles.aplicar()
-    try:
-        _auto_backup()
-    except Exception:
-        with open(APP_DIR / "error.log", "a", encoding="utf-8") as f:
-            f.write("auto-backup falló:\n" + traceback.format_exc())
+    preparar_datos()
 
     from bitacora.app import create_app
     flask_app = create_app()

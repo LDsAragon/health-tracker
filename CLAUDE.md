@@ -79,8 +79,9 @@ bitacora/
       emotion-guided.js # Exploración guiada (árbol de decisión, tercer tab del modal)
       vendor/           # chart.umd.min.js
   escritorio/           # Solo la app de ventana. Nada del resto del paquete importa de acá.
-    main.py             # Arranque pywebview; auto-backup diario; APP_DIR por plataforma;
-                        #   arrancar() = main() envuelto en el reporte de errores
+    main.py             # Arranque pywebview; preparar_datos() (migraciones, perfil, backup
+                        #   diario y esquema); APP_DIR por plataforma; arrancar() = main()
+                        #   envuelto en el reporte de errores
     widget.py           # Ventana del widget de escritorio (segunda ventana pywebview)
     tray.py             # Icono en el área de notificación (NotifyIcon vía pythonnet, solo Win)
     instancia.py        # Una sola Bitácora a la vez: lock del SO + aviso por HTTP
@@ -123,6 +124,18 @@ Desde sep 2026 hay **perfiles**: la DB no está en la raíz de `APP_DIR` sino en
 `perfiles/<slug>/health.db`, y el índice (`perfiles.json`) dice cuál está activo. `webview/` y
 `error.log` siguen siendo del dispositivo, no del perfil.
 
+⚠️ **El esquema lo crea el ARRANQUE, no solo el primer request.** `init_db()` corre en cada
+request (`app.py`), pero la ventana **lee** la base antes de que haya ninguno: el tamaño con el
+que abrir (`tamano_inicial`), el ajuste de bandeja y el toast de tareas sin cerrar. En una
+instalación nueva todavía no hay tablas, así que eso moría con `no such table: settings` y la app
+**no abría nunca en una máquina nueva** — el modo navegador no lo mostraba porque ahí `main.py`
+llama a `init_db()` de entrada. Por eso el arranque de los datos vive junto en
+`escritorio.main.preparar_datos()` (migraciones → perfil activo → auto-backup → `init_db()`, en
+ese orden), que es donde va cualquier paso nuevo de arranque. Lo fija `tests/test_arranque.py`,
+que corre esa secuencia sobre una carpeta virgen sin abrir ninguna ventana. El smoke
+`tools/smoke_desktop.py` no lo cazó porque repite los pasos del arranque a mano en vez de llamarlo:
+un paso nuevo en `main()` le sigue siendo invisible.
+
 Todos los backups (diarios + pre-operación) van a `<dir DB>/backups/` via `backup_path(prefix)` en
 `conn.py`. Como esa ruta se deriva de `DB_PATH`, **cada perfil obtiene su propia carpeta de backups
 sin código extra**.
@@ -142,7 +155,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 826 tests, ~45s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 830 tests, ~55s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
