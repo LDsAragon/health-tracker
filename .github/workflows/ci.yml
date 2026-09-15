@@ -10,8 +10,8 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt pytest
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: tests
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: bash tools/make_release_linux.sh
       # El tarball se arma copiando archivos: si falta un modulo, pytest no lo ve
       # (corre sobre el repo) y la app no arranca. Paso con updater.py desde
@@ -39,7 +39,7 @@ jobs:
           tar -xzf dist/Bitacora-linux-*.tar.gz -C "$tmp"
           cd "$tmp/Bitacora"
           python -c "from bitacora.app import create_app; create_app(); print('el tarball importa y crea la app')"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: bitacora-linux
           path: dist/Bitacora-linux-*.tar.gz
