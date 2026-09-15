@@ -68,7 +68,12 @@ def create_app():
                 # Acá y no en cada ruta: lo necesitan base.html y widget.html, que son los dos
                 # árboles de plantillas. Servirlo con la página evita que la primera vuelta del
                 # poleo tenga que establecer la referencia.
-                "token_datos": db.token_datos()}
+                "token_datos": db.token_datos(),
+                # Cómo dejaste acomodada cada pantalla. Van TODAS las claves y no solo las de la
+                # vista actual: son un puñado de filas (el registro de `appconfig.VISTAS` acota
+                # cuáles pueden existir) y así el JS las lee sin saber en qué vista está, que es
+                # lo que permite aplicar el zoom en el <head> sin un salto.
+                "vista_prefs": db.get_prefs()}
 
     for module in BLUEPRINTS:
         app.register_blueprint(module.bp)

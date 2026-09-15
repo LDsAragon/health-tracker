@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, make_r
 from bitacora import database as db
 from bitacora import services
 from bitacora.escritorio import updater
-from bitacora.appconfig import (THEMES, SETTINGS, VENTANA_PRESETS, es_resolucion,
+from bitacora.appconfig import (THEMES, SETTINGS, VENTANA_PRESETS, VISTAS, es_resolucion,
                                 valor_valido)
 from bitacora.helpers import _setting, _first_weekday, _week_start, _dow_names, safe_back, MESES
 from bitacora.fieldtypes import TIPOS_GRAFICABLES
@@ -179,6 +179,39 @@ def settings_set():
     """Guardado al instante de un ajuste suelto. 204 como el resto del AJAX del repo."""
     ok = _guardar_ajuste(request.form.get("key"), request.form.get("value"))
     return ("", 204) if ok else ("", 400)
+
+
+# ── Preferencias de vista ────────────────────────────────────────────────────
+# Cómo dejaste acomodada cada pantalla. Vivía en `localStorage` y el escritorio la perdía en cada
+# arranque: el origen incluye el puerto y el puerto cambia siempre. Mismo camino que el guardado
+# al instante de Ajustes (204, y `refresco.js` ignora las escrituras propias de la página).
+
+
+@bp.route("/vista/set", methods=["POST"])
+def vista_set():
+    ok = db.set_pref(request.form.get("vista", ""), request.form.get("clave", ""),
+                     request.form.get("valor", ""))
+    return ("", 204) if ok else ("", 400)
+
+
+@bp.route("/vista/borrar", methods=["POST"])
+def vista_borrar():
+    """Una sola preferencia: es el doble clic en un agarre, que vuelve al ancho del CSS."""
+    db.borrar_pref(request.form.get("vista", ""), request.form.get("clave", ""))
+    return ("", 204)
+
+
+@bp.route("/vista/reiniciar", methods=["POST"])
+def vista_reiniciar():
+    """Deja una vista como viene de fábrica, sin tocar las otras. El zoom se va con ella porque
+    es lo que se pidió del menú contextual, y el texto del menú lo dice."""
+    vista = request.form.get("vista", "")
+    if vista not in VISTAS:
+        return ("", 400)
+    db.reset_vista(vista)
+    if vista != "app":
+        db.reset_vista("app")
+    return ("", 204)
 
 
 # ── Estadísticas ─────────────────────────────────────────────────────────────────

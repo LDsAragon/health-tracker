@@ -7,8 +7,13 @@
   {# Plantilla propia y no base.html: acá no van navbar, buscador, rueda de emociones ni zoom. #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/widget.css') }}">
+  {# Cómo dejaste acomodada la pantalla. Va en el <head> y ANTES de los scripts que la usan:
+     zoom.js aplica el zoom guardado lo antes posible y sin esto habría un salto al cargar.
+     ⚠️ Con `| tojson` y nunca `"{{ ... }}"`: mismo motivo que el token del refresco. #}
+  <script>window.VISTA_PREFS = {{ vista_prefs | tojson }};</script>
+  <script src="{{ url_for('static', filename='js/vista-prefs.js') }}"></script>
 </head>
-<body class="widget-body">
+<body class="widget-body" data-vista="widget">
 
 {# Sin barra de título del sistema (la ventana es frameless): esta fila es la nuestra.
    El resto de la ventana arrastra solo, por easy_drag. #}

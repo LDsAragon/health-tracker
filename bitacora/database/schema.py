@@ -18,7 +18,7 @@ _EN_SETUP = threading.Lock()
 #  2. el import de sincronización va a poder rechazar un archivo incompatible.
 # ⚠️ AL AGREGAR UNA MIGRACIÓN HAY QUE SUBIRLA. Si no, las DBs ya instaladas se saltean el
 # paso y nunca reciben la columna nueva.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 # Tablas que participan de la sincronización entre dispositivos. `settings` queda afuera a
 # propósito: mezcla preferencias de la persona (formato de fecha) con las del dispositivo
@@ -103,6 +103,30 @@ SCHEMA = """
         bucket      TEXT DEFAULT 'day',
         tag_filter  TEXT DEFAULT '',
         created_at  TEXT DEFAULT (datetime('now','localtime'))
+    );
+"""
+
+# Cómo dejaste acomodada cada pantalla: el ancho y el alto de los paneles, el alto de celda del
+# calendario, el zoom, qué desplegables quedaron abiertos. Vivía en `localStorage` y se perdía en
+# CADA arranque de la app de escritorio, porque `localStorage` va por origen y el puerto cambia en
+# cada arranque (`escritorio/main.puerto_seguro()`): en una instalación real había 52 orígenes
+# acumulados, con el zoom guardado bajo 18 de ellos.
+#
+# ⚠️ **Fuera de `SYNCABLE` a propósito, y el merge no la mira.** Un ancho elegido en un monitor de
+# 2560 no puede aterrizar en una laptop de 1366 — el mismo motivo por el que la geometría del
+# widget vive en `widget.json` y no en `settings`, que sí viaja.
+# ⚠️ **Fuera de `token_datos()` también**: si entrara, plegar un desplegable en una ventana
+# recargaría la otra a los 3 segundos.
+#
+# Guarda solo lo que el usuario cambió. Los defaults ya están declarados donde corresponde (las
+# custom properties del CSS, el `abiertoPorDefecto` de cada colapsable, `zoom = 1`), así que
+# copiarlos acá sería una segunda fuente que se desincroniza sola. "Reiniciar" es borrar la fila.
+SCHEMA += """
+    CREATE TABLE IF NOT EXISTS vista_prefs (
+        vista TEXT NOT NULL,
+        clave TEXT NOT NULL,
+        valor TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (vista, clave)
     );
 """
 

@@ -288,7 +288,7 @@ window.BITACORA_REINIT.push(restaurarRuedas);
    *   grip      el elemento que se arrastra
    *   eje       'x' | 'y'
    *   variable  la custom property que se setea en :root
-   *   pref      la clave de localStorage
+   *   pref      la clave de la preferencia de vista
    *   minimo    px
    *   maximo()  tope, calculado en el momento (depende del tamaño de la ventana)
    *   medir()   el tamaño actual, para arrancar el arrastre si no hay valor pedido
@@ -309,10 +309,8 @@ window.BITACORA_REINIT.push(restaurarRuedas);
       raiz.setProperty(variable, pedido + 'px');
     }
 
-    try {
-      const v = parseInt(localStorage.getItem(pref), 10);
-      if (Number.isFinite(v)) aplicar(v);
-    } catch (e) { /* modo privado */ }
+    const guardado = parseInt(window.prefLeer(pref), 10);
+    if (Number.isFinite(guardado)) aplicar(guardado);
 
     let arrastrando = false, origen = 0, inicial = 0;
     const coord = (e) => (eje === 'x' ? e.clientX : e.clientY);
@@ -338,7 +336,7 @@ window.BITACORA_REINIT.push(restaurarRuedas);
       arrastrando = false;
       grip.classList.remove('arrastrando');
       document.body.classList.remove('day-redimensionando');
-      try { localStorage.setItem(pref, String(pedido)); } catch (e) { /* modo privado */ }
+      window.prefGuardar(pref, pedido);
     }
     grip.addEventListener('pointerup', terminar);
     grip.addEventListener('pointercancel', terminar);
@@ -346,7 +344,7 @@ window.BITACORA_REINIT.push(restaurarRuedas);
     grip.addEventListener('dblclick', () => {
       pedido = null;
       raiz.removeProperty(variable);          // vuelve al default del CSS
-      try { localStorage.removeItem(pref); } catch (e) { /* modo privado */ }
+      window.prefBorrar(pref);
     });
 
     // Al achicar la ventana, re-acotar sin pisar lo elegido: un tamaño de un monitor grande no

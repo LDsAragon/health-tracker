@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block vista %}dia{% endblock %}
 {% from "_macros.html" import date_field %}
 {% set COLORS = note_colors %}
 {% set MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'] %}
@@ -27,7 +28,7 @@
 <!-- Panel lateral permanente: objetivos / quehaceres -->
 <aside class="day-side">
   {# Arrastrar para cambiar el ancho del panel; doble clic lo devuelve al default. Lo maneja
-     day.js y el ancho queda en localStorage. #}
+     day.js y el ancho queda guardado con las demás preferencias de la vista. #}
   <div class="day-side-grip" id="day-side-grip" title="Arrastrá para cambiar el ancho (doble clic para volver al normal)"></div>
   {# El de abajo cambia el ALTO. Los data-* los lee day.js: así los dos paneles usan el mismo
      helper sin que el JS sepa de cuál se trata. #}

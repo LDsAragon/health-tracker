@@ -9,9 +9,14 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/day.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/wheel.css') }}">
+  {# Cómo dejaste acomodada la pantalla. Va en el <head> y ANTES de los scripts que la usan:
+     zoom.js aplica el zoom guardado lo antes posible y sin esto habría un salto al cargar.
+     ⚠️ Con `| tojson` y nunca `"{{ ... }}"`: mismo motivo que el token del refresco. #}
+  <script>window.VISTA_PREFS = {{ vista_prefs | tojson }};</script>
+  <script src="{{ url_for('static', filename='js/vista-prefs.js') }}"></script>
   <script src="{{ url_for('static', filename='js/zoom.js') }}"></script>
 </head>
-<body>
+<body data-vista="{% block vista %}app{% endblock %}">
   <nav class="navbar">
     <a href="{{ url_for('main.home') }}" class="nav-brand">Bitácora</a>
 
@@ -264,8 +269,8 @@
 
   <script>
   (function() {
-    // Una sola vez por arranque: pywebview conserva localStorage entre sesiones pero
-    // sessionStorage muere al cerrar la ventana, que es justo la semántica que queremos.
+    // Una sola vez por arranque: va en sessionStorage, que muere al cerrar la ventana — que
+    // es justo la semántica que queremos y por eso no se mudó a las preferencias de vista.
     var SEEN = 'todoAlertSeen';
     var _modal = document.getElementById('todo-modal');
 

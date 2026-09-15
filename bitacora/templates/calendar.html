@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block vista %}calendario{% endblock %}
 {% block title %}{{ month_name }} {{ year }}{% endblock %}
 {% block main_class %}main-wide{% endblock %}
 {% block main_attrs %} data-refresco-parcial{% endblock %}
@@ -90,9 +91,9 @@
 const PREF = 'cal_cell_height';
 const slider = document.getElementById('cell-size');
 function apply(h) { document.documentElement.style.setProperty('--cell-height', h + 'px'); }
-const saved = localStorage.getItem(PREF);
+const saved = prefLeer(PREF);
 if (saved) { slider.value = saved; apply(saved); } else { apply(slider.value); }
-slider.addEventListener('input', () => { apply(slider.value); localStorage.setItem(PREF, slider.value); });
+slider.addEventListener('input', () => { apply(slider.value); prefGuardar(PREF, slider.value); });
 
 function previewCalColor(radio, color) {
   const inp = radio.closest('.cal-quick-form').querySelector('.cal-quick-input');

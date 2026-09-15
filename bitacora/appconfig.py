@@ -112,3 +112,39 @@ EMOTION_COLORS = {
                 "Asco": "#4f9d69", "Disfrute": "#e6b53c"},
 }
 EMOTION_FALLBACK = "#8892a4"
+
+
+# ── Preferencias de vista ────────────────────────────────────────────────────
+# Qué claves son de qué pantalla. No es una tabla de defaults: los defaults ya están declarados
+# donde corresponde (las custom properties del CSS, el `abiertoPorDefecto` de cada colapsable, el
+# zoom en 1), y copiarlos acá sería una segunda fuente que se desincroniza sola. Esto es lo que le
+# da ALCANCE al "reiniciar esta vista" y lo que permite rechazar una clave inventada, igual que
+# `valor_valido()` con los ajustes.
+#
+# Una clave que termina en `*` es un prefijo: los colapsables de Rutinas son uno por rutina
+# (`recOpen-<id>`), así que no se pueden enumerar.
+#
+# ⚠️ `app` es la vista de lo que vale para toda la app (hoy el zoom). Al reiniciar una vista se
+# borra también, porque así se pidió — y por eso el texto del menú lo dice en vez de sorprender.
+VISTAS = {
+    "dia":        ("day_side_width", "day_alto_tareas", "day_alto_rutinas"),
+    "calendario": ("cal_cell_height",),
+    "tareas":     ("todosNuevaOpen", "todosResumenOpen"),
+    "rutinas":    ("recSugOcultas", "recOpen-*"),
+    "ajustes":    ("setOpen-*",),
+    "widget":     ("widgetNotasHoy",),
+    "app":        ("app_zoom",),
+}
+
+
+def clave_de_vista_valida(vista, clave) -> bool:
+    """¿Esa clave pertenece a esa vista? Lo que llega del navegador no se guarda a ciegas."""
+    if not clave or not isinstance(clave, str) or len(clave) > 80:
+        return False
+    for patron in VISTAS.get(vista, ()):
+        if patron.endswith("*"):
+            if clave.startswith(patron[:-1]) and len(clave) > len(patron) - 1:
+                return True
+        elif clave == patron:
+            return True
+    return False

@@ -1,9 +1,11 @@
 // Zoom estilo navegador, a nivel web (portable navegador ↔ pywebview/WebView2).
-// Ctrl+rueda y Ctrl + +/- ajustan; Ctrl+0 (o Ctrl+Shift+R) resetea. Persistido en localStorage.
+// Ctrl+rueda y Ctrl + +/- ajustan; Ctrl+0 (o Ctrl+Shift+R) resetea. Se guarda en la base
+// (vista-prefs.js): en localStorage se perdia en cada arranque del escritorio.
 (function () {
   var KEY = 'app_zoom';
   var MIN = 0.5, MAX = 2.5, STEP = 0.1;
-  var zoom = parseFloat(localStorage.getItem(KEY)) || 1;
+  // El zoom es de toda la app, no de una pantalla: se guarda siempre en la vista "app".
+  var zoom = parseFloat(window.prefLeer(KEY)) || 1;
 
   function clamp(z) { return Math.min(MAX, Math.max(MIN, Math.round(z * 100) / 100)); }
   function apply() {
@@ -12,7 +14,7 @@
     // (los vh/vw y media queries no se enteran del CSS zoom) — ej. la rueda.
     window.dispatchEvent(new CustomEvent('app-zoom', { detail: zoom }));
   }
-  function set(z) { zoom = clamp(z); apply(); localStorage.setItem(KEY, String(zoom)); }
+  function set(z) { zoom = clamp(z); apply(); window.prefGuardar(KEY, zoom, 'app'); }
 
   apply();   // aplica el zoom guardado lo antes posible (script en <head>)
 
