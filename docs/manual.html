@@ -51,10 +51,11 @@
   .cover-box {
     margin-top: 80px; text-align: center;
   }
+  /* El icono de verdad, el que genera tools/make_icon.py (calendario con corazón): la portada
+     mostraba un emoji de calendario que no es el icono de la app. Se apunta al archivo en vez de
+     copiarlo o redibujarlo acá, para que no pueda divergir del que se instala. */
   .cover-box .logo {
-    width: 96px; height: 96px; border-radius: 22px; background: var(--accent);
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 48px; margin-bottom: 18px;
+    width: 104px; height: 104px; margin-bottom: 18px;
   }
   .toc { columns: 2; column-gap: 28px; margin-top: 16px; }
   .toc div { margin-bottom: 5px; }
@@ -68,7 +69,8 @@
 <!-- ───────────────────────── PORTADA ───────────────────────── -->
 <section class="cover">
   <div class="cover-box">
-    <div class="logo">📅</div>
+    <img class="logo" src="../bitacora/static/icon.png"
+         alt="Icono de Bitácora: un calendario con un corazón">
     <h1>Bitácora</h1>
     <p class="lead">Manual de uso — cómo está pensada y todo lo que podés hacer con ella</p>
     <p class="muted small">Tu calendario personal de hábitos, registros y emociones · septiembre 2026 · v3</p>
