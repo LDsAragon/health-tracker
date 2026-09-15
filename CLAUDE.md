@@ -163,7 +163,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 843 tests, ~50s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 865 tests, ~50s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -816,6 +816,40 @@ Las ocho pantallas que se abren desde el navbar llevan el mismo `.page-back .bac
 - En `/search` el hidden del formulario **conserva** el `back` en vez de recalcularlo, o buscar
   dos veces seguidas encadenaba el volver a la búsqueda anterior.
 
+## Cómo dejaste acomodada cada pantalla
+
+Los anchos y altos de los paneles del día, el alto de celda del calendario, el zoom y qué
+desplegables quedaron abiertos viven en la tabla **`vista_prefs`** (`database/vistas.py`), por
+perfil. Antes iban a `localStorage` y la app de escritorio **los perdía en cada arranque**:
+`localStorage` va por origen, el origen es `http://127.0.0.1:<puerto>` y `puerto_seguro()` pide uno
+nuevo siempre. Medido en una instalación real: **52 orígenes** acumulados, con `app_zoom` guardada
+bajo 18 de ellos. Por eso **no hizo falta tocar el puerto**: con el estado en la base, el origen
+deja de importar.
+
+- ⚠️ **Fuera de `SYNCABLE` y fuera de `token_datos()`**, las dos con tripwire. Lo primero porque un
+  ancho elegido en un monitor de 2560 no puede aterrizar en una laptop de 1366 —es el mismo motivo
+  por el que la geometría del widget va a `widget.json` y no a `settings`, que sí viaja—. Lo
+  segundo porque si alimentara el token, plegar un desplegable en una ventana **recargaría la
+  otra** a los 3 segundos.
+- **Guarda solo lo que cambiaste.** Los defaults siguen declarados donde ya estaban (las custom
+  properties del CSS, el `abiertoPorDefecto` de cada colapsable, el zoom en 1); copiarlos a Python
+  sería una segunda fuente que se desincroniza sola. "Reiniciar" es **borrar la fila**.
+- `appconfig.VISTAS` es el registro de **qué clave es de qué vista** (no de defaults): le da alcance
+  al reiniciar y hace de whitelist de lo que llega del navegador. Una clave terminada en `*` es un
+  prefijo, para los colapsables de Rutinas, que son uno por rutina.
+- Cada plantilla declara la suya con `{% block vista %}`; sin eso cae en `app` y sus preferencias
+  se rechazarían. Hay un test que recorre las plantillas y lo exige —el mismo fallo callado que
+  "una pantalla a medio marcar" del refresco.
+- La lectura es **síncrona**: el context processor inyecta todas las filas y `base.html` las embute
+  en el `<head>` **antes de `zoom.js`** (con `| tojson`), así el zoom se aplica sin salto.
+- ⚠️ **Setear `.open` a mano dispara `toggle`**, así que cada pantalla guardaba su propio default
+  apenas la abrías. Con `localStorage` era gratis e invisible; con escrituras HTTP es ruido, y
+  encima deshacía el "reiniciar" en la recarga siguiente. La guarda vive en `colapsables.js`.
+- **El menú del clic derecho** (`static/js/menu-contextual.js`) es lo que lo usa: *Reiniciar esta
+  vista* borra las filas de la vista actual **y el zoom**, que es de toda la app — por eso el ítem
+  lo dice en vez de sorprender. ⚠️ **No se intercepta sobre un campo de texto ni con algo
+  seleccionado**: ahí tiene que salir el menú nativo o se pierden *pegar* y *copiar*.
+
 ## Confirmaciones: ninguna es del navegador
 
 `confirm()` en la ventana de escritorio sale encabezado por **"127.0.0.1:65015 dice"**, que es lo
@@ -1116,16 +1150,14 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
   **`create_window(http_port=...)`, no por `webview.start()`**: con un objeto Flask la ventana
   levanta su propio servidor en `_initialize()` y ahí solo llega el de `create_window`. El widget
   no necesita nada porque reusa ese mismo servidor.
-- **pywebview / localStorage**: `webview.start(private_mode=False, storage_path=...)` — sin eso
-  pywebview borra el perfil del WebView2 al cerrar.
-  ⚠️ **Pero eso NO alcanza: hoy el `localStorage` se pierde igual en cada arranque.** Vive por
-  **origen**, y el origen es `http://127.0.0.1:<puerto>` con un puerto efímero distinto cada vez
-  (`puerto_seguro()`, que nació para esquivar `ERR_UNSAFE_PORT`). Medido en una instalación real:
-  **52 orígenes** acumulados, con `app_zoom` guardada bajo 18 de ellos, `setOpen-apariencia` bajo
-  15 y `day_side_width` bajo 13. O sea que se resetean en cada arranque los colapsables
-  (`setOpen-*`, `todos*Open`, `widgetNotasHoy`), el zoom, `cal_cell_height`, el ancho y alto de
-  los paneles del día y el "dejarla como está" de las sugerencias de rutinas. En el navegador sí
-  persisten: ahí el puerto es fijo. **Arreglo pendiente** (decisión del usuario, 2026-09-14):
-  recordar el último puerto en un archivo del dispositivo y reusarlo si sigue libre. Hasta
-  entonces el manual dice la verdad —"mientras la app está abierta"— en vez de prometerlo.
+- ⚠️ **`localStorage` no sirve para guardar nada en el escritorio.** Vive por **origen**, y el
+  origen es `http://127.0.0.1:<puerto>` con un puerto efímero distinto en cada arranque
+  (`puerto_seguro()`, que nació para esquivar `ERR_UNSAFE_PORT`): en una instalación real había
+  **52 orígenes** acumulados, con `app_zoom` guardada bajo 18 de ellos. `webview.start(
+  private_mode=False, storage_path=...)` sigue haciendo falta —sin eso pywebview borra el perfil
+  del WebView2 al cerrar— pero **no alcanza**, porque el que cambia es el origen. Todo lo que hay
+  que recordar vive ahora en `vista_prefs` (§ *Cómo dejaste acomodada cada pantalla*), y por eso
+  **no se fijó el puerto**: no quedó nada que dependa de él. Lo único que queda en el navegador es
+  `sessionStorage`, que muere con la ventana **a propósito** (el "visto" del aviso de tareas y el
+  corta-circuitos del refresco). Hay un tripwire que falla si vuelve un `localStorage.`.
 - **DB path en tests**: `bitacora.database.conn.DB_PATH` se parchea directamente (por string, así que un cambio de layout lo rompe ruidoso); `get_db()` lo lee en cada call.

@@ -19,8 +19,10 @@
   function post(url, datos) {
     try {
       const cuerpo = new URLSearchParams(datos);
-      fetch(url, { method: 'POST', body: cuerpo }).catch(() => {});
-    } catch (e) { /* sin fetch no se guarda, pero la página sigue andando */ }
+      return fetch(url, { method: 'POST', body: cuerpo }).catch(() => {});
+    } catch (e) {
+      return Promise.resolve();   // sin fetch no se guarda, pero la página sigue andando
+    }
   }
 
   window.prefLeer = function (clave) {
@@ -38,7 +40,9 @@
     post('/vista/borrar', { vista: vista || vistaActual(), clave: clave });
   };
 
+  // Devuelve la promesa: el menú contextual recarga recién cuando el borrado llegó, o la
+  // página volvería a renderizarse con las preferencias que todavía no se borraron.
   window.prefReiniciarVista = function (vista) {
-    post('/vista/reiniciar', { vista: vista || vistaActual() });
+    return post('/vista/reiniciar', { vista: vista || vistaActual() });
   };
 })();

@@ -155,3 +155,32 @@ def test_un_colapsable_no_guarda_su_propio_default(client, test_db):
     se deshiciera solo en la recarga siguiente. La guarda vive en colapsables.js."""
     js = _leer("bitacora", "static", "js", "colapsables.js")
     assert "if (valor === actual || (actual === null && d.open === abiertoPorDefecto)) return;" in js
+
+
+# ── El menú del clic derecho ─────────────────────────────────────────────────
+
+def test_toda_pantalla_trae_el_menu_contextual(client, test_db):
+    # "/" redirige a la vista de inicio configurada, así que se piden las pantallas de verdad.
+    for url in ("/calendar/2026/6", "/day/2026-06-09", "/tareas", "/ajustes",
+                "/estadisticas", "/journal"):
+        assert b"js/menu-contextual.js" in client.get(url).data, url
+
+
+def test_el_widget_no_trae_el_menu(client, test_db):
+    """Plantilla propia: no hereda de base.html, y en 340px un menú no tiene dónde caer."""
+    assert b"js/menu-contextual.js" not in client.get("/widget").data
+
+
+def test_el_menu_no_se_come_el_de_pegar_ni_el_de_copiar():
+    """⚠️ Interceptar el clic derecho en toda la página cuesta *pegar* y *copiar*, que en el modo
+    navegador se usan todos los días. La guarda es lo que hace aceptable el menú propio."""
+    js = _leer("bitacora", "static", "js", "menu-contextual.js")
+    assert "input, textarea, select, [contenteditable=" in js      # pegar
+    assert "if (sel && String(sel).trim()) return;" in js          # copiar
+
+
+def test_el_reiniciar_del_menu_recarga_recien_cuando_el_borrado_llego():
+    """Si recargara sin esperar, la página volvería a renderizarse con las preferencias que
+    todavía no se borraron y el reinicio se vería como que no hizo nada."""
+    js = _leer("bitacora", "static", "js", "menu-contextual.js")
+    assert "window.prefReiniciarVista().then(() => location.reload())" in js

@@ -1338,3 +1338,31 @@ select.journal-cat-select {
 .rec-sug-titulo { font-weight: 600; margin: 0 0 8px; }
 .rec-sug-texto { font-size: 13px; line-height: 1.5; margin: 0 0 6px; color: var(--text); }
 .rec-sug-acciones { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+
+/* ── MENÚ CONTEXTUAL ──────────────────────────────────────────────────────
+   El del navegador dice "127.0.0.1:65015" y ofrece "ver código fuente": es el menú de un sitio
+   web, no el de un programa. Mismo motivo por el que los confirm() se fueron. */
+.menu-ctx {
+  position: fixed;
+  z-index: 3000;
+  min-width: 190px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  display: flex;
+  flex-direction: column;
+}
+.menu-ctx-item {
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.menu-ctx-item:hover { background: var(--surface2); color: var(--accent); }
