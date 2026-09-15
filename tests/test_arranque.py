@@ -4,10 +4,13 @@ Lo que necesita una ventana de verdad vive en tools/smoke_desktop.py; acá va lo
 verificar sin display, que es justo donde se escapó el bug que estos tests fijan.
 """
 import sqlite3
+from pathlib import Path
 
 import pytest
 
 from bitacora import database as db
+from bitacora import profiles
+from bitacora.app import create_app
 from bitacora.escritorio import main as desktop
 
 
@@ -54,6 +57,43 @@ def test_preparar_los_datos_dos_veces_no_cambia_nada(instalacion_nueva):
 
     assert db.get_setting("window_size") == "1366x768"
     assert len(__import__("bitacora.profiles", fromlist=["x"]).listar()) == 1
+
+
+def test_una_instalacion_nueva_sirve_la_app(instalacion_nueva):
+    """De punta a punta y sin ventana: una carpeta de datos virgen tiene que poder mostrar la
+    pantalla principal y guardar algo, no solo no explotar al arrancar.
+
+    Este NO es el tripwire del bug —pasa igual sin el fix, porque cualquier request pasa por el
+    `init_db()` del before_request—: lo que cubre es que la instalación virgen sirva la app
+    entera. El bug lo fijan los de arriba, que leen la base sin pasar por ningún request."""
+    desktop.preparar_datos()
+
+    cliente = create_app().test_client()
+    assert cliente.get("/", follow_redirects=True).status_code == 200
+    r = cliente.post("/day/2026-09-14/note/add", data={"content": "la primera nota", "color": ""},
+                     follow_redirects=True)
+    assert r.status_code == 200 and "la primera nota" in r.data.decode()
+
+
+def test_reanuda_una_instalacion_que_quedo_a_medias(instalacion_nueva):
+    """La máquina donde YA corrió la versión rota: el perfil quedó creado y su health.db quedó
+    en 0 bytes (cualquier cosa que toque la ruta lo crea, aunque después falle la lectura).
+
+    Un archivo de 0 bytes es una base SQLite válida y vacía, así que el arranque arreglado tiene
+    que escribirle el esquema adentro y seguir — sin duplicar el perfil que ya estaba."""
+    desktop._migrate_first_run()
+    desktop._migrate_a_perfiles()
+    profiles.aplicar()
+    with pytest.raises(sqlite3.OperationalError):
+        db.get_all_settings()                      # así moría, después de dejar el archivo
+    activa = Path(db.db_path())
+    assert activa.stat().st_size == 0, activa.stat().st_size
+
+    desktop.preparar_datos()
+
+    assert desktop.tamano_inicial()
+    assert [p["nombre"] for p in profiles.listar()] == ["Principal"]
+    assert create_app().test_client().get("/", follow_redirects=True).status_code == 200
 
 
 def test_sin_crear_el_esquema_la_base_nueva_no_se_puede_leer(tmp_path, monkeypatch):

@@ -136,6 +136,11 @@ que corre esa secuencia sobre una carpeta virgen sin abrir ninguna ventana. El s
 `tools/smoke_desktop.py` no lo cazó porque repite los pasos del arranque a mano en vez de llamarlo:
 un paso nuevo en `main()` le sigue siendo invisible.
 
+Reanudar una instalación que quedó a medias sale gratis y hay un test que lo fija: un `health.db`
+de **0 bytes** —lo que deja cualquier cosa que toque la ruta antes de que exista el esquema— es una
+base SQLite válida y vacía, así que `init_db()` le escribe las tablas adentro, y `perfiles.json` ya
+existente hace que `_migrate_a_perfiles()` salga temprano en vez de duplicar el perfil.
+
 Todos los backups (diarios + pre-operación) van a `<dir DB>/backups/` via `backup_path(prefix)` en
 `conn.py`. Como esa ruta se deriva de `DB_PATH`, **cada perfil obtiene su propia carpeta de backups
 sin código extra**.
@@ -155,7 +160,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 830 tests, ~55s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 832 tests, ~50s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
