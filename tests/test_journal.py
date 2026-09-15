@@ -775,3 +775,26 @@ def test_un_campo_de_texto_tildado_no_produce_ningun_grafico(test_db):
     _add_entry(test_db, cid, values={"Notas": "un texto largo", "Ánimo": "4"})
     assert db.build_series(cid, "Notas", "text", DATE, DATE)["data"] == []
     assert db.build_series(cid, "Ánimo", "escala", DATE, DATE)["data"] == [4]
+
+
+def test_los_datos_de_ejemplo_ejercitan_todos_los_tipos_graficables(test_db):
+    """`tools/datos_demo.py` existe para MIRAR Estadísticas con algo adentro; si un tipo deja de
+    producir serie, el ejemplo miente y se ve una tarjeta vacía. Acá se fija que cada tipo
+    graficable produzca datos de verdad, que es lo que un test de unidad por función no cubre."""
+    import pathlib
+    import sys
+    from datetime import date, timedelta
+    from bitacora.fieldtypes import TIPOS_GRAFICABLES
+
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "tools"))
+    from datos_demo import sembrar
+    sembrar(db)
+
+    fin = date.today().isoformat()
+    ini = (date.today() - timedelta(days=60)).isoformat()
+    vistos = set()
+    for f in db.chartable_fields():
+        serie = db.build_series(f["category_id"], f["label"], f["type"], ini, fin)
+        assert serie["data"], f"{f['label']} ({f['type']}) no produjo ningún dato"
+        vistos.add(f["type"])
+    assert vistos == set(TIPOS_GRAFICABLES)

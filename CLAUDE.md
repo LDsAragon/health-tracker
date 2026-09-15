@@ -95,7 +95,10 @@ tools/                  # Builds (make_release*.ps1|sh, publish_release.ps1), in
                         #   launcher Linux (linux/), smoke tests, make_icon.py, compare_dbs.py,
                         #   screenshots_audit.mjs (Playwright, auditoría visual de las pantallas),
                         #   refresco_audit.mjs (que el refresco entre ventanas ande, pantalla por
-                        #   pantalla) y servidor_prueba.py (la app contra una base temporal)
+                        #   pantalla), servidor_prueba.py (la app contra una base temporal;
+                        #   con --demo siembra datos_demo.py) y datos_demo.py (mes y medio de
+                        #   datos inventados: un tipo de campo por forma de gráfico, para mirar
+                        #   Estadísticas con algo adentro)
   andamios/             # `hacer.ps1 nuevo ...`: ajuste.py, campo.py, ruta.py + comun.py
                         #   (leer/escribir/insertar en ancla). Ver § Convenciones
 hacer.ps1               # Un solo lugar para todos los comandos; sin argumentos los lista
@@ -160,7 +163,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 837 tests, ~50s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 840 tests, ~50s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 

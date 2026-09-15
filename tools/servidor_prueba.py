@@ -8,8 +8,11 @@ una vez le borró la base al usuario: `profiles.aplicar()` sin `HT_PERFILES` pro
 vive la bitácora de verdad. Acá las tres variables se fijan a un directorio temporal **antes** de
 importar nada de la app, y además se verifica que la ruta final no caiga adentro del APP_DIR real.
 
-Uso:  python tools/servidor_prueba.py [puerto]
+Uso:  python tools/servidor_prueba.py [puerto] [--demo]
 Imprime `URL: http://127.0.0.1:<puerto>` cuando está listo.
+
+Con `--demo` siembra los datos inventados de `datos_demo.py`: mes y medio de notas especiales de
+todos los tipos de campo, para poder MIRAR la pantalla de Estadísticas con algo adentro.
 """
 import json
 import os
@@ -29,7 +32,9 @@ def _app_dir_real() -> str:
 
 
 def main() -> int:
-    puerto = int(sys.argv[1]) if len(sys.argv) > 1 else 5199
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    puerto = int(args[0]) if args else 5199
+    demo = "--demo" in sys.argv
 
     real = os.path.abspath(_app_dir_real()) if _app_dir_real() else None
     tmp = tempfile.mkdtemp(prefix="bitacora-prueba-")
@@ -62,6 +67,12 @@ def main() -> int:
         "name": "Emociones", "color": "#6366f1", "show_in_calendar": 1,
         "fields_json": json.dumps([{"label": "Qué sentí", "type": "text", "placeholder": ""}]),
     })
+
+    if demo:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from datos_demo import sembrar, resumen
+        sembrar(db)
+        print(resumen(), flush=True)
 
     print("DB:", conn.DB_PATH, flush=True)
     print(f"URL: http://127.0.0.1:{puerto}", flush=True)
