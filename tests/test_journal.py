@@ -780,7 +780,11 @@ def test_un_campo_de_texto_tildado_no_produce_ningun_grafico(test_db):
 def test_los_datos_de_ejemplo_ejercitan_todos_los_tipos_graficables(test_db):
     """`tools/datos_demo.py` existe para MIRAR Estadísticas con algo adentro; si un tipo deja de
     producir serie, el ejemplo miente y se ve una tarjeta vacía. Acá se fija que cada tipo
-    graficable produzca datos de verdad, que es lo que un test de unidad por función no cubre."""
+    graficable produzca datos de verdad, que es lo que un test de unidad por función no cubre.
+
+    Se recorren los campos **sembrados** y no los tildados: el ejemplo tilda solo donde el gráfico
+    automático dice algo, y los que van sin tilde tienen que graficarse igual desde el
+    constructor."""
     import pathlib
     import sys
     from datetime import date, timedelta
@@ -793,8 +797,12 @@ def test_los_datos_de_ejemplo_ejercitan_todos_los_tipos_graficables(test_db):
     fin = date.today().isoformat()
     ini = (date.today() - timedelta(days=60)).isoformat()
     vistos = set()
-    for f in db.chartable_fields():
-        serie = db.build_series(f["category_id"], f["label"], f["type"], ini, fin)
-        assert serie["data"], f"{f['label']} ({f['type']}) no produjo ningún dato"
-        vistos.add(f["type"])
+    for c in db.get_journal_categories():
+        for f in c["fields"]:
+            tipo = f.get("type", "text")
+            if tipo not in TIPOS_GRAFICABLES:
+                continue
+            serie = db.build_series(c["id"], f["label"], tipo, ini, fin)
+            assert serie["data"], f"{f['label']} ({tipo}) no produjo ningún dato"
+            vistos.add(tipo)
     assert vistos == set(TIPOS_GRAFICABLES)

@@ -10,6 +10,13 @@ Qué tipo produce qué:
     sino                             → barras: cuántos "sí" por día
     opciones                         → barras: cuántas veces cada opción en el período
     text, emotion-wheel              → nada, y por eso no se les ofrece el tilde
+
+⚠️ **Los campos están todos, pero el tilde no.** El gráfico automático es una línea o una barra
+POR DÍA, y eso solo dice algo cuando el valor de cada día se lee solo: el peso, el ánimo, las
+horas que dormiste. Sobre las horas trabajadas es ruido —lo que querés es el total por semana— y
+sobre un sí/no con una nota por día son todas barras de altura 1. Esos van sin tilde y se grafican
+desde el constructor, que es lo que el tilde no sabe hacer: sumar dos campos, agrupar por opción y
+juntar por semana o por mes. El ejemplo muestra las dos cosas a propósito.
 """
 import json
 import random
@@ -24,6 +31,12 @@ def _fechas(dias=DIAS):
     return [(hoy - timedelta(days=n)) for n in range(dias, -1, -1)]
 
 
+def _sueno(r):
+    """Un horario creíble, que cruza la medianoche: el caso que el tipo rango contempla."""
+    return (r.choice(["23:10", "23:40", "00:05", "00:35", "01:15"]) + "-" +
+            r.choice(["06:40", "07:00", "07:20", "07:50", "08:30"]))
+
+
 def sembrar(db):
     """Llena la base con categorías, entradas y gráficos guardados. `db` es bitacora.database."""
     r = random.Random(7)          # fijo: dos corridas muestran lo mismo y se pueden comparar
@@ -34,8 +47,11 @@ def sembrar(db):
         "fields_json": json.dumps([
             {"label": "Proyecto", "type": "opciones", "chart": True,
              "placeholder": ", ".join(PROYECTOS)},
-            {"label": "Franja", "type": "rango",    "chart": True},
-            {"label": "Horas",  "type": "duracion", "chart": True},
+            # Sin tilde: la línea diaria de las dos sería el mismo bloque medido dos veces.
+            # Van al constructor, sumadas y agrupadas por cliente, y siguen alimentando solas
+            # la tarjeta "Tiempo por actividad", que no mira el tilde.
+            {"label": "Franja", "type": "rango"},
+            {"label": "Horas",  "type": "duracion"},
             {"label": "Notas",  "type": "text", "placeholder": "en qué trabajé..."},
         ]),
     })
@@ -46,7 +62,18 @@ def sembrar(db):
             {"label": "Peso",      "type": "numero", "chart": True, "placeholder": "kg"},
             {"label": "Ánimo",     "type": "escala", "chart": True,
              "placeholder": "Muy mal, Mal, Normal, Bien, Muy bien"},
-            {"label": "¿Entrené?", "type": "sino",   "chart": True},
+            # Sin tilde: con una nota por día, el conteo de "sí" son todas barras de altura 1.
+            {"label": "¿Entrené?", "type": "sino"},
+        ]),
+    })
+    # ── Sueño: el buen uso de un rango, y en su propia categoría ─────────────
+    # "Tiempo por actividad" etiqueta por categoría: adentro de Cuerpo, la fila habría dicho
+    # "Cuerpo · 173 h" al lado de "Trabajo · ClienteB", que no se entiende.
+    db.add_journal_category({
+        "name": "Sueño", "color": "#3b82f6", "show_in_calendar": 1,
+        "fields_json": json.dumps([
+            # Cada día vale por sí mismo —cuántas horas dormiste—, así que la línea diaria sirve.
+            {"label": "Acostarse → Levantarse", "type": "rango", "chart": True},
         ]),
     })
     cats = {c["name"]: c["id"] for c in db.get_journal_categories()}
@@ -83,6 +110,13 @@ def sembrar(db):
                 }, ensure_ascii=False),
             })
 
+        if r.random() < 0.9:
+            db.add_journal_entry({
+                "category_id": cats["Sueño"], "entry_date": iso, "tags": "",
+                "values_json": json.dumps({"Acostarse → Levantarse": _sueno(r)},
+                                          ensure_ascii=False),
+            })
+
         if r.random() < 0.5:
             db.add_note(iso, r.choice(["día tranquilo", "dormí mal", "salí a caminar",
                                        "llamada larga con mamá"]),
@@ -111,16 +145,21 @@ def sembrar(db):
 
 
 def resumen() -> str:
-    return (
-        "Datos de ejemplo sembrados. En Estadísticas tendrías que ver:\n"
-        "  automáticos (el tilde En Estadísticas)\n"
-        "    Trabajo · Proyecto   barras con cuántas veces cada cliente\n"
-        "    Trabajo · Franja     línea de horas por día (rango horario)\n"
-        "    Trabajo · Horas      línea de horas por día (duración)\n"
-        "    Cuerpo · Peso        línea de kg por día\n"
-        "    Cuerpo · Ánimo       línea de 1 a 5 por día\n"
-        "    Cuerpo · ¿Entrené?   barras con los días que sí\n"
-        "  del constructor\n"
-        "    Horas por cliente, por semana   barras apiladas + tabla de totales\n"
-        "    Horas trabajadas por mes        barras por mes"
-    )
+    """Lo que habría que ver, para contrastarlo con la pantalla.
+
+    Va sin acentos a propósito: esto se imprime en la consola y en Windows, con la salida
+    redirigida a un pipe, se encodea en cp1252. Un acento ahí tira UnicodeEncodeError y se
+    lleva puesto el arranque del servidor — el mismo tropiezo que ya pagaron los andamios.
+    """
+    return """Datos de ejemplo sembrados. En Estadisticas tendrias que ver:
+  automaticos (el tilde En Estadisticas), donde el valor de cada dia se lee solo
+    Trabajo - Proyecto   barras: cuantas veces cada cliente
+    Cuerpo - Peso        linea de kg por dia
+    Cuerpo - Animo       linea de 1 a 5 por dia
+    Sueno - Acostarse    linea de horas dormidas por dia
+  del constructor, que es lo que el tilde no sabe hacer
+    Horas por cliente, por semana   barras apiladas + tabla de totales
+    Horas trabajadas por mes        barras por mes
+  sin tilde a proposito: Trabajo - Franja, Trabajo - Horas y Cuerpo - Entrene
+    una linea o una barra POR DIA no dice nada sobre esos tres; las horas siguen
+    apareciendo solas en la tarjeta Tiempo por actividad, que no mira el tilde"""
