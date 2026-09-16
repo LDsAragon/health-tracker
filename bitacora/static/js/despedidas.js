@@ -65,8 +65,8 @@
   }
 
   // ⚠️ Dónde quedó cada letra dentro de la escena. Es lo que hace que la destrucción **siga al
-  // bicho** —la ola las arrastra de izquierda a derecha, el cocodrilo se las come de derecha a
-  // izquierda, el meteorito las revienta desde donde cayó— en vez de ser un estallido al azar,
+  // bicho** —la ola las arrastra de izquierda a derecha, el tiburón las chupa al pasar por
+  // debajo, el meteorito las revienta desde donde cayó— en vez de ser un estallido al azar,
   // que era lo que hacía que la animación se viera simplona: pasaba algo, pero no pasaba por
   // culpa de nada.
   function ubicar(e) {
@@ -123,7 +123,7 @@
   }
 
   // ⚠️ El arte convertido de material real (tools/ascii_video.py) le GANA al dibujado a mano.
-  // Dibujar ASCII a mano tiene un techo bajo —sirve para un cocodrilo de tres líneas, no para una
+  // Dibujar ASCII a mano tiene un techo bajo —sirve para una aleta de tres líneas, no para una
   // ola que se te viene encima—, así que cada escena pide el suyo por slug y usa el de a mano solo
   // como respaldo, para que la app funcione igual sin el archivo generado.
   //
@@ -403,47 +403,6 @@
         }, '-=620');
     },
 
-    // El pantano: primero los ojos que se acercan, después la cabeza que sale del agua.
-    cocodrilo: function (e, tl) {
-      cuadros(e, e.capas[0], [
-        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
-        '≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~',
-      ], 220);
-      cuadros(e, e.capas[1], [
-        '        ______________\n' +
-        '     __/              \\\n' +
-        '    /   VVVVVVVVVVVV   \\\n' +
-        '   <                    >\n' +
-        '    \\   ^^^^^^^^^^^^   /\n' +
-        '     \\________________/',
-        '        ______________\n' +
-        '     __/              \\\n' +
-        '    /   VVVVVVVVVV    /\n' +
-        '   <                 /\n' +
-        '    \\   ^^^^^^^^^   /\n' +
-        '     \\_____________/',
-        '        ______________\n' +
-        '     __/              \\\n' +
-        '    /_________________/',
-      ], 150);
-      return tl
-        .add({                            // el agua quieta
-          targets: e.capas[0],
-          opacity: [0, 0.7],
-          translateY: [e.alto * 0.26, e.alto * 0.26],
-          duration: 620,
-          easing: 'easeOutQuad',
-        })
-        .add({                            // y algo que se acerca y crece
-          targets: e.capas[1],
-          opacity: [0, 1],
-          translateX: [e.ancho * 0.62, -e.ancho * 0.10],
-          translateY: [e.alto * 0.24, e.alto * 0.02],
-          scale: [0.35, 1.9],
-          duration: 1700,
-          easing: 'easeInQuad',
-        }, '-=380');
-    },
   };
 
   // Lo que le pasa al texto en cada escena, aparte. Se separa de la escena porque el momento en
@@ -520,19 +479,6 @@
       }, '-=1000');
     },
 
-    cocodrilo: function (e, tl) {
-      return tl.add({
-        // De derecha a izquierda, cada una justo cuando le llega la mandíbula.
-        targets: e.letras,
-        translateX: 26,
-        scale: [1, 0],
-        rotateY: function () { return anime.random(-120, 120); },
-        opacity: [1, 0],
-        duration: 320,
-        delay: function (l, i) { return (e.ancho - e.x[i]) * 1.15; },
-        easing: 'easeInBack',
-      }, '-=1250');
-    },
   };
 
   // ── El reproductor ─────────────────────────────────────────────────────────

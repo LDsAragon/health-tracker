@@ -1004,7 +1004,7 @@ cada formulario **declara** lo suyo:
 
 Borrar una tarea era lo más silencioso de la app: confirmabas y la fila desaparecía en la recarga.
 Ahora se abre un modal con **el texto de la tarea** adentro y algo se lo lleva —un meteorito, una
-ola, la parca, un cocodrilo o un tiburón—; recién cuando termina se envía el formulario, que es lo
+ola, la parca o un tiburón—; recién cuando termina se envía el formulario, que es lo
 que saca la fila de la lista.
 
 - ⚠️ **La primera versión la dibujaba ENCIMA de la fila y se descartó**: se encimaba con el texto
@@ -1046,7 +1046,7 @@ que saca la fila de la lista.
   versión mandaba las letras para cualquier lado con un retardo parejo: pasaba algo, pero no
   pasaba **por culpa de nada**. Ahora `ubicar()` mide dónde quedó cada letra dentro de la escena y
   cada coreografía usa esa posición: la ola las arrastra de izquierda a derecha a medida que les
-  llega, el cocodrilo se las come de derecha a izquierda cuando pasa la mandíbula, el meteorito
+  llega, el tiburón las chupa para abajo al pasar por debajo, el meteorito
   las revienta **desde el punto de impacto** —las de más lejos salen después y más fuerte—.
 - ⚠️ **El ritmo tiene tres tiempos y los tres importan.** La primera versión duraba 1,2 s y *"no
   se apreciaba"*: arrancaba con la destrucción ya empezada y terminaba antes de que pudieras
@@ -1065,7 +1065,7 @@ que saca la fila de la lista.
   convierte los `rotateX/rotateY` en profundidad en vez de un aplastado.
 - **El bicho se mueve Y se anima por dentro**, y hacen falta las dos mitades: las
   transformaciones lo desplazan (eso da la fluidez) y `cuadros()` le cambia el dibujo con un
-  `setInterval` propio —la mandíbula del cocodrilo que muerde, la cresta de la ola que rompe, la
+  `setInterval` propio —la cresta de la ola que rompe, la estela del meteorito que arde, la
   estela del tiburón, la mandíbula de la calavera—. Sin cuadros es un dibujo tieso que se
   desliza; sin transformaciones, la animación a saltos de una celda que ya se descartó. Es
   además lo que deja usar arte de las galerías de ASCII animado o dibujar el propio con
@@ -1100,6 +1100,11 @@ que saca la fila de la lista.
   tarea sin borrar después de haber dicho que sí sería el peor de los finales.
 - Con `prefers-reduced-motion` el modal se abre igual pero sin animación: saltearlo del todo
   dejaría el borrado sin ninguna señal.
+- ⚠️ **Sacar una escena es borrar su entrada del catálogo y nada más.** Se sacó el cocodrilo
+  (2026-09-16, textual: *"lo peor del universo"*) porque no había material que convirtiera bien y
+  cuatro escenas buenas valen más que cinco arrastrando una mala. A quien la tuviera elegida,
+  `get_all_settings()` le clampea el ajuste al default —mejor volver al azar que apuntar a una
+  escena que no está—, y hay un test que lo fija.
 - **En el widget no hay** (no tiene botón de borrar) y **completar una tarea no se anima**: eso ya
   tiene su festejo, la mascotita ASCII al cerrar el día, y dos festejos compitiendo se anulan.
 

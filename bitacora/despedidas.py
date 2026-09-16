@@ -14,7 +14,6 @@ DESPEDIDAS = [
     {"slug": "meteorito", "nombre": "Meteorito", "icono": "☄️"},
     {"slug": "ola", "nombre": "Ola", "icono": "🌊"},
     {"slug": "parca", "nombre": "La parca", "icono": "💀"},
-    {"slug": "cocodrilo", "nombre": "Cocodrilo", "icono": "🐊"},
     {"slug": "tiburon", "nombre": "Tiburón", "icono": "🦈"},
 ]
 

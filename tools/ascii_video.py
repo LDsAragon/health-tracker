@@ -1,6 +1,6 @@
 """Convierte un GIF o un video en cuadros ASCII para las animaciones de borrado.
 
-Dibujar ASCII a mano tiene un techo bajo: sirve para un cocodrilo de tres líneas y no para una
+Dibujar ASCII a mano tiene un techo bajo: sirve para una aleta de tres lineas y no para una
 ola que se te viene encima. Esto convierte material de verdad, cuadro por cuadro, que es como se
 hacen las animaciones ASCII que valen la pena.
 

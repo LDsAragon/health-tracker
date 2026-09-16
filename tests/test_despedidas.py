@@ -182,6 +182,19 @@ def test_un_valor_inventado_no_se_guarda(client, test_db):
     assert db.get_all_settings()["animacion_borrado"] == despedidas.AZAR
 
 
+def test_sacar_una_escena_no_rompe_a_quien_la_tenia_elegida(client, test_db):
+    """⚠️ Es el camino de salida de una animación. Se sacó el cocodrilo —*"lo peor del universo"*,
+    2026-09-16— y quien lo tuviera fijado se queda con una clave que ya no existe. `get_all_settings`
+    la clampea al default, que es lo correcto: mejor volver al azar que dejar un ajuste apuntando a
+    una escena que no está. Por eso sacar una escena es borrar su entrada del catálogo y nada más.
+    """
+    with db.get_db() as cx:
+        cx.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+                   ("animacion_borrado", "cocodrilo"))
+    assert db.get_all_settings()["animacion_borrado"] == despedidas.AZAR
+    assert "cocodrilo" not in despedidas.SLUGS
+
+
 def test_se_puede_apagar(client, test_db):
     assert client.post("/ajustes/set",
                        data={"key": "animacion_borrado", "value": "off"}).status_code == 204
