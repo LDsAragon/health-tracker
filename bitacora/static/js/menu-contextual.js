@@ -5,17 +5,91 @@
 // menú nativo o se pierden *pegar* y *copiar*, que en el modo navegador es un costo real. Se gana
 // poco y se rompe algo que la gente usa todos los días.
 (function () {
-  const ITEMS = [
-    {
+  // El destino de una emoción anotada desde acá: la primera categoría con campo de rueda,
+  // normalmente la "Emociones" que la app trae de fábrica. Si no hay ninguna, los dos ítems no
+  // se ofrecen: es mejor que falte el atajo a inventarle una categoría a alguien.
+  const DESTINO = window.EMOCION_DESTINO || null;
+
+  function items() {
+    const lista = [];
+    if (DESTINO) {
+      lista.push({
+        texto: '🎯 Anotar emoción · Willcox',
+        detalle: 'Abre la rueda y guarda lo que elijas en ' + DESTINO.nombre + ', con fecha de hoy.',
+        accion: () => anotarEmocion('es'),
+      });
+      lista.push({
+        texto: '🧭 Anotar emoción · Ekman',
+        detalle: 'Abre la rueda y guarda lo que elijas en ' + DESTINO.nombre + ', con fecha de hoy.',
+        accion: () => anotarEmocion('ek'),
+      });
+      lista.push({ separador: true });
+    }
+    lista.push({ texto: 'Ir a hoy', accion: () => { location.href = '/day/' + hoyISO(); } });
+    lista.push({ texto: 'Ajustes',  accion: () => { location.href = '/ajustes'; } });
+    lista.push({ separador: true });
+    lista.push({
       texto: 'Reiniciar esta vista',
       detalle: 'Los tamaños, los desplegables y el zoom vuelven a como vienen de fábrica.',
       // El zoom es de toda la app y también se va: se pidió así, y por eso el detalle lo dice
       // en vez de sorprender — mismo criterio que los botones que nombran su acción.
       accion: () => window.prefReiniciarVista().then(() => location.reload()),
-    },
-    { texto: 'Ir a hoy', accion: () => { location.href = '/day/' + hoyISO(); } },
-    { texto: 'Ajustes',  accion: () => { location.href = '/ajustes'; } },
-  ];
+    });
+    return lista;
+  }
+
+  // ── Anotar una emoción sin pasar por el día ───────────────────────────────
+  // Se arma un picker de los de siempre —el mismo que usa el formulario del día— fuera de la
+  // pantalla, se abre la rueda apuntándole, y al cerrarla se guarda lo que haya quedado adentro.
+  // Reusar el picker es lo que evita una segunda forma de leer la selección de la rueda.
+  function anotarEmocion(rueda) {
+    const caja = document.createElement('div');
+    caja.style.display = 'none';
+    caja.innerHTML = buildEWPicker(DESTINO.campo);
+    document.body.appendChild(caja);
+    const picker = caja.querySelector('.emotion-wheel-picker');
+
+    // La rueda no avisa cuando se cierra, así que se envuelve `closeEWModal` mientras dura este
+    // uso y se restaura enseguida: es lo mismo que hace refresco.js con `fetch`.
+    const original = window.closeEWModal;
+    window.closeEWModal = function () {
+      window.closeEWModal = original;
+      original();
+      const valor = (picker.querySelector('[data-ew-value]') || {}).value || '';
+      caja.remove();
+      if (valor) guardarEmocion(valor);
+    };
+    openEWModal(picker, rueda);
+  }
+
+  function guardarEmocion(valor) {
+    const valores = {};
+    valores[DESTINO.campo] = valor;
+    const hoy = hoyISO();
+    fetch('/day/' + hoy + '/journal/add', {
+      method: 'POST',
+      body: new URLSearchParams({ category_id: DESTINO.id, values_json: JSON.stringify(valores) }),
+    }).then(() => {
+      // Parado en el día de hoy la nota tiene que aparecer; en cualquier otra pantalla no se
+      // vería nada, y guardar sin señal se siente como que no pasó.
+      if (location.pathname === '/day/' + hoy) location.reload();
+      else aviso('✓ Anotada en hoy: ' + valor, hoy);
+    }).catch(() => aviso('No se pudo guardar la emoción', null));
+  }
+
+  function aviso(texto, dia) {
+    const caja = document.createElement('div');
+    caja.className = 'menu-ctx-aviso';
+    caja.textContent = texto + ' ';
+    if (dia) {
+      const a = document.createElement('a');
+      a.href = '/day/' + dia;
+      a.textContent = 'Ver el día';
+      caja.appendChild(a);
+    }
+    document.body.appendChild(caja);
+    setTimeout(() => caja.remove(), 6000);
+  }
 
   function hoyISO() {
     const d = new Date();
@@ -35,7 +109,11 @@
     cerrar();
     menu = document.createElement('div');
     menu.className = 'menu-ctx';
-    ITEMS.forEach((item) => {
+    items().forEach((item) => {
+      if (item.separador) {
+        menu.appendChild(document.createElement('hr')).className = 'menu-ctx-sep';
+        return;
+      }
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'menu-ctx-item';

@@ -21,7 +21,7 @@ from .journal import (
     delete_journal_category, get_journal_entries_for_date,
     get_journal_entries_range, add_journal_entry, update_journal_entry,
     delete_journal_entry, migrate_entry_values, count_journal_entries_by_category,
-    journal_field_usage, set_journal_category_active, search_journal_entries,
+    journal_field_usage, set_journal_category_active, search_journal_entries, categoria_con_rueda,
 )
 from .todos import (
     get_todos_for_date, add_todo, toggle_todo, update_todo, move_todo,

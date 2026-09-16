@@ -12,7 +12,8 @@
   {# Cómo dejaste acomodada la pantalla. Va en el <head> y ANTES de los scripts que la usan:
      zoom.js aplica el zoom guardado lo antes posible y sin esto habría un salto al cargar.
      ⚠️ Con `| tojson` y nunca `"{{ ... }}"`: mismo motivo que el token del refresco. #}
-  <script>window.VISTA_PREFS = {{ vista_prefs | tojson }};</script>
+  <script>window.VISTA_PREFS = {{ vista_prefs | tojson }};
+          window.EMOCION_DESTINO = {{ emocion_destino | tojson }};</script>
   <script src="{{ url_for('static', filename='js/vista-prefs.js') }}"></script>
   <script src="{{ url_for('static', filename='js/zoom.js') }}"></script>
 </head>

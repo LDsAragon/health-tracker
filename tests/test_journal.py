@@ -806,3 +806,28 @@ def test_los_datos_de_ejemplo_ejercitan_todos_los_tipos_graficables(test_db):
             assert serie["data"], f"{f['label']} ({tipo}) no produjo ningún dato"
             vistos.add(tipo)
     assert vistos == set(TIPOS_GRAFICABLES)
+
+
+# ── Adónde cae una emoción anotada desde el menú del clic derecho ────────────
+
+def test_el_destino_de_una_emocion_es_la_primera_categoria_con_rueda(test_db):
+    _add_cat(test_db, name="Comidas", fields_json=json.dumps([{"label": "Qué comí", "type": "text"}]))
+    _add_cat(test_db, name="Ánimo", fields_json=json.dumps([
+        {"label": "Cómo me siento", "type": "emotion-wheel"}]))
+    destino = db.categoria_con_rueda()
+    assert destino["nombre"] == "Ánimo"
+    assert destino["campo"] == "Cómo me siento"      # la clave con la que se guarda el valor
+
+
+def test_sin_categorias_con_rueda_no_hay_destino(test_db):
+    """El menú no ofrece el atajo en vez de inventarle una categoría a alguien que no la quiso."""
+    _add_cat(test_db, name="Comidas", fields_json=json.dumps([{"label": "Qué comí", "type": "text"}]))
+    assert db.categoria_con_rueda() is None
+
+
+def test_una_categoria_archivada_no_es_destino(test_db):
+    """Archivar afecta dónde se ESCRIBE: una archivada ya no se ofrece para cargar nada."""
+    cid = _add_cat(test_db, name="Ánimo", fields_json=json.dumps([
+        {"label": "Emoción", "type": "emotion-wheel"}]))
+    db.set_journal_category_active(cid, 0)
+    assert db.categoria_con_rueda() is None

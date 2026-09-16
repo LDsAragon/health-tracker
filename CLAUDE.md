@@ -163,7 +163,7 @@ Prefijos de backup:
 ## Tests
 
 ```powershell
-.\hacer.ps1 tests              # 865 tests, ~50s (o `pytest tests/` directo)
+.\hacer.ps1 tests              # 878 tests, ~50s (o `pytest tests/` directo)
 .\hacer.ps1 tests -k ajustes   # los argumentos pasan tal cual a pytest
 ```
 
@@ -768,6 +768,21 @@ es "achicar el texto".
   *"Definí las opciones…"*) y hasta ahora se guardaba igual. Se valida al enviar, **inline y al
   lado de lo que falta** —nunca un diálogo—, que es la misma regla que `#weekday-error`.
 
+- **Tres categorías vienen de fábrica** (`plantillas.DE_FABRICA`: Emociones, Sueño,
+  Alimentación): armarlas a mano era el primer trabajo antes de poder anotar nada. El catálogo de
+  plantillas vive en **`bitacora/plantillas.py`** —de ahí salen también los chips de "Empezá desde
+  una plantilla", que antes eran una copia en JS— y el sembrado está en `schema._sembrar_categorias`.
+  ⚠️ **Corre una sola vez por perfil**, marcado con `_seed_journal` en `settings`: con un
+  `WHERE NOT EXISTS` como el del grupo Cumpleaños volverían después de borrarlas, y borrar una
+  categoría **se lleva sus notas**. Y si el perfil **ya tiene categorías**, no se agrega ninguna
+  —quien armó las suyas no tiene por qué encontrarse tres más una mañana—, pero la marca se
+  escribe igual para no volver a preguntar.
+  ⚠️ **Llevan `uid` fijo** (`plantillas.PLANTILLAS[*]["uid"]`), por lo mismo que el grupo
+  Cumpleaños: las crea cada instalación por su cuenta, y con un uid al azar sincronizar dejaría
+  dos "Sueño". Lo fija `test_semilla.py`, que siembra dos bases y las mergea.
+  ⚠️ **El fixture `test_db` las borra** (y el de `test_sync`): casi todos los tests arman sus
+  propios datos y tres categorías ajenas les cambian los ids y los conteos. Lo del sembrado se
+  prueba en `tests/test_semilla.py`, que crea su base a mano.
 - ⚠️ **El alta vive SOLO en el día.** El calendario y la semana muestran el badge de lo que
   registraste, pero no dejan cargar (`446638b`, *"vista muy cargada"*). De esa decisión quedó vivo
   todo el JS del formulario llamando a elementos que ya no existían —45 líneas por plantilla que
@@ -845,6 +860,14 @@ deja de importar.
 - ⚠️ **Setear `.open` a mano dispara `toggle`**, así que cada pantalla guardaba su propio default
   apenas la abrías. Con `localStorage` era gratis e invisible; con escrituras HTTP es ruido, y
   encima deshacía el "reiniciar" en la recarga siguiente. La guarda vive en `colapsables.js`.
+- **Anotar una emoción desde cualquier pantalla**: los dos primeros ítems del menú abren la
+  rueda (Willcox o Ekman) y guardan lo elegido como nota especial **de hoy** en la primera
+  categoría con campo de rueda (`db.categoria_con_rueda()`, inyectada como `emocion_destino`).
+  Sin ninguna categoría con rueda el atajo **no se ofrece**, en vez de inventarle una categoría a
+  alguien. Reusa `buildEWPicker` y `openEWModal`: un segundo lector de la selección de la rueda
+  divergiría, como ya pasó con el marcado de las filas de campos. Como la rueda no avisa cuando se
+  cierra, se **envuelve `closeEWModal`** mientras dura el uso — la misma técnica que `refresco.js`
+  con `fetch`.
 - **El menú del clic derecho** (`static/js/menu-contextual.js`) es lo que lo usa: *Reiniciar esta
   vista* borra las filas de la vista actual **y el zoom**, que es de toda la app — por eso el ítem
   lo dice en vez de sorprender. ⚠️ **No se intercepta sobre un campo de texto ni con algo

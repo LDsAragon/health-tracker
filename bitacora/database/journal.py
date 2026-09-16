@@ -3,6 +3,20 @@ import json
 from .conn import get_db, snapshot_to, backup_path
 
 
+def categoria_con_rueda() -> dict | None:
+    """La categoría activa donde cae una emoción anotada desde el menú del clic derecho.
+
+    Es la primera con un campo de rueda: normalmente "Emociones", que la app trae de fábrica. Si
+    no hay ninguna —la borraste, o armaste otra cosa—, el menú no ofrece el atajo en vez de
+    inventarle una categoría a alguien que no la quiso.
+    """
+    for c in get_journal_categories():
+        for f in c.get("fields", []):
+            if f.get("type") == "emotion-wheel":
+                return {"id": c["id"], "nombre": c["name"], "campo": f["label"]}
+    return None
+
+
 def get_journal_categories(incluir_archivadas: bool = False) -> list:
     """⚠️ Por default solo las activas, que es lo que corresponde en el único lugar donde se
     ELIGE una: el alta del día. Todo lo que LEE historia —Estadísticas, la pantalla de

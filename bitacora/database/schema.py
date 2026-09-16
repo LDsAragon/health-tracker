@@ -1,6 +1,8 @@
 """Esquema, migraciones declarativas y triggers de identidad para sincronizar."""
+import json
 import threading
 
+from bitacora import plantillas
 from .conn import activar_wal, get_db, _columns
 
 # ⚠️ `init_db()` corre en CADA request y en el primer arranque hace todo el setup: crear tablas,
@@ -18,7 +20,7 @@ _EN_SETUP = threading.Lock()
 #  2. el import de sincronización va a poder rechazar un archivo incompatible.
 # ⚠️ AL AGREGAR UNA MIGRACIÓN HAY QUE SUBIRLA. Si no, las DBs ya instaladas se saltean el
 # paso y nunca reciben la columna nueva.
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 # Tablas que participan de la sincronización entre dispositivos. `settings` queda afuera a
 # propósito: mezcla preferencias de la persona (formato de fecha) con las del dispositivo
@@ -249,6 +251,35 @@ SEED = f"""
 """
 
 
+# Las tres categorías que la app trae ya creadas (`plantillas.DE_FABRICA`). Armarlas a mano era el
+# primer trabajo antes de poder anotar nada.
+#
+# ⚠️ Corre **una sola vez por perfil** y se marca con una clave en `settings`. Con un
+# `WHERE NOT EXISTS` como el del grupo Cumpleaños volverían a aparecer después de borrarlas, y
+# borrar una categoría se lleva sus notas: resucitarla sería el peor de los finales.
+# ⚠️ Y si el perfil **ya tiene categorías**, no se agrega nada: quien armó las suyas no tiene por
+# qué encontrarse tres más una mañana. La marca se escribe igual, así que la pregunta no se vuelve
+# a hacer nunca.
+CLAVE_SEED_JOURNAL = "_seed_journal"
+
+
+def _sembrar_categorias(conn):
+    if conn.execute("SELECT 1 FROM settings WHERE key = ?", (CLAVE_SEED_JOURNAL,)).fetchone():
+        return
+    conn.execute("INSERT INTO settings (key, value) VALUES (?, '1')", (CLAVE_SEED_JOURNAL,))
+    if conn.execute("SELECT 1 FROM journal_categories LIMIT 1").fetchone():
+        return
+    for slug in plantillas.DE_FABRICA:
+        p = plantillas.por_slug(slug)
+        conn.execute(
+            "INSERT INTO journal_categories"
+            " (name, color, fields_json, show_in_calendar, active, uid, updated_at)"
+            " VALUES (?,?,?,1,1,?,?)",
+            (p["nombre"], p["color"],
+             json.dumps(plantillas.campos_json(p), ensure_ascii=False),
+             p["uid"], MARCA_SEED))
+
+
 def init_db():
     """Crea/migra el esquema. Idempotente: corre en cada request (app.before_request).
 
@@ -298,4 +329,5 @@ def _setup():
         # 4) El grupo de fábrica, DESPUÉS de los triggers para que nazca con su uid y pueda
         # sincronizar como cualquier otra fila.
         conn.executescript(SEED)
+        _sembrar_categorias(conn)                       # 5) las categorías de fábrica
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")

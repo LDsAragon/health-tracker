@@ -26,8 +26,8 @@
 
     <div class="jcat-paso">
       <h3 class="jcat-paso-titulo">Empezá desde una plantilla</h3>
-      {# Los chips los arma el JS desde JCAT_PRESETS: el nombre, el color y el icono de cada
-         plantilla viven en un solo lugar. Sin JS no hay plantillas, que es como estaba. #}
+      {# Los chips los arma el JS desde `bitacora/plantillas.py`, que es también de donde salen
+         las tres que la app trae creadas. Sin JS no hay plantillas, que es como estaba. #}
       <div class="jcat-chips" id="jcat-plantillas"></div>
     </div>
 
@@ -339,48 +339,9 @@ function undoRemoveField(btn) {
 }
 
 // ── Plantillas ─────────────────────────────────────────────────────────────
-// Categorías armadas con los campos genéricos. El nombre, el color y el icono de cada una viven
-// acá y nada más que acá: los chips los arma este mismo archivo desde esta tabla.
-const JCAT_PRESETS = {
-  emociones: { name: 'Emociones', icono: '🎡', color: '#ec4899', fields: [
-    { label: 'Emoción',          type: 'emotion-wheel', ph: '' },
-    { label: '¿Qué la disparó?', type: 'text',          ph: 'situación, pensamiento...' },
-    { label: '¿Cómo la manejé?', type: 'text',          ph: '' }
-  ]},
-  sueno: { name: 'Sueño', icono: '😴', color: '#3b82f6', fields: [
-    { label: 'Acostarse → Levantarse', type: 'rango',  ph: '' },
-    { label: 'Calidad',                type: 'escala', ph: '' },
-    { label: 'Notas',                  type: 'text',   ph: 'cómo dormí, despertares...' }
-  ]},
-  estudio: { name: 'Estudio', icono: '📚', color: '#a855f7', fields: [
-    { label: 'Tiempo estudiado', type: 'duracion', ph: '' },
-    { label: 'Qué estudié',      type: 'text',     ph: 'tema, materia...' },
-    { label: 'Foco',             type: 'escala',   ph: '' }
-  ]},
-  alimentacion: { name: 'Alimentación', icono: '🍎', color: '#22c55e', fields: [
-    { label: 'Momento',     type: 'opciones', ph: 'Desayuno, Almuerzo, Merienda, Cena, Snack' },
-    { label: '¿Qué comí?',  type: 'text',     ph: '' },
-    { label: 'Saciedad',    type: 'escala',   ph: '' },
-    { label: 'Antojos',     type: 'text',     ph: '' }
-  ]},
-  social: { name: 'Social', icono: '👥', color: '#f97316', fields: [
-    { label: '¿Con quién?',       type: 'opciones', ph: 'Familia, Amigos, Pareja, Trabajo, Solo' },
-    { label: 'Actividad',         type: 'text',     ph: '' },
-    { label: 'Tiempo compartido', type: 'duracion', ph: '' },
-    { label: '¿Cómo me sentí?',   type: 'escala',   ph: '' }
-  ]},
-  aficiones: { name: 'Aficiones', icono: '🎨', color: '#6366f1', fields: [
-    { label: 'Afición',         type: 'text',     ph: 'qué hice' },
-    { label: 'Tiempo dedicado', type: 'duracion', ph: '' },
-    { label: 'Disfrute',        type: 'escala',   ph: '' }
-  ]},
-  trabajo: { name: 'Trabajo', icono: '💼', color: '#14b8a6', fields: [
-    { label: 'Proyecto', type: 'opciones', ph: 'ClienteA, ClienteB, Proyecto propio' },
-    { label: 'Franja',   type: 'rango',    ph: '' },
-    { label: 'Horas',    type: 'duracion', ph: '' },
-    { label: 'Notas',    type: 'text',     ph: 'en qué trabajé...' }
-  ]},
-};
+// Categorías ya armadas con los campos genéricos. La tabla vive en bitacora/plantillas.py, que es
+// la misma de la que salen las tres que la app trae creadas: dos copias serían dos catálogos.
+const JCAT_PRESETS = {{ plantillas | tojson }};
 
 function _chipPlantilla(key, texto, color) {
   const b = document.createElement('button');
@@ -397,8 +358,8 @@ function chipsPlantillas() {
   const cont = document.getElementById('jcat-plantillas');
   if (!cont) return;
   cont.appendChild(_chipPlantilla('', 'Sin plantilla', 'var(--muted)'));
-  Object.entries(JCAT_PRESETS).forEach(([key, p]) =>
-    cont.appendChild(_chipPlantilla(key, p.icono + ' ' + p.name, p.color)));
+  JCAT_PRESETS.forEach((p) =>
+    cont.appendChild(_chipPlantilla(p.slug, p.icono + ' ' + p.nombre, p.color)));
 }
 
 function applyPreset(key) {
@@ -406,13 +367,13 @@ function applyPreset(key) {
   document.querySelectorAll('#jcat-plantillas .jcat-chip').forEach(b =>
     b.classList.toggle('jcat-chip-sel', b.dataset.plantilla === key));
   cont.innerHTML = '';
-  const p = JCAT_PRESETS[key];
+  const p = JCAT_PRESETS.find((x) => x.slug === key);
   if (!p) { nuevaFila(cont); return; }               // "Sin plantilla": vuelve a una fila limpia
   const nombre = document.getElementById('jcat-name');
-  if (!nombre.value.trim()) nombre.value = p.name;   // lo que ya escribiste gana
+  if (!nombre.value.trim()) nombre.value = p.nombre; // lo que ya escribiste gana
   const radio = document.querySelector('#jcat-add-form input[name="color"][value="' + p.color + '"]');
   if (radio) radio.checked = true;
-  p.fields.forEach(f => {
+  p.campos.forEach(f => {
     const row = nuevaFila(cont);
     row.querySelector('input[name="field_label[]"]').value = f.label;
     row.querySelector('select[name="field_type[]"]').value = f.type;

@@ -184,3 +184,29 @@ def test_el_reiniciar_del_menu_recarga_recien_cuando_el_borrado_llego():
     todavía no se borraron y el reinicio se vería como que no hizo nada."""
     js = _leer("bitacora", "static", "js", "menu-contextual.js")
     assert "window.prefReiniciarVista().then(() => location.reload())" in js
+
+
+def test_la_pagina_dice_adonde_va_una_emocion(client, test_db):
+    """El menú vive en todas las pantallas, así que el destino se inyecta con la página."""
+    import json as _json
+    db.add_journal_category({"name": "Emociones", "color": "#ec4899", "show_in_calendar": 1,
+                             "fields_json": _json.dumps([{"label": "Emoción",
+                                                          "type": "emotion-wheel"}])})
+    html = client.get("/tareas").data.decode()
+    # tojson escapa los no-ASCII, así que la clave viaja escapada: se busca tal cual sale.
+    assert r'"campo": "Emoci\u00f3n"' in html
+
+
+def test_sin_categoria_con_rueda_la_pagina_no_ofrece_el_atajo(client, test_db):
+    html = client.get("/tareas").data.decode()
+    assert "window.EMOCION_DESTINO = null" in html
+    js = _leer("bitacora", "static", "js", "menu-contextual.js")
+    assert "if (DESTINO) {" in js            # sin destino, los dos ítems no se arman
+
+
+def test_la_emocion_se_lee_del_mismo_picker_que_el_dia():
+    """Reusar `buildEWPicker` es lo que evita una segunda forma de leer la selección de la rueda:
+    dos lectores del mismo widget divergen, como ya pasó con el marcado de las filas de campos."""
+    js = _leer("bitacora", "static", "js", "menu-contextual.js")
+    assert "buildEWPicker(DESTINO.campo)" in js
+    assert "openEWModal(picker, rueda)" in js

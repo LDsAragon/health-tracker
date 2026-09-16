@@ -27,6 +27,12 @@ def dos_equipos(tmp_path, monkeypatch):
         db.init_db()
 
     usar(pc)
+    # Sin las categorías de fábrica: estos tests arman sus propias filas y tres ajenas les
+    # cambian los ids y los conteos. Que el sembrado NO las duplique al sincronizar —para eso
+    # llevan uid fijo— se prueba aparte, en tests/test_semilla.py.
+    with db.get_db() as cx:
+        cx.execute("DELETE FROM journal_categories")
+        cx.execute("DELETE FROM deletions")
     db.add_note("2026-09-01", "comun")
     _clonar(lap)                 # la portátil arranca del mismo estado
     usar(lap)

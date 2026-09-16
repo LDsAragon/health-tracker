@@ -3,6 +3,7 @@ import json
 from flask import Blueprint, render_template, request, redirect, url_for
 from bitacora import database as db
 from bitacora.helpers import safe_back
+from bitacora.plantillas import PLANTILLAS
 
 bp = Blueprint("journal", __name__)
 
@@ -13,6 +14,7 @@ def journal_view():
     return render_template("journal.html", categories=categories,
                            usos=db.count_journal_entries_by_category(),
                            usos_campos=db.journal_field_usage(),
+                           plantillas=PLANTILLAS,
                            back=safe_back(request.args.get("back")))
 
 

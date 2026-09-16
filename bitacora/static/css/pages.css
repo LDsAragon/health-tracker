@@ -1366,3 +1366,18 @@ select.journal-cat-select {
   cursor: pointer;
 }
 .menu-ctx-item:hover { background: var(--surface2); color: var(--accent); }
+.menu-ctx-sep { border: none; border-top: 1px solid var(--border); margin: 4px 6px; }
+/* Anotaste una emoción desde otra pantalla: sin esto, guardar no deja ninguna señal. */
+.menu-ctx-aviso {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 3000;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--r);
+  padding: 10px 14px;
+  font-size: 13px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+.menu-ctx-aviso a { color: var(--accent); text-decoration: underline; margin-left: 6px; }

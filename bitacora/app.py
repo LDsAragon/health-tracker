@@ -73,7 +73,11 @@ def create_app():
                 # vista actual: son un puñado de filas (el registro de `appconfig.VISTAS` acota
                 # cuáles pueden existir) y así el JS las lee sin saber en qué vista está, que es
                 # lo que permite aplicar el zoom en el <head> sin un salto.
-                "vista_prefs": db.get_prefs()}
+                "vista_prefs": db.get_prefs(),
+                # Adónde manda una emoción anotada desde el menú del clic derecho. Va acá
+                # porque el menú vive en todas las pantallas; es None si no hay ninguna
+                # categoría con rueda y entonces el atajo no se ofrece.
+                "emocion_destino": db.categoria_con_rueda()}
 
     for module in BLUEPRINTS:
         app.register_blueprint(module.bp)
