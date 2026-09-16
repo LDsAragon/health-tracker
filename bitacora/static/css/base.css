@@ -163,25 +163,51 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* La muerte de una tarea. Va en base.css —y no en day.css ni en pages.css— porque la usan tres
-   pantallas de dos árboles distintos: el día, el visor de tareas y la previsualización de Ajustes.
-   Mismo criterio que `.refresco-aviso`. El tamaño de letra lo calcula despedidas.js: depende del
-   ancho de la fila, que con el panel del día arrastrable no es un número fijo. */
-.despedida-art {
-  position: fixed;
-  margin: 0;
-  z-index: 9998;
-  font-family: monospace;
-  line-height: 1.05;
-  white-space: pre;
-  /* Pegada a la izquierda y no centrada: en el visor la fila mide 900px y el dibujo quedaba
-     flotando en el medio, lejos del texto. Lo que se está llevando el meteorito es la tarea, y
-     la tarea empieza donde empieza la fila. */
-  text-align: left;
-  color: var(--accent);
-  pointer-events: none;          /* nada de esto puede comerse un clic */
-  transform: translateY(-50%);   /* el top que le pasa el JS es el centro de la fila */
-  text-shadow: 0 1px 2px var(--bg);
+   pantallas de dos árboles distintos: el día, el visor de tareas y la previsualización de
+   Ajustes. Mismo criterio que `.refresco-aviso`. */
+/* ⚠️ La cortina propia, más oscura que la de los otros modales. `.update-modal-overlay` usa
+   55% de negro, que alcanza cuando arriba hay una caja con fondo y borde; acá no hay caja —es un
+   escenario, no un cartel— y con esa cortina la animación flotaba sobre la lista y parecía un
+   accidente. */
+#despedida-modal { background: rgba(0, 0, 0, .86); }
+
+.despedida-escena {
+  position: relative;
+  width: min(560px, 86vw);
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Lo que convierte los rotateX/rotateY en profundidad de verdad y no en un aplastado. */
+  perspective: 700px;
+  overflow: hidden;
 }
-/* La fila no se esconde del todo: la tarea que se está yendo tiene que seguir ahí abajo, o la
-   animación parece que pasa sobre un hueco. */
-.despedida-yendo { opacity: .2; transition: opacity .2s ease; }
+.despedida-texto {
+  margin: 0;
+  padding: 0 18px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--text);
+  transform-style: preserve-3d;
+}
+/* Cada letra es un elemento: es lo que deja que cada una se vaya por su lado. `inline-block`
+   porque a un inline no se le pueden aplicar transformaciones. */
+.despedida-l {
+  display: inline-block;
+  white-space: pre;
+  will-change: transform, opacity;
+}
+.despedida-bicho {
+  position: absolute;
+  margin: 0;
+  font-family: monospace;
+  font-size: 26px;
+  line-height: 1.05;
+  color: var(--accent);
+  white-space: pre;
+  opacity: 0;
+  pointer-events: none;          /* nada de esto puede comerse un clic */
+  text-shadow: 0 1px 3px var(--bg);
+}

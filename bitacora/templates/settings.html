@@ -365,8 +365,6 @@
           {%- for d in despedidas %}{% set _ = opciones.append((d.slug, d.icono ~ ' ' ~ d.nombre)) %}{% endfor %}
           {%- set _ = opciones.append(('off', 'Sin animación')) %}
           {{ chips('animacion_borrado', opciones) }}
-          {# Una tarea de mentira para probar encima. #}
-          <div class="despedida-previa" id="despedida-previa">Sacar la basura</div>
         </div>
       </div>
 
@@ -490,14 +488,13 @@
   })();
 </script>
 <script>
-// Elegir una animación la reproduce sobre la tarea de mentira. El GUARDADO no pasa por acá: lo
-// hace ajustes.js, que escucha el change de todo el formulario, así que este chip se guarda solo
-// como cualquier otro control.
+// Elegir una animación la reproduce en el mismo modal en el que se va a ver de verdad, con una
+// tarea de mentira. El GUARDADO no pasa por acá: lo hace ajustes.js, que escucha el change de
+// todo el formulario, así que este chip se guarda solo como cualquier otro control.
 (function () {
-  const previa = document.getElementById('despedida-previa');
   document.querySelectorAll('input[name="animacion_borrado"]').forEach(function (r) {
     r.addEventListener('change', function () {
-      if (window.despedirEn) window.despedirEn(previa, r.value);
+      if (window.despedirEn) window.despedirEn('Sacar la basura', r.value);
     });
   });
 })();

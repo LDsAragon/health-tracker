@@ -20,30 +20,34 @@ def _leer(*partes):
 
 # ── El catálogo ──────────────────────────────────────────────────────────────
 
-def test_cada_animacion_tiene_varios_cuadros():
-    for a in despedidas.DESPEDIDAS:
-        assert len(a["cuadros"]) >= 2, a["slug"]
+def test_cada_animacion_tiene_su_coreografia():
+    """⚠️ El catálogo de Python dice qué se puede elegir; el JS dice cómo se dibuja. Una animación
+    elegible en Ajustes **sin coreografía** es un ajuste que no hace nada: se guarda, el chip queda
+    marcado y al borrar no pasa nada. El fallo callado de siempre."""
+    js = _leer("bitacora", "static", "js", "despedidas.js")
+    bloque = js[js.index("const COREOGRAFIAS = {"):js.index("// ── El reproductor")]
+    en_js = set(re.findall(r"^    (\w+): function \(e\)", bloque, re.M))
+    assert en_js == set(despedidas.SLUGS), (en_js, despedidas.SLUGS)
 
 
-def test_los_cuadros_de_una_animacion_estan_en_la_misma_grilla():
-    """⚠️ Un cuadro más angosto o más bajo que el anterior mueve el dibujo entero al pasar, y la
-    animación se ve como un temblor. Lo garantiza `_cuadros()`, que normaliza lo que se escribe
-    suelto; este test es de que siga haciéndolo."""
-    for a in despedidas.DESPEDIDAS:
-        grillas = {(len(c.split("\n")), max(len(l) for l in c.split("\n")))
-                   for c in a["cuadros"]}
-        assert len(grillas) == 1, (a["slug"], grillas)
-        # Y que cada línea llegue hasta el borde: si no, las de la derecha no se recortan igual.
-        for c in a["cuadros"]:
-            anchos = {len(l) for l in c.split("\n")}
-            assert len(anchos) == 1, (a["slug"], anchos)
+def test_el_texto_que_se_destruye_es_el_de_la_tarea():
+    """Es el pedido: el render de la tarea siendo destruido, no un dibujo al lado. Las dos
+    pantallas que borran una tarea la muestran en un `.todo-text`."""
+    js = _leer("bitacora", "static", "js", "despedidas.js")
+    assert "querySelector('.todo-text')" in js
+    for plantilla in ("day.html", "todos.html"):
+        assert 'class="todo-text"' in _leer("bitacora", "templates", plantilla), plantilla
 
 
-def test_las_lineas_en_blanco_a_proposito_sobreviven():
-    """El cuadro 1 de la ola es una línea vacía y después la barra: es lo que la deja abajo. Con
-    un `strip()` en vez del salto de línea justo, el dibujo arrancaría una fila más arriba."""
-    ola = despedidas.por_slug("ola")
-    assert ola["cuadros"][0].split("\n")[0].strip() == ""
+def test_cada_letra_es_un_elemento():
+    """Es lo que deja que cada una se vaya por su lado. Y el espacio va como espacio duro: un
+    inline-block con un espacio normal mide cero y la frase se vería toda pegada."""
+    js = _leer("bitacora", "static", "js", "despedidas.js")
+    assert r"ch === ' ' ? '\u00a0' : ch" in js
+    css = _leer("bitacora", "static", "css", "base.css")
+    assert ".despedida-l" in css and "display: inline-block;" in css
+    # Sin perspective, los rotateX/rotateY se ven aplastados y no hay 3D.
+    assert "perspective:" in css
 
 
 def test_las_opciones_del_ajuste_salen_del_catalogo():
@@ -128,5 +132,24 @@ def test_la_animacion_tiene_un_tope_de_tiempo_y_va_antes_del_try():
 
 
 def test_la_animacion_no_se_come_un_clic():
-    """Se dibuja encima de la fila, así que sin esto taparía el botón de al lado."""
+    """El bicho se dibuja encima del texto, así que sin esto taparía lo que hay abajo."""
     assert "pointer-events: none;" in _leer("bitacora", "static", "css", "base.css")
+
+
+def test_la_escena_y_el_motor_viajan_con_la_pagina(client, test_db):
+    """El modal vive en base.html —lo necesitan las tres pantallas— y anime.js se carga ahí y no
+    en el widget, que no tiene borrado. Mismo criterio que Chart.js, que solo lo trae stats."""
+    html = client.get("/tareas").data.decode()
+    assert 'id="despedida-modal"' in html and 'id="despedida-texto"' in html
+    assert "js/vendor/anime.min.js" in html
+    assert "anime.min.js" not in _leer("bitacora", "templates", "widget.html")
+
+
+def test_escape_termina_la_animacion_en_vez_de_cancelarla():
+    """⚠️ Ya confirmaste el borrado: si Escape cancelara, la tarea quedaría sin borrar después de
+    haber dicho que sí. Y corta la propagación para que el handler global de base.html no te
+    saque de la pantalla en el medio."""
+    js = _leer("bitacora", "static", "js", "despedidas.js")
+    bloque = js[js.index("ev.key === 'Escape'"):]
+    assert "ev.stopPropagation();" in bloque[:200]
+    assert "cerrarActual();" in bloque[:200]

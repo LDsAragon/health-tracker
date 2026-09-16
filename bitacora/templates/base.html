@@ -254,6 +254,16 @@
     </div>
   </div>
 
+  {# La animación de borrado. El texto de la tarea se reparte acá adentro, una letra por
+     elemento, y se destruye de verdad —ver static/js/despedidas.js—. La escena no lleva
+     `.update-modal-box` a propósito: no es un cartel, es un escenario. #}
+  <div id="despedida-modal" class="update-modal-overlay" style="display:none;">
+    <div class="despedida-escena">
+      <pre class="despedida-bicho" id="despedida-bicho"></pre>
+      <p class="despedida-texto" id="despedida-texto"></p>
+    </div>
+  </div>
+
   <div id="todo-modal" class="update-modal-overlay" style="display:none;">
     <div class="update-modal-box">
       <p class="update-modal-title" id="todo-modal-title">Tareas sin cerrar</p>
@@ -369,6 +379,7 @@
 <script>window.TOKEN_DATOS = {{ token_datos | tojson }};</script>
 <script>window.DESPEDIDAS = {{ despedidas | tojson }};
         window.DESPEDIDA_ELEGIDA = {{ settings.animacion_borrado | tojson }};</script>
+<script src="{{ url_for('static', filename='js/vendor/anime.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/despedidas.js') }}"></script>
 <script src="{{ url_for('static', filename='js/confirmar.js') }}"></script>
 <script src="{{ url_for('static', filename='js/menu-contextual.js') }}"></script>
