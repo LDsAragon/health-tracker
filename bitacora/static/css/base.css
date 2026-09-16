@@ -161,3 +161,27 @@ a { color: inherit; text-decoration: none; }
   font-size: 13px;
   cursor: pointer;
 }
+
+/* La muerte de una tarea. Va en base.css —y no en day.css ni en pages.css— porque la usan tres
+   pantallas de dos árboles distintos: el día, el visor de tareas y la previsualización de Ajustes.
+   Mismo criterio que `.refresco-aviso`. El tamaño de letra lo calcula despedidas.js: depende del
+   ancho de la fila, que con el panel del día arrastrable no es un número fijo. */
+.despedida-art {
+  position: fixed;
+  margin: 0;
+  z-index: 9998;
+  font-family: monospace;
+  line-height: 1.05;
+  white-space: pre;
+  /* Pegada a la izquierda y no centrada: en el visor la fila mide 900px y el dibujo quedaba
+     flotando en el medio, lejos del texto. Lo que se está llevando el meteorito es la tarea, y
+     la tarea empieza donde empieza la fila. */
+  text-align: left;
+  color: var(--accent);
+  pointer-events: none;          /* nada de esto puede comerse un clic */
+  transform: translateY(-50%);   /* el top que le pasa el JS es el centro de la fila */
+  text-shadow: 0 1px 2px var(--bg);
+}
+/* La fila no se esconde del todo: la tarea que se está yendo tiene que seguir ahí abajo, o la
+   animación parece que pasa sobre un hueco. */
+.despedida-yendo { opacity: .2; transition: opacity .2s ease; }

@@ -8,6 +8,7 @@ from bitacora import filters
 from bitacora import services
 from bitacora import profiles
 from bitacora.fieldtypes import FIELD_TYPES
+from bitacora.despedidas import DESPEDIDAS
 from bitacora.appconfig import PET_ART, NOTE_COLORS, EMOTION_COLORS, EMOTION_FALLBACK
 from bitacora.helpers import _week_start
 # Re-export para tests que hacen `from app import dur_fmt_filter, ...`
@@ -58,6 +59,10 @@ def create_app():
                 "overdue_count": _overdue_count(settings),
                 "perfiles": profiles.listar(), "perfil_activo": profiles.activo(),
                 "note_colors": NOTE_COLORS,
+                # Cómo se muere una tarea al borrarla. Van a todas las pantallas, como el resto
+                # del catálogo: el día que otra sume un borrado de tareas tiene que andar sola,
+                # que es lo contrario del "a medio marcar" que ya costó caro con el refresco.
+                "despedidas": DESPEDIDAS,
                 # Un color por emoción, igual en el día y en Estadísticas: estaban
                 # copiados como literales dentro de `day.html`.
                 "emotion_colors": EMOTION_COLORS,

@@ -1,6 +1,8 @@
 """Datos de configuración: temas y esquema de ajustes (fuente única)."""
 import re
 
+from bitacora import despedidas
+
 # Temas: slug + nombre + 4 colores para el swatch (las paletas reales están en base.css → [data-theme]).
 THEMES = [
     {"slug": "indigo",     "name": "Índigo",     "dark": True,  "bg": "#0f1117", "surface": "#1a1d27", "text": "#e2e8f0", "accent": "#6366f1"},
@@ -80,6 +82,10 @@ SETTINGS = {
     # navegador no aplica: ahí el tamaño lo pone el navegador.
     "window_size": {"default": "1280x860", "choices": ("maximizada",) + VENTANA_PRESETS,
                     "valida": es_resolucion},
+    # Con qué animación se muere una tarea al borrarla. Las opciones salen del catálogo
+    # (bitacora/despedidas.py), así que sumar una animación no toca esta línea. "aleatorio" es
+    # el default —la gracia es no saber cuál te toca— y "off" la borra sin ceremonia.
+    "animacion_borrado": {"default": despedidas.AZAR, "choices": despedidas.OPCIONES},
     # ANDAMIO: ajustes — `hacer.ps1 nuevo ajuste` inserta aca. No mover ni borrar.
 }
 

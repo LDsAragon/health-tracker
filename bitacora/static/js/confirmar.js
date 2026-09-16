@@ -50,7 +50,12 @@
     cerrar();
     // `form.submit()` y no `requestSubmit()`: el segundo volvería a disparar el evento submit y
     // caería otra vez acá. La validación HTML5 ya corrió (el evento submit no llega si falla).
-    if (form) form.submit();
+    const enviar = function () { if (form) form.submit(); };
+    // Acá se reproduce la animación de borrado (despedidas.js): ya confirmaste y el formulario
+    // todavía no se envió. ⚠️ Si ese archivo no cargó, o el formulario no la pide, se envía igual:
+    // la parte decorativa no puede quedar en el camino de un borrado.
+    if (form && form.hasAttribute('data-despedida') && window.despedir) window.despedir(form, enviar);
+    else enviar();
   });
 
   // Clic afuera y Escape cancelan, como el resto de los modales de la app.

@@ -28,6 +28,7 @@ bitacora/
   helpers.py            # _setting, _week_start, _dow_names, MESES[], _fmt_clock, safe_back
   filters.py            # Filtros Jinja2 (humantime, fechacorta, dur_fmt, rango_fmt)
   fieldtypes.py         # Catálogo de tipos de campo de notas especiales
+  despedidas.py         # Las animaciones ASCII con las que se muere una tarea al borrarla
   profiles.py           # Perfiles locales: índice perfiles.json, crear/usar/borrar, cambio
                         #   en caliente. Sin HT_PERFILES se desactiva solo (tests, navegador)
   sync.py               # Merge entre dos dispositivos: exportar/analizar/aplicar. El paquete
@@ -67,6 +68,7 @@ bitacora/
       zoom.js           # Zoom Ctrl+rueda / Ctrl±, persistido en localStorage
       colapsables.js    # recordarColapsable(): estado de un <details> en localStorage
       confirmar.js      # Confirmaciones con la estética de la app (data-confirmar en el <form>)
+      despedidas.js     # La animación de borrado; la dispara confirmar.js al confirmar
       ajustes.js        # Guardado al instante de Ajustes; esconde el botón Guardar
       date-es.js        # Campo de fecha con formato configurable (hidden ISO para el backend)
       day.js / stats.js # JS de la vista del día y del constructor de gráficos
@@ -915,6 +917,40 @@ cada formulario **declara** lo suyo:
   tener que armar dos perfiles, un gráfico y una previa de sync para que aparezcan los botones.
   Es estricto a propósito: salta hasta con un `alert()` escrito dentro de un comentario.
 
+## La muerte de una tarea
+
+Borrar una tarea era lo más silencioso de la app: confirmabas y la fila desaparecía en la recarga.
+Ahora se reproduce una animación ASCII corta encima de la fila —un meteorito, una ola, la parca, un
+cocodrilo o un tiburón— y recién después se envía el formulario.
+
+- **Engancha en `confirmar.js`, en el botón OK del modal**, que es el único punto por donde pasan
+  los 16 borrados de la app: ahí ya confirmaste y todavía no se envió nada. El formulario lo pide
+  con `data-despedida`, y lo llevan **solo los dos que borran una tarea** (el día y el visor). Un
+  meteorito arriba de "Eliminar este perfil" sería un chiste sobre un borrado grande.
+- ⚠️ **Borrar no puede depender de la animación.** `window.despedir(form, enviar)` tiene que llamar
+  a `enviar` siempre: hay un **tope duro de 1,5 s agendado ANTES del `try`** (para el caso en que
+  el reproductor explote al armarse), un `catch` que envía igual, y una guarda de "una sola vez"
+  porque el tope y el final de la animación pueden llegar los dos. Si `despedidas.js` no cargó,
+  `confirmar.js` envía derecho. Es el mismo criterio que el `onsubmit="return false;"` de ese
+  archivo y que el botón Guardar que sigue en la plantilla de Ajustes: lo decorativo puede fallar,
+  la acción no. Lo fijan dos tripwires en `tests/test_despedidas.py`.
+- **El catálogo vive en Python** (`bitacora/despedidas.py`) porque tiene tres lectores —el día, el
+  visor y el control de Ajustes que las previsualiza—, y de ahí **se derivan las `choices` del
+  ajuste**, como `TIPOS_GRAFICABLES` sale de `FIELD_TYPES`: sumar una animación es una entrada.
+- ⚠️ **Los cuadros se escriben sueltos y los normaliza `_cuadros()`** a una grilla única. Un cuadro
+  más angosto o más bajo que el anterior corre el dibujo entero al pasar y la animación se ve como
+  un temblor. Y se saca **un solo salto de línea** de cada punta, no un `strip()`: las líneas en
+  blanco de arriba y de abajo son las que dejan al meteorito alto y a la ola baja.
+- **Se dibuja pegada a la izquierda y con un tamaño calculado**, no fijo: el panel del día puede
+  estar en su mínimo (manda el ancho) y la fila del visor mide 900px (manda el alto, o el dibujo
+  taparía tres tareas para arriba y tres para abajo). Centrada quedaba flotando lejos del texto:
+  lo que se están llevando es **esa** tarea.
+- El `<pre>` va al `<body>` con `position: fixed` sobre el rectángulo de la fila, y con
+  `pointer-events: none`: así no se le toca el layout a `.todo-row` —que es un flex con su propio
+  arreglo— ni se come el clic del botón de al lado.
+- **En el widget no hay** (no tiene botón de borrar) y **completar una tarea no se anima**: eso ya
+  tiene su festejo, la mascotita ASCII al cerrar el día, y dos festejos compitiendo se anulan.
+
 ## Color por defecto de las notas rápidas
 
 `services.color_para_nota_nueva(elegido)` decide con qué color se guarda una nota nueva:
@@ -990,14 +1026,18 @@ miraban) y **ningún número era comparativo** — un `0 / 15 · 0%` no dice si 
 
 ## La pantalla de Ajustes
 
-Cero `<select>` entre los 17 ajustes, seis secciones colapsables y **guardado al instante**.
+Cero `<select>` entre los 18 ajustes, seis secciones colapsables y **guardado al instante**.
 
-- **Cuatro controles, y cuál va dónde no es estético**: switch deslizable para los 9 que se leen
+- **Cinco controles, y cuál va dónde no es estético**: switch deslizable para los 9 que se leen
   como prendido/apagado (aunque el vocabulario cambie: `on/off`, `show/hide`, `open/collapsed`);
   segmentado para los que son **esto o aquello** (`24h/12h`, `mon/sun`, `week/day`) y para los de 3
-  opciones; swatches para el tema y el color de nota; y el de **medida** (tamaño de ventana), que
-  es un segmentado de medidas comunes más dos números para escribir la tuya. Un switch en "24 h"
-  haría preguntar *"¿12 h está prendido?"*.
+  opciones; swatches para el tema y el color de nota; **chips** para el de las animaciones de
+  borrado, que son siete opciones y no entran en un segmentado; y el de **medida** (tamaño de
+  ventana), que es un segmentado de medidas comunes más dos números para escribir la tuya. Un
+  switch en "24 h" haría preguntar *"¿12 h está prendido?"*.
+- El de chips además **reproduce la animación al elegirla**, sobre una tarea de mentira: entre
+  cinco nombres, elegir sin ver no significa nada. Encaja con que la pantalla guarde al instante
+  —se aplica y queda— y es el mismo patrón visual que los chips de plantilla de `/journal`.
 - ⚠️ **`window_size` es el único ajuste sin whitelist cerrada.** Admite `maximizada`, una de
   `VENTANA_PRESETS` o una medida escrita a mano, así que trae **su propio validador** en el
   esquema (`valida: es_resolucion`) y toda la app valida por `appconfig.valor_valido()`. Eso no es

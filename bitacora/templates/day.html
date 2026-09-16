@@ -55,7 +55,7 @@
             <button type="button" class="btn-edit" onclick="editTodo({{ t.id }})" title="Editar">&#9998;</button>
             <button type="button" class="btn-edit" onclick="moveTodo({{ t.id }})" title="Mover a otro día">&#8594;</button>
             <form method="POST" action="{{ url_for('day.todo_delete', date_str=date_str, todo_id=t.id) }}" style="display:inline;"
-                  data-confirmar="¿Eliminar esta tarea?" data-confirmar-ok="Eliminar"
+                  data-confirmar="¿Eliminar esta tarea?" data-confirmar-ok="Eliminar" data-despedida
             onsubmit="return false;">
               <button type="submit" class="btn-delete" title="Eliminar">&#10005;</button>
             </form>

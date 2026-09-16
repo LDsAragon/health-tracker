@@ -38,7 +38,7 @@
     </form>
     {% endif %}
     <form method="POST" action="{{ url_for('todos.todo_borrar', todo_id=t.id) }}" class="todo-mini-form"
-          data-confirmar="¿Eliminar esta tarea?" data-confirmar-ok="Eliminar"
+          data-confirmar="¿Eliminar esta tarea?" data-confirmar-ok="Eliminar" data-despedida
             onsubmit="return false;">
       {{ filtros_hidden(f) }}
       <button type="submit" class="btn-delete-sm" title="Eliminar">×</button>

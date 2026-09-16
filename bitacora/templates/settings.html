@@ -29,6 +29,21 @@
 </div>
 {% endmacro %}
 
+{#- Chips: para el ajuste con más opciones de las que entran en un segmentado y donde, además,
+    la opción no se entiende leyendo su nombre. El de las animaciones se reproduce al elegirlo
+    (abajo, en page_scripts): elegir entre cinco sin verlas no significa nada. -#}
+{% macro chips(key, opciones) %}
+<div class="chips" role="radiogroup" aria-label="{{ key }}">
+  {% for val, etiqueta in opciones %}
+  <label class="chip-opt">
+    <input type="radio" name="{{ key }}" value="{{ val }}"
+           {% if settings[key] == val %}checked{% endif %}>
+    <span>{{ etiqueta }}</span>
+  </label>
+  {% endfor %}
+</div>
+{% endmacro %}
+
 {% block content %}
 <div class="page-back" style="margin-bottom:14px;">
   <a href="{{ back or url_for('main.home') }}" class="back-link">&#8592; {{ 'Volver' if back else 'Calendario' }}</a>
@@ -339,6 +354,22 @@
         </div>
       </div>
 
+      <div class="set-row">
+        <div class="set-texto">
+          <label for="animacion_borrado">Cómo se muere una tarea</label>
+          <p class="set-desc">Al eliminar una tarea, una animación corta se la lleva. Tocá una
+            para verla acá al lado.</p>
+        </div>
+        <div class="set-control">
+          {%- set opciones = [('aleatorio', '🎲 Al azar')] %}
+          {%- for d in despedidas %}{% set _ = opciones.append((d.slug, d.icono ~ ' ' ~ d.nombre)) %}{% endfor %}
+          {%- set _ = opciones.append(('off', 'Sin animación')) %}
+          {{ chips('animacion_borrado', opciones) }}
+          {# Una tarea de mentira para probar encima. #}
+          <div class="despedida-previa" id="despedida-previa">Sacar la basura</div>
+        </div>
+      </div>
+
       {# ANDAMIO: detalles #}
     </div>
   </details>
@@ -457,6 +488,19 @@
     w.addEventListener('change', aplicar);
     h.addEventListener('change', aplicar);
   })();
+</script>
+<script>
+// Elegir una animación la reproduce sobre la tarea de mentira. El GUARDADO no pasa por acá: lo
+// hace ajustes.js, que escucha el change de todo el formulario, así que este chip se guarda solo
+// como cualquier otro control.
+(function () {
+  const previa = document.getElementById('despedida-previa');
+  document.querySelectorAll('input[name="animacion_borrado"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      if (window.despedirEn) window.despedirEn(previa, r.value);
+    });
+  });
+})();
 </script>
 <script src="{{ url_for('static', filename='js/ajustes.js') }}"></script>
 {% endblock %}

@@ -1381,3 +1381,29 @@ select.journal-cat-select {
   box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
 }
 .menu-ctx-aviso a { color: var(--accent); text-decoration: underline; margin-left: 6px; }
+
+/* Chips de Ajustes: el quinto tipo de control. Son siete opciones —cinco animaciones más el azar
+   y el apagado—, que en un segmentado no entran, y la regla de la pantalla es cero <select>. */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-opt {
+  position: relative;
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 6px 12px; font-size: 13px; color: var(--muted);
+  cursor: pointer; user-select: none; background: var(--surface);
+}
+.chip-opt:hover { border-color: var(--accent); color: var(--text); }
+.chip-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.chip-opt:has(input:checked) {
+  border-color: var(--accent); color: var(--text); font-weight: 600;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+/* La tarea de mentira sobre la que se prueba: se parece a una fila del visor, no a un cartel. */
+.despedida-previa {
+  margin-top: 10px; padding: 7px 11px;
+  border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--surface2); font-size: 13px; color: var(--text);
+  max-width: 260px;
+  /* Alta a propósito: el dibujo se centra sobre la fila y con una fila de 30px se salía por
+     arriba, encima de los chips. Acá hay lugar para las tres líneas. */
+  min-height: 70px; display: flex; align-items: center;
+}

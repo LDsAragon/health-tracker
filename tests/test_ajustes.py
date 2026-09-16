@@ -71,10 +71,11 @@ def valor_del_form(html, name):
 
 def test_todos_los_ajustes_tienen_un_control():
     """El esquema es la fuente única: un ajuste nuevo sin control quedaría invisible."""
-    # `theme` y `nota_color` son los dos de swatches, y `window_size` el único que además de
-    # opciones admite una medida escrita a mano; el resto, switch o segmentado.
+    # `theme` y `nota_color` son los dos de swatches, `animacion_borrado` el de chips, y
+    # `window_size` el único que además de opciones admite una medida escrita a mano; el resto,
+    # switch o segmentado.
     assert (set(SWITCHES) | set(SEGMENTADOS)
-            | {"theme", "nota_color", "window_size"}) == set(SETTINGS)
+            | {"theme", "nota_color", "window_size", "animacion_borrado"}) == set(SETTINGS)
 
 
 def test_todos_los_ajustes_estan_en_la_pagina(client):
