@@ -1004,7 +1004,7 @@ cada formulario **declara** lo suyo:
 
 Borrar una tarea era lo más silencioso de la app: confirmabas y la fila desaparecía en la recarga.
 Ahora se abre un modal con **el texto de la tarea** adentro y algo se lo lleva —un meteorito, una
-ola, la parca o un tiburón—; recién cuando termina se envía el formulario, que es lo
+o la parca—; recién cuando termina se envía el formulario, que es lo
 que saca la fila de la lista.
 
 - ⚠️ **La primera versión la dibujaba ENCIMA de la fila y se descartó**: se encimaba con el texto
@@ -1046,7 +1046,7 @@ que saca la fila de la lista.
   versión mandaba las letras para cualquier lado con un retardo parejo: pasaba algo, pero no
   pasaba **por culpa de nada**. Ahora `ubicar()` mide dónde quedó cada letra dentro de la escena y
   cada coreografía usa esa posición: la ola las arrastra de izquierda a derecha a medida que les
-  llega, el tiburón las chupa para abajo al pasar por debajo, el meteorito
+  llega, el meteorito
   las revienta **desde el punto de impacto** —las de más lejos salen después y más fuerte—.
 - ⚠️ **El ritmo tiene tres tiempos y los tres importan.** La primera versión duraba 1,2 s y *"no
   se apreciaba"*: arrancaba con la destrucción ya empezada y terminaba antes de que pudieras

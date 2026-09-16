@@ -10,10 +10,8 @@ convertirlas a ASCII sigue siendo una obra derivada.
 
 | Escena | Origen | Autor | Licencia |
 |---|---|---|---|
-| `ola` | [La gran ola de Kanagawa](https://commons.wikimedia.org/wiki/File:Tsunami_by_hokusai_19th_century.jpg) (1831) | Katsushika Hokusai | Dominio público |
 | `meteorito` | [GIF de Giphy](https://giphy.com/gifs/mograph-meteor-end-of-the-world-l46CvyAn1oBTOZtZK) (`l46CvyAn1oBTOZtZK`) | sin identificar | ⚠️ de terceros |
 | `parca` | [GIF de Giphy](https://giphy.com/gifs/wave-xcopy-deathwave-xfkB0MewxbRt9BMxIK) (`xfkB0MewxbRt9BMxIK`) | atribuido a xcopy | ⚠️ de terceros |
-| `ola.fondo` | el mismo Hokusai, sin recortar | Katsushika Hokusai | Dominio público |
 | `meteorito.fondo` | [GIF de Giphy](https://giphy.com/gifs/earth-super-asteroid-YQPVI7u1Cue1W) (`YQPVI7u1Cue1W`) | sin identificar | ⚠️ de terceros |
 
 ⚠️ **Las dos últimas son obra de terceros y entran por decisión expresa del dueño del repo**
@@ -47,6 +45,18 @@ duplicados.
 - `--recorte ancho:alto:x:y` acerca la cámara antes de convertir. Es lo que le dio escala a la
   ola: con la estampa entera se leía "un cuadro de una ola"; recortada al rompiente, se te viene
   encima.
+
+## De qué se acuerda una escena al agrandarse
+
+⚠️ **El sujeto casi nunca está en el centro del cuadro**, así que al escalar un plano se corre
+solo hacia su esquina. En el meteorito la roca vive abajo a la derecha, con la estela subiendo a
+la izquierda: al agrandarla se iba de cuadro y el impacto pasaba en un lugar donde no había nada.
+El destino de la traslación tiene que compensar ese corrimiento.
+
+También conviene mirar **qué cuenta el material**: el GIF del meteorito es un BUCLE sin impacto
+—la roca se queda en su lugar y lo que se mueve es el chisporroteo de la estela—, así que la
+llegada la cuenta entera la cámara y por eso su recorrido de escala es largo. Estirarlo sobre la
+escena en vez de ciclarlo lo hacía ir a media velocidad.
 
 ## Qué material convierte bien
 

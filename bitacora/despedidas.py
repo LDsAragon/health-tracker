@@ -12,9 +12,7 @@ ajuste que no hace nada. Lo fija un tripwire en `tests/test_despedidas.py`.
 
 DESPEDIDAS = [
     {"slug": "meteorito", "nombre": "Meteorito", "icono": "☄️"},
-    {"slug": "ola", "nombre": "Ola", "icono": "🌊"},
     {"slug": "parca", "nombre": "La parca", "icono": "💀"},
-    {"slug": "tiburon", "nombre": "Tiburón", "icono": "🦈"},
 ]
 
 SLUGS = tuple(d["slug"] for d in DESPEDIDAS)

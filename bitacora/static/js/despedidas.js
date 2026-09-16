@@ -239,19 +239,26 @@
         })
         .add({                            // la roca, desde muy lejos y muy chica
           targets: e.capas[2],
-          translateX: conv ? [-e.ancho * 0.30, xi - e.ancho * 0.52]
+          // ⚠️ La roca NO está en el centro del cuadro del material —vive abajo a la derecha, con
+          // la estela subiendo a la izquierda—, así que al agrandar el plano se corre sola hacia
+          // esa esquina. El destino compensa ese corrimiento: sin esto la roca terminaba fuera de
+          // cuadro y el impacto pasaba en un lugar donde no había nada.
+          translateX: conv ? [-e.ancho * 0.34, -e.ancho * 0.46]
                            : [-e.ancho * 0.42, xi - e.ancho * 0.5],
-          translateY: conv ? [-e.alto * 0.58, e.alto * 0.06]
+          translateY: conv ? [-e.alto * 0.78, -e.alto * 0.33]
                            : [-e.alto * 0.62, e.alto * 0.10],
-          // El convertido ya entra justo en la escena: se lo acerca apenas, no se lo infla.
-          scale: conv ? [0.62, 1.15] : [0.18, 1.75],
-          rotate: [-6, 10],
+          // ⚠️ El material es un BUCLE sin impacto —la roca se queda en su lugar y lo que se
+          // mueve es el chisporroteo de la estela—, así que la llegada la cuenta entera la
+          // cámara: de muy chica y muy arriba a encima del texto. Por eso el recorrido de escala
+          // es largo, al revés que en el resto del material convertido.
+          scale: conv ? [0.4, 1.62] : [0.18, 1.75],
+          rotate: [-8, 6],
           opacity: [0, 1],
-          duration: 1550,
+          duration: 2000,
           easing: 'easeInQuad',
         }, '-=1400')
-        .add({ targets: e.capas[2], opacity: 0, scale: conv ? 1.6 : 3.4,
-               duration: 260, easing: 'easeOutQuad' });
+        .add({ targets: e.capas[2], opacity: 0, scale: conv ? 2.3 : 3.4,
+               duration: 280, easing: 'easeOutQuad' });
     },
 
     // Se la ve venir de lejos, se acerca de golpe, pega un guadañazo y el flash parte el texto
@@ -292,116 +299,7 @@
         });
     },
 
-    // El mar. El texto flota, y desde el fondo sube lentamente algo enorme que se lo traga.
-    tiburon: function (e, tl) {
-      cuadros(e, e.capas[0], [
-        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n   ≈      ≈       ≈      ≈       ≈      ≈',
-        '≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~\n     ≈      ≈       ≈      ≈       ≈     ≈',
-        '~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈\n   ≈      ≈       ≈      ≈       ≈      ≈',
-      ], 190);
-      cuadros(e, e.capas[1], [
-        '      \\               /\n' +
-        '       \\_____________/\n' +
-        '      / VVVVVVVVVVVVV \\\n' +
-        '     |                 |\n' +
-        '      \\ ^^^^^^^^^^^^^ /\n' +
-        '       \\_____________/',
-        '      \\               /\n' +
-        '       \\_____________/\n' +
-        '      / VVVVVVVVVVVVV \\\n' +
-        '     |                 |\n' +
-        '      \\ ^^^^^^^^^^^^^ /\n' +
-        '        \\___________/',
-      ], 260);
-      return tl
-        .add({                            // la superficie, a la altura del texto
-          targets: e.capas[0],
-          opacity: [0, 0.85],
-          translateY: [e.alto * 0.09, e.alto * 0.09],
-          duration: 700,
-          easing: 'easeOutQuad',
-        })
-        .add({                            // el texto flota encima
-          targets: e.texto,
-          keyframes: [
-            { translateY: -40, rotate: -1.2, duration: 640 },
-            { translateY: -22, rotate: 1.2, duration: 640 },
-            { translateY: -34, rotate: 0, duration: 520 },
-          ],
-          easing: 'easeInOutSine',
-        }, '-=520')
-        .add({                            // y desde el fondo sube, enorme
-          // ⚠️ Arranca en +0.46 y no más abajo: la escena mide 420px, así que todo lo que pase
-          // de la mitad para abajo está fuera de cuadro y la subida no se veía —el tiburón
-          // aparecía casi arriba del texto, sin el viaje que es lo que se pidió—.
-          targets: e.capas[1],
-          opacity: [0, 1],
-          translateY: [e.alto * 0.46, -e.alto * 0.07],
-          scale: [0.14, 2.4],
-          duration: 2000,
-          easing: 'easeInQuad',
-        }, '-=1500');
-    },
 
-    // Una tormenta: llueve, y por la izquierda se levanta una ola enorme que se curva sobre el
-    // texto y se lo lleva puesto.
-    ola: function (e, tl) {
-      const fondo = pintar(e, e.capas[0], 'ola.fondo', [
-        '  /  /  /  /  /  /  /  /  /  /  /  /  /  /\n' +
-        ' /  /  /  /  /  /  /  /  /  /  /  /  /  / \n' +
-        '/  /  /  /  /  /  /  /  /  /  /  /  /  /  \n' +
-        '  /  /  /  /  /  /  /  /  /  /  /  /  /  /',
-        ' /  /  /  /  /  /  /  /  /  /  /  /  /  / \n' +
-        '/  /  /  /  /  /  /  /  /  /  /  /  /  /  \n' +
-        '  /  /  /  /  /  /  /  /  /  /  /  /  /  /\n' +
-        ' /  /  /  /  /  /  /  /  /  /  /  /  /  / ',
-      ], 85);
-      // ⚠️ Asimétrica a propósito: la primera versión era un montículo con la misma rampa de los
-      // dos lados y se leía como una loma, no como una ola. La de Hokusai sube por la izquierda,
-      // rompe arriba a la derecha y deja las garras de espuma colgando sobre lo que va a tapar.
-      const ola = pintar(e, e.capas[1], 'ola', [
-        '                      ,   ,   ,\n' +
-        '                     /|  /|  /|\n' +
-        '              _,-~~~~ \'   \'   \'\n' +
-        '          _,-~        ~-,_\n' +
-        '       _,-~                ~-,\n' +
-        '    _,-~                      ~,\n' +
-        ' _,-~                           \\\n' +
-        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
-        '                     ,   ,   ,\n' +
-        '                    /|  /|  /|\n' +
-        '              _,-~~~ \'   \'   \'\n' +
-        '          _,-~        ~-,_\n' +
-        '       _,-~                ~-,\n' +
-        '    _,-~                      ~,\n' +
-        ' _,-~                           \\\n' +
-        '≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈',
-      ], 150);
-      return tl
-        .add({                            // el horizonte, lejos
-          targets: e.capas[0],
-          opacity: [0, fondo ? 0.32 : 0.55],
-          scale: fondo ? [0.55, 0.62] : [1, 1],
-          translateY: fondo ? [-e.alto * 0.30, -e.alto * 0.26]
-                            : [-e.alto * 0.36, -e.alto * 0.30],
-          duration: 900,
-          easing: 'linear',
-        })
-        .add({                            // y la ola, que crece hasta no entrar en la pantalla
-          targets: e.capas[1],
-          opacity: [0, 1],
-          // ⚠️ Lo que da la escala es que TERMINE sin entrar en el cuadro. Con el recorte al
-          // rompiente más este recorrido, la ola se te viene encima; con la estampa entera y
-          // chiquita se leía "un cuadro de una ola", que es lo que le faltaba.
-          translateX: ola ? [-e.ancho * 0.22, e.ancho * 0.06]
-                          : [-e.ancho * 0.85, -e.ancho * 0.10],
-          translateY: ola ? [e.alto * 0.30, -e.alto * 0.12]
-                          : [e.alto * 0.34, -e.alto * 0.17],
-          scale: ola ? [0.8, 2.05] : [0.45, 2.7],
-          duration: 1850,
-          easing: 'easeInQuad',
-        }, '-=620');
-    },
 
   };
 
@@ -448,36 +346,7 @@
       }, '-=300');
     },
 
-    tiburon: function (e, tl) {
-      const xc = e.ancho / 2;
-      return tl.add({
-        // Se las traga: convergen a la boca y desaparecen adentro.
-        targets: e.letras,
-        translateX: function (l, i) { return (xc - e.x[i]) * 0.8; },
-        translateY: 46,
-        scale: [1, 0],
-        rotateX: [0, 90],
-        opacity: [1, 0],
-        duration: 620,
-        delay: function (l, i) { return Math.abs(e.x[i] - xc) * 0.7; },
-        easing: 'easeInBack',
-      }, '-=520');
-    },
 
-    ola: function (e, tl) {
-      sacudir(e, tl, 12, 600, '-=900');
-      return tl.add({
-        // Se la lleva puesta: cada una arranca cuando la ola le llega, todas para el mismo lado.
-        targets: e.letras,
-        translateX: function () { return anime.random(260, 560); },
-        translateY: function (l, i) { return 70 + Math.sin(i * 0.7) * 44; },
-        rotateZ: function () { return anime.random(-70, 70); },
-        opacity: [1, 0],
-        duration: 820,
-        delay: function (l, i) { return e.x[i] * 1.15; },
-        easing: 'easeInOutQuad',
-      }, '-=1000');
-    },
 
   };
 
