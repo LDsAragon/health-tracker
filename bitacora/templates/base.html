@@ -386,6 +386,9 @@
 <script>window.DESPEDIDAS = {{ despedidas | tojson }};
         window.DESPEDIDA_ELEGIDA = {{ settings.animacion_borrado | tojson }};</script>
 <script src="{{ url_for('static', filename='js/vendor/anime.min.js') }}"></script>
+{# El arte convertido de material real (tools/ascii_video.py). Va ANTES de despedidas.js, que lo
+   prefiere al dibujo a mano cuando existe para esa escena. #}
+<script src="{{ url_for('static', filename='js/despedidas-arte.js') }}"></script>
 <script src="{{ url_for('static', filename='js/despedidas.js') }}"></script>
 <script src="{{ url_for('static', filename='js/confirmar.js') }}"></script>
 <script src="{{ url_for('static', filename='js/menu-contextual.js') }}"></script>

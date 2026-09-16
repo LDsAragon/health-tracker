@@ -103,6 +103,24 @@
     }, ms || 90));
   }
 
+  // ⚠️ El arte convertido de material real (tools/ascii_video.py) le GANA al dibujado a mano.
+  // Dibujar ASCII a mano tiene un techo bajo —sirve para un cocodrilo de tres líneas, no para una
+  // ola que se te viene encima—, así que cada escena pide el suyo por slug y usa el de a mano solo
+  // como respaldo, para que la app funcione igual sin el archivo generado.
+  //
+  // El tamaño de letra sale del ANCHO EN COLUMNAS del arte: el convertido tiene ~100 y el de a
+  // mano ~35, así que con un tamaño fijo uno de los dos se sale de la escena.
+  function pintar(e, capa, slug, alternativa, ms) {
+    const conv = (window.DESPEDIDAS_ARTE || {})[slug];
+    const lista = (conv && conv.cuadros && conv.cuadros.length) ? conv.cuadros : alternativa;
+    let cols = 0;
+    lista.forEach(function (c) {
+      c.split('\n').forEach(function (l) { if (l.length > cols) cols = l.length; });
+    });
+    capa.style.fontSize = Math.max(6, Math.min(26, e.ancho / (cols * 0.62))) + 'px';
+    cuadros(e, capa, lista, (conv && conv.ms) || ms);
+  }
+
   // ── La cámara ──────────────────────────────────────────────────────────────
   // Los dos efectos que convierten un dibujo que se mueve en un golpe: el temblor sacude la
   // escena entera y el destello tapa todo un instante. Son los que dan el impacto del meteorito
@@ -305,7 +323,7 @@
       // ⚠️ Asimétrica a propósito: la primera versión era un montículo con la misma rampa de los
       // dos lados y se leía como una loma, no como una ola. La de Hokusai sube por la izquierda,
       // rompe arriba a la derecha y deja las garras de espuma colgando sobre lo que va a tapar.
-      cuadros(e, e.capas[1], [
+      pintar(e, e.capas[1], 'ola', [
         '                      ,   ,   ,\n' +
         '                     /|  /|  /|\n' +
         '              _,-~~~~ \'   \'   \'\n' +
