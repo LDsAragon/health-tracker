@@ -54,8 +54,19 @@ Salió de probar tres cosas distintas y mirar el resultado:
 
 - **Sí**: contraste alto y formas grandes. Estampas, siluetas, grafismos, cosas con contorno
   grueso. Hokusai se lee perfecto a 100 columnas: la cresta, la espuma y hasta el Fuji al fondo.
-- **No**: fotografía natural de tono parejo (probado con un caimán: sale una mancha) y grabado de
-  línea fina (probado con un Holbein de 1538: el entramado se vuelve ruido).
+- **No**: fotografía natural de tono parejo y grabado de línea fina. Probado con un caimán, un
+  Holbein de 1538, un acuario y **tres GIF de tiburones**: todos dan mancha.
+
+⚠️ **Lo que falla no es el contraste, es la silueta.** En una toma submarina el bicho y el agua
+son el mismo gris: no hay contorno que reducir. Se intentó rescatarlos con `--bordes` (detección
+de contorno antes de convertir) y `--normalizar` (estirar los niveles, porque el contorno sale
+tenue —llega a 84 de 255— y cae entero por debajo del piso). Las dos opciones **funcionan y
+quedan**, porque sirven para material fotográfico con un sujeto recortado contra el fondo; pero
+ninguna inventa un contorno que no está.
+
+El criterio corto: **si el material se ve bien en blanco y negro puro, convierte bien**. Un
+tiburón en silueta contra el agua clara entra; el mismo tiburón filmado de costado en penumbra,
+no.
 
 La regla es que a 100 columnas cada carácter se come ~20×40 píxeles del original. Lo que no
 sobreviva a esa reducción no va a estar en el ASCII.

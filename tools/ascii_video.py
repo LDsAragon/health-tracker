@@ -53,7 +53,7 @@ def _ffmpeg(*args):
 
 
 def extraer(origen: Path, carpeta: Path, cols: int, cuadros: int,
-            recorte: str = "", interpolar: bool = False) -> list:
+            recorte: str = "", interpolar: bool = False, bordes: bool = False) -> list:
     """Saca `cuadros` PNG en escala de grises, ya con la grilla de caracteres como resolución."""
     filas = max(6, int(round(cols * PROPORCION_CELDA * 0.62)))
     # `fps` se calcula para repartir los cuadros a lo largo de TODO el material: con un fps fijo,
@@ -70,6 +70,12 @@ def extraer(origen: Path, carpeta: Path, cols: int, cuadros: int,
         filtros.append("minterpolate=fps={:.4f}:mi_mode=mci".format(fps))
     else:
         filtros.append("fps={:.4f}".format(fps))
+    if bordes:
+        # Saca el contorno antes de convertir. Es lo que rescata el material FOTOGRAFICO: una
+        # toma submarina es todo gris medio y da puré, pero sus bordes son linea limpia.
+        # Va antes del escalado, con la imagen todavia grande, o los bordes se pierden.
+        filtros.append("format=gray")
+        filtros.append("edgedetect=low=0.06:high=0.18")
     filtros.append("scale={}:{}:flags=lanczos".format(cols, filas))
     filtros.append("format=gray")
 
@@ -104,10 +110,15 @@ def duracion(origen: Path) -> float:
         return 0.0
 
 
-def a_ascii(png: Path, invertir: bool, piso: int) -> str:
-    from PIL import Image
+def a_ascii(png: Path, invertir: bool, piso: int, normalizar: bool = False) -> str:
+    from PIL import Image, ImageOps
     with Image.open(png) as im:
         im = im.convert("L")
+        if normalizar:
+            # Estira los niveles para que el mas claro llegue al tope. Hace falta sobre todo con
+            # --bordes: el contorno sale tenue (llega a 84 de 255) y sin estirarlo cae entero por
+            # debajo del piso y no se dibuja nada.
+            im = ImageOps.autocontrast(im)
         ancho, alto = im.size
         pix = im.load()
         filas = []
@@ -149,6 +160,10 @@ def main():
     p.add_argument("--invertir", action="store_true", help="para material claro sobre fondo claro")
     p.add_argument("--piso", type=int, default=28, help="por debajo de esto es fondo (28)")
     p.add_argument("--recorte", default="", help="recorte ffmpeg ancho:alto:x:y, para acercarse")
+    p.add_argument("--normalizar", action="store_true",
+                   help="estira los niveles de cada cuadro; casi obligatorio con --bordes")
+    p.add_argument("--bordes", action="store_true",
+                   help="convierte el contorno en vez del tono; rescata material fotografico")
     p.add_argument("--bucle", action="store_true",
                    help="material corto que CICLA a su ritmo, en vez de estirarse sobre la escena")
     p.add_argument("--interpolar", action="store_true",
@@ -172,10 +187,10 @@ def main():
 
     tmp = Path(tempfile.mkdtemp(prefix="ascii-"))
     try:
-        pngs = extraer(origen, tmp, a.cols, a.cuadros, a.recorte, a.interpolar)
+        pngs = extraer(origen, tmp, a.cols, a.cuadros, a.recorte, a.interpolar, a.bordes)
         if not pngs:
             sys.exit("ffmpeg no saco ningun cuadro.")
-        cuadros = [a_ascii(f, a.invertir, a.piso) for f in pngs]
+        cuadros = [a_ascii(f, a.invertir, a.piso, a.normalizar) for f in pngs]
         arte[a.nombre] = {"ms": a.ms, "cols": a.cols, "cuadros": cuadros}
         if a.bucle:
             # Un material de medio segundo estirado sobre una escena de cuatro va en camara
