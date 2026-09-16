@@ -1023,6 +1023,18 @@ que saca la fila de la lista.
   cargaron, `confirmar.js` envía derecho. Es el mismo criterio que el `onsubmit="return false;"` de
   ese archivo y que el botón Guardar que sigue en la plantilla de Ajustes: lo decorativo puede
   fallar, la acción no. Lo fijan dos tripwires en `tests/test_despedidas.py`.
+- ⚠️ **Cada animación es una ESCENA, no un bicho que cruza la pantalla.** Esa primera forma se
+  descartó con el mismo diagnóstico del usuario: *"muy simplonas"*. Hoy hay **tres planos de
+  dibujo** —dos detrás del texto y uno adelante— que se mueven a distinta escala y velocidad, y eso
+  es lo que da la profundidad: el meteorito baja desde un cielo estrellado que queda quieto atrás,
+  el tiburón sube desde el fondo del mar creciendo, la ola se levanta por la izquierda hasta tapar
+  todo. La escala es la herramienta principal: **algo chico y lejos que se vuelve enorme**.
+- ⚠️ **Hay cámara, y es la mitad del golpe**: `sacudir()` mueve la ESCENA entera (no el dibujo —si
+  sacudiera el dibujo no sería un temblor—) y `destello()` tapa todo un instante con blanco. Son
+  las que dan el impacto del meteorito y el flash del guadañazo.
+- **La escena y el golpe están separados**: `COREOGRAFIAS[slug]` plantea (los planos, el viaje) y
+  `DESTRUCCION[slug]` es lo que le pasa al texto. Así se lee de un vistazo qué hace cada una, y hay
+  un tripwire por cada uno de los dos mapas.
 - ⚠️ **La destrucción SIGUE al bicho, y eso es lo que la saca de "simplona".** La primera
   versión mandaba las letras para cualquier lado con un retardo parejo: pasaba algo, pero no
   pasaba **por culpa de nada**. Ahora `ubicar()` mide dónde quedó cada letra dentro de la escena y
@@ -1032,11 +1044,14 @@ que saca la fila de la lista.
 - ⚠️ **El ritmo tiene tres tiempos y los tres importan.** La primera versión duraba 1,2 s y *"no
   se apreciaba"*: arrancaba con la destrucción ya empezada y terminaba antes de que pudieras
   mirar. Hoy: la tarea **aparece y se queda** un momento (la leés), pasa lo que pasa, y queda un
-  respiro de vacío antes de cerrar. Entre 2,5 y 3,3 s según la animación. `entrada()` y `salida()`
+  respiro de vacío antes de cerrar. Entre 3,3 y 4,5 s según la escena. `entrada()` y `salida()`
   son comunes a las cinco justamente para que el ritmo no se decida cinco veces.
-- **La escena mide 340px de alto** y no los 240 de antes: el bicho tiene cuatro o cinco líneas y
-  entra desde afuera, así que el viaje de llegada quedaba recortado contra el borde —el meteorito
-  se veía recién cuando ya había pegado—.
+- **La escena mide 420px de alto** y no los 240 del principio: los planos entran desde afuera —el
+  meteorito desde el espacio, el tiburón desde el fondo— y el viaje quedaba recortado contra el
+  borde. Dos veces pasó lo mismo: el meteorito se veía recién cuando ya había pegado, y el tiburón
+  aparecía arriba del texto sin la subida, que era justo lo que se había pedido.
+  ⚠️ **Al mover un plano, mirar contra qué borde queda.** El alto útil es ±210px desde el centro:
+  todo lo que se anime más allá está fuera de cuadro y no existe.
 - **Cada letra del texto es un `<span>`**, y de ahí sale todo: cada una se va por su lado, con su
   retardo y su rotación. El espacio va como **espacio duro**, porque un `inline-block` con un
   espacio normal mide cero y la frase se vería toda pegada. `perspective` en la escena es lo que

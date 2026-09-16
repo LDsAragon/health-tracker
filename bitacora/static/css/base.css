@@ -165,30 +165,26 @@ a { color: inherit; text-decoration: none; }
 /* La muerte de una tarea. Va en base.css —y no en day.css ni en pages.css— porque la usan tres
    pantallas de dos árboles distintos: el día, el visor de tareas y la previsualización de
    Ajustes. Mismo criterio que `.refresco-aviso`. */
-/* ⚠️ La cortina propia, más oscura que la de los otros modales. `.update-modal-overlay` usa
-   55% de negro, que alcanza cuando arriba hay una caja con fondo y borde; acá no hay caja —es un
-   escenario, no un cartel— y con esa cortina la animación flotaba sobre la lista y parecía un
-   accidente. */
-#despedida-modal { background: rgba(0, 0, 0, .86); }
-
 .despedida-escena {
   position: relative;
-  width: min(620px, 88vw);
-  /* ⚠️ Alta a propósito: el bicho tiene cuatro o cinco líneas y entra desde afuera, así que con
-     240px el viaje de llegada quedaba recortado contra el borde —el meteorito se veía recién
-     cuando ya había pegado—. Acá hay lugar para la aproximación y para los escombros. */
-  height: 340px;
+  width: min(760px, 92vw);
+  /* ⚠️ Alta a propósito: las escenas tienen planos que entran desde afuera —el meteorito baja
+     desde el espacio, el tiburón sube desde el fondo— y con 240px el viaje quedaba recortado
+     contra el borde: el meteorito se veía recién cuando ya había pegado. */
+  height: 420px;
   display: flex;
   align-items: center;
   justify-content: center;
   /* Lo que convierte los rotateX/rotateY en profundidad de verdad y no en un aplastado. */
-  perspective: 700px;
+  perspective: 800px;
   overflow: hidden;
 }
 .despedida-texto {
+  position: relative;
+  z-index: 2;
   margin: 0;
   padding: 0 18px;
-  font-size: 22px;
+  font-size: 23px;
   font-weight: 600;
   line-height: 1.45;
   text-align: center;
@@ -202,15 +198,34 @@ a { color: inherit; text-decoration: none; }
   white-space: pre;
   will-change: transform, opacity;
 }
-.despedida-bicho {
+/* Los planos del dibujo. Las de fondo van más chicas y apagadas: es lo que da la distancia. */
+.despedida-capa {
   position: absolute;
   margin: 0;
   font-family: monospace;
-  font-size: 26px;
   line-height: 1.05;
-  color: var(--accent);
   white-space: pre;
   opacity: 0;
   pointer-events: none;          /* nada de esto puede comerse un clic */
+  will-change: transform, opacity;
+}
+.despedida-capa-fondo {
+  z-index: 1;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.despedida-capa-frente {
+  z-index: 3;
+  font-size: 20px;
+  color: var(--accent);
   text-shadow: 0 1px 3px var(--bg);
+}
+/* El golpe. Blanco y encima de todo: es el flash de impacto, no una transición. */
+.despedida-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
 }

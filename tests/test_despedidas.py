@@ -39,7 +39,37 @@ def test_todos_los_bichos_tienen_cuadros_propios():
     for slug in despedidas.SLUGS:
         cuerpo = bloque[bloque.index(slug + ": function (e, tl)"):]
         cuerpo = cuerpo[:cuerpo.index("return tl")]
-        assert "cuadros(e, [" in cuerpo, slug
+        assert "cuadros(e, e.capas[" in cuerpo, slug
+
+
+def test_cada_animacion_tiene_su_destruccion():
+    """La escena y lo que le pasa al texto van separados: la escena es el planteo y `DESTRUCCION`
+    es el golpe. Una escena sin su destrucción dejaría la tarea intacta en pantalla."""
+    js = _leer("bitacora", "static", "js", "despedidas.js")
+    bloque = js[js.index("const DESTRUCCION = {"):js.index("// ── El reproductor")]
+    en_js = set(re.findall(r"^    (\w+): function \(e, tl\)", bloque, re.M))
+    assert en_js == set(despedidas.SLUGS), (en_js, despedidas.SLUGS)
+
+
+def test_la_escena_tiene_planos_y_camara():
+    """Los planos son lo que da profundidad —el cielo lejos y quieto, el meteorito cerca— y la
+    cámara es lo que convierte un dibujo que se mueve en un golpe. Sin esto, cada animación vuelve
+    a ser un solo bicho cruzando la pantalla, que es de donde se venía."""
+    html = _leer("bitacora", "templates", "base.html")
+    for n in (0, 1, 2):
+        assert 'id="despedida-capa%d"' % n in html, n
+    assert 'id="despedida-flash"' in html
+
+    js = _leer("bitacora", "static", "js", "despedidas.js")
+    assert "function sacudir(e, tl" in js and "function destello(e, tl" in js
+    # El temblor sacude la ESCENA entera, no el dibujo: si sacudiera el dibujo no sería un temblor.
+    assert "targets: e.caja, keyframes: pasos" in js
+
+    css = _leer("bitacora", "static", "css", "base.css")
+    assert ".despedida-flash" in css
+    # ⚠️ El destello tapa toda la escena: sin esto se comería el clic de lo que haya abajo.
+    flash = css[css.index(".despedida-flash"):]
+    assert "pointer-events: none;" in flash[:400]
 
 
 # ⚠️ Medidos EN EL NAVEGADOR, en la fuente del bicho (16 caracteres seguidos, en px):
@@ -56,22 +86,24 @@ FUERA_DE_GRILLA_OK = {"☄"}
 
 
 def _cuadros_del_arte():
-    """Los literales de los `cuadros(e, [...])`, que es donde vive el dibujo.
+    """Los literales de los `cuadros(e, capa, [...])`, que es donde vive el dibujo.
 
     Se lee por líneas y no con una expresión regular: el arte está lleno de barras invertidas
     (las mandíbulas, la estela del meteorito) y un patrón que las contemple es justo el tipo de
-    cosa que se rompe sola.
+    cosa que se rompe sola. Los cuadros grandes se escriben como varias líneas concatenadas con
+    `+`, así que cada una cuenta por separado: para lo que se mira acá —qué caracteres usa— da
+    exactamente igual.
     """
     fuera = []
     dentro = False
     for linea in _leer("bitacora", "static", "js", "despedidas.js").splitlines():
         t = linea.strip()
-        if t.startswith("cuadros(e, ["):
+        if t.startswith("cuadros(e, e.capas["):
             dentro = True
         elif dentro and t.startswith("],"):
             dentro = False
         elif dentro and t.startswith("'"):
-            fuera.append(t.rstrip(",").strip("'"))
+            fuera.append(t.rstrip("+").strip().rstrip(",").strip("'"))
     return fuera
 
 
@@ -97,7 +129,7 @@ def test_el_reloj_de_los_cuadros_se_corta_al_terminar():
     cortarlo queda vivo sobre una página que se está yendo —y el borrado recarga la página—."""
     js = _leer("bitacora", "static", "js", "despedidas.js")
     terminar = js[js.index("const terminar = function ()"):]
-    assert "clearInterval(e.reloj)" in terminar[:400]
+    assert "e.relojes.forEach(clearInterval)" in terminar[:500]
 
 
 def test_el_texto_que_se_destruye_es_el_de_la_tarea():

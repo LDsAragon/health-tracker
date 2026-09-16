@@ -258,9 +258,15 @@
      elemento, y se destruye de verdad —ver static/js/despedidas.js—. La escena no lleva
      `.update-modal-box` a propósito: no es un cartel, es un escenario. #}
   <div id="despedida-modal" class="update-modal-overlay" style="display:none;">
-    <div class="despedida-escena">
-      <pre class="despedida-bicho" id="despedida-bicho"></pre>
+    {# Capas: las de fondo van detrás del texto y las de frente adelante, así una escena puede
+       tener profundidad —el cielo estrellado atrás, el meteorito adelante—. El destello es la
+       otra mitad de la cámara, junto con el temblor que sacude la escena entera. #}
+    <div class="despedida-escena" id="despedida-escena">
+      <pre class="despedida-capa despedida-capa-fondo" id="despedida-capa0"></pre>
+      <pre class="despedida-capa despedida-capa-fondo" id="despedida-capa1"></pre>
       <p class="despedida-texto" id="despedida-texto"></p>
+      <pre class="despedida-capa despedida-capa-frente" id="despedida-capa2"></pre>
+      <div class="despedida-flash" id="despedida-flash"></div>
     </div>
   </div>
 
