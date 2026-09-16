@@ -6,7 +6,7 @@ sin abrir ventanas de verdad.
 import calendar as cal
 from datetime import date
 
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 
 from bitacora import database as db
 from bitacora import services
@@ -60,6 +60,9 @@ def vista():
         prev=(año - 1, 12) if mes == 1 else (año, mes - 1),
         sig=(año + 1, 1) if mes == 12 else (año, mes + 1),
         fijado=widget.esta_fijado(),
+        # Desde dónde arranca a contar el agarre de la esquina. El valor se corrige solo con lo
+        # que devuelve /widget/tamano, así que alcanza con que sea el de la última vez.
+        tamano_widget=widget.tamano_actual(),
     )
 
 
@@ -153,6 +156,30 @@ def fijar():
 def minimizar():
     widget.minimizar()
     return _volver(request.form.get("p", "tareas"))
+
+
+@bp.route("/widget/tamano", methods=["POST"])
+def tamano():
+    """El agarre de la esquina, mientras lo arrastrás. 204 y a otra cosa.
+
+    Llega muchas veces por segundo, así que no devuelve página: es el mismo trato que
+    `/ajustes/set`. Sin medidas válidas no hace nada —redimensionar a cualquier cosa es peor que
+    no redimensionar—, y sin ventana (modo navegador, tests) `widget.redimensionar` es no-op.
+    """
+    try:
+        w = int(request.form["w"])
+        h = int(request.form["h"])
+    except (KeyError, TypeError, ValueError):
+        return "", 400
+    ancho, alto = widget.redimensionar(w, h)
+    return jsonify(w=ancho, h=alto)
+
+
+@bp.route("/widget/tamano/original", methods=["POST"])
+def tamano_original():
+    """Doble clic en el agarre."""
+    ancho, alto = widget.tamano_original()
+    return jsonify(w=ancho, h=alto)
 
 
 @bp.route("/widget/cerrar", methods=["POST"])

@@ -278,6 +278,64 @@ function editarEnLinea(lapiz) {
 recordarColapsable('w-notas-hoy', 'widgetNotasHoy', false);
 </script>
 
+{# El agarre para estirar la ventana. ⚠️ La ventana es `frameless`, o sea que NO tiene borde de
+   redimensionado: sin esto, con el mouse no hay de dónde agarrarla (el `resizable=True` con el que
+   se crea no alcanza). Doble clic vuelve a la medida original, el mismo gesto que resetea el ancho
+   de los paneles del día. #}
+<div class="w-grip" id="w-grip" title="Arrastrá para cambiar el tamaño · doble clic para el original"></div>
+<script>window.WIDGET_TAMANO = {{ tamano_widget | tojson }};</script>
+<script>
+(function () {
+  const agarre = document.getElementById('w-grip');
+  if (!agarre) return;
+  let actual = window.WIDGET_TAMANO || [340, 520];
+  let x0 = 0, y0 = 0, w0 = 0, h0 = 0, arrastrando = false;
+  let enVuelo = false, pendiente = null;
+
+  // Una medida a la vez: mientras una está viajando, la siguiente espera y se pisa con la que
+  // venga después. Arrastrar dispara decenas de eventos por segundo y no hay nada que ganar
+  // mandándolos todos.
+  function mandar(url, datos) {
+    if (enVuelo) { pendiente = [url, datos]; return; }
+    enVuelo = true;
+    fetch(url, { method: 'POST', body: new URLSearchParams(datos || {}) })
+      .then(function (r) { return r.json(); })
+      .then(function (t) { actual = [t.w, t.h]; })
+      .catch(function () {})
+      .then(function () {
+        enVuelo = false;
+        if (pendiente) { const p = pendiente; pendiente = null; mandar(p[0], p[1]); }
+      });
+  }
+
+  agarre.addEventListener('mousedown', function (e) {
+    // ⚠️ El stopPropagation NO es opcional: easy_drag de pywebview engancha su `mousedown` en
+    // `window`, así que sin cortar la propagación arrastrar el agarre **movería** la ventana
+    // mientras se redimensiona, y se ve como que el widget se escapa.
+    e.preventDefault();
+    e.stopPropagation();
+    arrastrando = true;
+    x0 = e.screenX; y0 = e.screenY;
+    w0 = actual[0]; h0 = actual[1];
+  });
+
+  // En `window` y no en el agarre: al agrandar, el puntero le va ganando de mano a la esquina.
+  window.addEventListener('mousemove', function (e) {
+    if (!arrastrando) return;
+    mandar('/widget/tamano', { w: Math.round(w0 + (e.screenX - x0)),
+                               h: Math.round(h0 + (e.screenY - y0)) });
+  });
+  window.addEventListener('mouseup', function () { arrastrando = false; });
+
+  agarre.addEventListener('dblclick', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    arrastrando = false;
+    mandar('/widget/tamano/original', {});
+  });
+})();
+</script>
+
 {# ⚠️ tojson, y NO el valor entre comillas — ver la nota en base.html: las barras invertidas de
    la ruta de Windows se comían como escapes de JavaScript y la página se recargaba sin parar. #}
 <script>window.TOKEN_DATOS = {{ token_datos | tojson }};</script>

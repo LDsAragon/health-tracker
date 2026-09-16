@@ -48,6 +48,24 @@ def _check(cond, msg):
         fallos.append(msg)
 
 
+def _esperar(cond, segundos=8):
+    """Espera a que se cumpla, hasta `segundos`.
+
+    ⚠️ Con un `sleep` fijo, un chequeo sobre una ventana real mide la velocidad del escritorio y
+    no si la ventana cambió: en GTK el redimensionado pasa por el gestor de ventanas y el evento
+    vuelve cuando vuelve —con 1 segundo daba en rojo algo que sí funcionaba—.
+    """
+    limite = time.time() + segundos
+    while time.time() < limite and not cond():
+        time.sleep(0.2)
+    return cond()
+
+
+def _geometria():
+    g = widget.leer_geometria()
+    return g.get("w"), g.get("h")
+
+
 def guion():
     time.sleep(3)
     try:
@@ -77,6 +95,22 @@ def guion():
         widget.guardar_geometria(x=50, y=60)
         _check(widget.leer_geometria().get("x") == 50,
                f"la geometría se guarda en {widget.GEOMETRIA} (no en settings)")
+
+        # Estirar la ventana. ⚠️ Es `frameless`, o sea FormBorderStyle = None: NO tiene borde de
+        # redimensionado y el `resizable=True` con el que se crea no hace nada. El agarre lo pone
+        # la página y termina en `redimensionar()`, así que acá se prueba esa mitad —la otra, que
+        # el mouse pueda agarrar la esquina, es de las que se miran.
+        widget.redimensionar(480, 640)
+        _check(_esperar(lambda: _geometria() == (480, 640)),
+               f"redimensionar cambia la ventana Y queda guardado: {_geometria()}")
+        # Lo anterior pasa solo si el evento `resized` salta con un resize NUESTRO y no solo con
+        # el del mouse: si no saltara, el tamaño se perdería al cerrar y nadie se enteraría.
+        widget.redimensionar(10, 10)
+        _check(_esperar(lambda: _geometria() == widget.MIN_WIDGET),
+               f"una medida imposible se acota al mínimo {widget.MIN_WIDGET}: {_geometria()}")
+        widget.tamano_original()
+        _check(_esperar(lambda: _geometria() == (widget.ANCHO, widget.ALTO)),
+               f"el doble clic del agarre devuelve la medida de fábrica: {_geometria()}")
 
         # El punto del widget: la ventana grande se cierra y él sigue vivo.
         principal.destroy()
@@ -115,6 +149,11 @@ def _puertos():
 
 threading.Thread(target=guion, daemon=True).start()
 webview.settings["ALLOW_DOWNLOADS"] = True
+# ⚠️ El `http_port` NO es opcional acá: sin él pywebview sortea el puerto con randint(1023, 65535)
+# y cae en uno de los ~85 que Chromium rechaza (ERR_UNSAFE_PORT) cada ~750 arranques. La app lo
+# pasa en `escritorio/main.py`; este smoke repetía el arranque a mano y se lo había salteado, así
+# que su propio chequeo del puerto venía en rojo —probaba el smoke y no la app—.
 webview.create_window(desktop.WINDOW_TITLE, flask_app, width=900, height=600,
-                      min_size=desktop.MIN_SIZE, text_select=True)
+                      min_size=desktop.MIN_SIZE, text_select=True,
+                      http_port=desktop.puerto_seguro())
 webview.start(private_mode=False, storage_path=str(desktop.APP_DIR / "webview"))

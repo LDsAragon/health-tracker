@@ -175,3 +175,22 @@
   font-size: 10px;
   text-align: center;
 }
+
+/* El agarre para estirar la ventana. La ventana es frameless: no hay borde del sistema del que
+   tirar, así que esta esquina es la única forma de cambiarle el tamaño con el mouse. */
+.w-grip {
+  position: fixed; right: 0; bottom: 0;
+  width: 16px; height: 16px;
+  cursor: nwse-resize;
+  z-index: 10;
+  /* Dos rayitas, como el agarre de cualquier ventana. Se ven apenas: el widget tiene que ocupar
+     lo mínimo y esto está siempre en pantalla. */
+  background:
+    linear-gradient(135deg, transparent 0 46%, var(--border) 46% 58%, transparent 58%),
+    linear-gradient(135deg, transparent 0 68%, var(--border) 68% 80%, transparent 80%);
+}
+.w-grip:hover {
+  background:
+    linear-gradient(135deg, transparent 0 46%, var(--accent) 46% 58%, transparent 58%),
+    linear-gradient(135deg, transparent 0 68%, var(--accent) 68% 80%, transparent 80%);
+}

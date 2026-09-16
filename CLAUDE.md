@@ -188,6 +188,12 @@ Smoke tests fuera de pytest, porque necesitan display o ventana real — todos v
 de Windows— así que en Linux apuntaba a la carpeta de datos **real**; lo frenó su propio assert,
 que está justamente para eso. Ahora fija las dos variables.
 
+⚠️ **Un smoke que repite el arranque a mano prueba el smoke, no la app.** `smoke_widget` armaba
+su `create_window` sin el `http_port=puerto_seguro()` que sí pasa `escritorio/main.py`, así que su
+propio chequeo —"el servidor levantó en un puerto que Chromium acepta"— venía **en rojo** y lo
+que fallaba era el andamio. Es el mismo agujero que ya tenía `smoke_desktop` con los pasos del
+arranque. Antes de creerle a un smoke: mirar si lo que hace es lo que hace la app.
+
 ⚠️ **Lo del empaquetado Linux se verifica sobre una instalación de verdad**, armada desde el
 tarball (`tar -xzf dist/Bitacora-linux-*.tar.gz -C $(mktemp -d)` y `./instalar.sh` con un `HOME`
 temporal), nunca sobre el repo: es lo único que reproduce que allá la app corre **desde el
@@ -409,6 +415,13 @@ Segunda ventana de pywebview **en el mismo proceso**, `frameless` + `easy_drag` 
   cierra la *última* ventana. Es la razón de ser de la feature.
 - ⚠️ **Una ventana destruida NO tira excepción al navegarla.** Hay que preguntarle a pywebview si
   todavía la tiene (`_principal_viva()`), o el clic en un día se pierde en silencio.
+- ⚠️ **Las dos escrituras de `widget.json` van bajo un lock** (`_geo_lock`). Los que escriben son
+  manejadores de eventos de la ventana —`moved` y `resized`— y **llegan juntos**: en GTK cada
+  redimensionado viene con su `moved` pegado. Cada uno leía el archivo, cambiaba lo suyo y lo
+  escribía entero, así que el que escribía último lo hacía sobre una foto vieja y le devolvía al
+  archivo las claves del otro como estaban antes: **mover el widget le borraba el tamaño recién
+  elegido**. Sin error en ningún lado. El temporal lleva además el id del hilo, porque compartido
+  uno podía truncarlo justo cuando el otro estaba por renombrarlo.
 - ⚠️ **La geometría del widget va a `APP_DIR/widget.json`, nunca a `settings`**: los ajustes
   sincronizan entre máquinas y el widget aparecería corrido o fuera de pantalla en la otra.
 - ⚠️ **Una posición guardada se valida contra los monitores, al guardarla y al abrir**
@@ -418,6 +431,29 @@ Segunda ventana de pywebview **en el mismo proceso**, `frameless` + `easy_drag` 
   la app decía que estaba abierto mientras no se veía por ningún lado. Desenchufar el monitor
   donde vivía hacía lo mismo. Al abrir, una posición imposible se descarta y se olvida
   (`olvidar_posicion()` deja el tamaño), así la ventana nace donde la ponga el sistema.
+- ⚠️ **El widget se estira desde un agarre de la PÁGINA, no desde el borde del sistema.** La
+  ventana es `frameless`, y en Windows eso es `FormBorderStyle = None`
+  (`webview/platforms/winforms.py`): **no tiene borde de redimensionado**, así que el
+  `resizable=True` con el que se crea es inerte y con el mouse no había de dónde agarrarla —se
+  veía como un flag correcto y no hacía nada—. Renunciar a `frameless` para ganar ese borde le
+  devolvería la barra de título, que es justo lo que el widget no tiene. El agarre vive en
+  `widget.html` (`.w-grip`, la esquina de abajo a la derecha) y postea a `POST /widget/tamano`,
+  que termina en `escritorio.widget.redimensionar()`.
+  - ⚠️ **El `mousedown` del agarre corta la propagación.** `easy_drag` engancha el suyo en
+    `window`, así que sin eso arrastrar el agarre **movería** la ventana mientras se
+    redimensiona. Es callado —parece que el widget se escapa— y por eso va con tripwire.
+  - La ruta **devuelve la medida que aplicó** (acotada a `MIN_WIDGET` y a la pantalla) y la
+    página sigue el arrastre desde ahí: el tope vive en un solo lado y el agarre no sigue
+    contando por su cuenta una ventana que ya no se achicó más. De dónde **parte** sale de
+    `tamano_actual()`, que lee la geometría guardada y no `_ventana.width` —esa propiedad
+    **espera hasta 15 s** a que la ventana se muestre, y la lee un request que puede llegar justo
+    mientras el widget se abre—.
+  - **No guarda nada**: `resize()` dispara el `Resize` de WinForms igual que el del mouse, así que
+    el `resized` que ya estaba enganchado escribe la geometría solo. Lo comprueba
+    `hacer.ps1 smoke widget`, que es lo único que puede.
+  - **Doble clic en el agarre vuelve a 340×520**, el mismo gesto que resetea el ancho de los
+    paneles del día. Por eso no hizo falta darle menú contextual al widget ni otro botón a una
+    barra de 340px.
 
 ### Una sola instancia
 Abrir Bitácora estando abierta **no lanza otra**: vuelve la que ya está, y donde la dejaste.

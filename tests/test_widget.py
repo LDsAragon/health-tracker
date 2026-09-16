@@ -4,6 +4,7 @@ Lo que necesita una ventana real va a tools/smoke_widget.py; acá va todo lo que
 verificar sin display.
 """
 import json
+import pathlib
 from datetime import date, timedelta
 
 import pytest
@@ -24,6 +25,8 @@ def cliente(tmp_path, monkeypatch):
     with flask_app.app.test_client() as c:
         yield c
 
+
+RAIZ = pathlib.Path(__file__).resolve().parent.parent
 
 HOY = date.today().isoformat()
 VIEJA = (date.today() - timedelta(days=20)).isoformat()
@@ -429,3 +432,112 @@ def test_el_acceso_a_nota_especial_abre_el_dia(cliente):
     html = cliente.get("/widget?p=nota").data.decode()
     assert "Nota especial" in html
     assert f"/widget/dia/{HOY}" in html
+
+
+# ── Estirar la ventana ───────────────────────────────────────────────────────
+# ⚠️ El widget es `frameless`, y en Windows eso es FormBorderStyle = None: NO tiene borde de
+# redimensionado. El `resizable=True` con el que se crea la ventana no hace nada — con el mouse
+# no había de dónde agarrarla. El agarre lo pone la página y termina en estas rutas.
+
+def test_el_minimo_de_la_ventana_y_el_del_acotado_son_el_mismo():
+    """Son el mismo límite: con dos números sueltos, subir uno dejaba al otro atrás."""
+    assert widget._acotar(10, 10) == widget.MIN_WIDGET
+
+
+def test_redimensionar_devuelve_la_medida_que_aplico(cliente):
+    """La página sigue el arrastre desde lo que devuelve la ruta, así el tope vive en un solo
+    lado y el agarre no sigue contando por su cuenta una ventana que ya no se achicó más."""
+    r = cliente.post("/widget/tamano", data={"w": "480", "h": "700"})
+    assert r.status_code == 200 and r.get_json() == {"w": 480, "h": 700}
+
+    chico = cliente.post("/widget/tamano", data={"w": "10", "h": "10"}).get_json()
+    assert (chico["w"], chico["h"]) == widget.MIN_WIDGET
+
+
+def test_una_medida_que_no_es_un_par_de_numeros_no_hace_nada(cliente):
+    """Redimensionar a cualquier cosa es peor que no redimensionar."""
+    assert cliente.post("/widget/tamano", data={"w": "ancho", "h": "700"}).status_code == 400
+    assert cliente.post("/widget/tamano", data={"h": "700"}).status_code == 400
+
+
+def test_el_doble_clic_vuelve_a_la_medida_de_fabrica(cliente):
+    r = cliente.post("/widget/tamano/original")
+    assert r.get_json() == {"w": widget.ANCHO, "h": widget.ALTO}
+
+
+def test_sin_ventana_no_explota(cliente):
+    """Modo navegador y tests: como todo el módulo, degrada a no-op."""
+    assert widget.esta_abierto() is False
+    assert widget.redimensionar(500, 600) == (500, 600)
+
+
+def test_la_pagina_trae_el_agarre_y_la_medida_de_la_que_parte(cliente):
+    html = cliente.get("/widget").data.decode()
+    assert 'id="w-grip"' in html
+    assert "window.WIDGET_TAMANO = [340, 520]" in html
+
+
+def test_el_agarre_corta_la_propagacion_del_mousedown():
+    """⚠️ Tripwire de un fallo callado: `easy_drag` de pywebview engancha su `mousedown` en
+    `window`, así que sin el stopPropagation arrastrar el agarre MOVERÍA la ventana mientras se
+    redimensiona — se ve como que el widget se escapa, y no hay error en ningún lado."""
+    html = (RAIZ / "bitacora" / "templates" / "widget.html").read_text(encoding="utf-8")
+    mousedown = html[html.index("agarre.addEventListener('mousedown'"):]
+    assert "e.stopPropagation();" in mousedown[:600]
+
+
+def test_el_tamano_no_viaja_en_el_sync():
+    """Sigue en widget.json, como la posición: una medida elegida en un monitor de 2560 no tiene
+    sentido en una laptop de 1366. Es el mismo motivo que dejó las preferencias de vista fuera
+    del sync, y por eso tampoco puede aparecer como ajuste ni como preferencia de vista."""
+    assert widget.GEOMETRIA == "widget.json"
+    assert "widget.json" not in (RAIZ / "bitacora" / "sync.py").read_text(encoding="utf-8")
+    assert "widget" not in SETTINGS.get("window_size", {}).get("choices", ())
+    from bitacora.appconfig import VISTAS
+    assert [c for c in VISTAS["widget"] if "tamano" in c or "grip" in c] == []
+
+
+def test_mover_y_redimensionar_a_la_vez_no_se_pisan(tmp_path, monkeypatch):
+    """⚠️ Los dos que escriben widget.json son manejadores de eventos de la ventana —`moved` y
+    `resized`— y llegan JUNTOS: en GTK cada redimensionado viene con su `moved` pegado. Cada uno
+    hacía leer-modificar-escribir por su cuenta, así que el que escribía último lo hacía sobre una
+    foto vieja y le devolvía al archivo las claves del otro como estaban antes: **mover el widget
+    le borraba el tamaño recién elegido**, y al revés. Sin error en ningún lado.
+
+    Lo cazó `hacer.ps1 smoke widget` en Linux, donde los dos eventos llegan de a pares. Acá la
+    lectura se hace lenta a propósito: si no, el choque depende de cómo caiga el planificador y
+    el test no probaría nada.
+    """
+    import threading
+    import time as _t
+
+    monkeypatch.setenv("HT_PERFILES", str(tmp_path))
+    monkeypatch.setattr(widget, "_url_base", "http://127.0.0.1:1")   # hay_escritorio()
+
+    real_leer = widget.leer_geometria
+
+    def lenta():
+        d = real_leer()
+        _t.sleep(0.003)          # ensancha el hueco entre leer y escribir
+        return d
+
+    monkeypatch.setattr(widget, "leer_geometria", lenta)
+    widget.guardar_geometria(x=0, y=0, w=340, h=520)
+
+    def mover():
+        for i in range(30):
+            widget.guardar_geometria(x=i, y=i)
+
+    def estirar():
+        for i in range(30):
+            widget.guardar_geometria(w=300 + i, h=500 + i)
+
+    hilos = [threading.Thread(target=mover), threading.Thread(target=estirar)]
+    for t in hilos:
+        t.start()
+    for t in hilos:
+        t.join()
+
+    # Lo último que pidió cada uno tiene que seguir ahí: ninguno pisó al otro con una foto vieja.
+    assert real_leer() == {"x": 29, "y": 29, "w": 329, "h": 529}, real_leer()
+    assert not list(tmp_path.glob("*.tmp")), "quedó un temporal sin renombrar"

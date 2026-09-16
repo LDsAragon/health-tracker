@@ -9,6 +9,9 @@ import threading
 
 TITULO = "Bitácora"
 ANCHO, ALTO = 340, 520
+# Lo más chico que puede quedar el widget. Es el `min_size` de su ventana Y el piso del acotado
+# de `redimensionar()`: son el mismo límite y tenían que salir del mismo lugar.
+MIN_WIDGET = (260, 320)
 # Mínimo de la ventana GRANDE (el del widget es el min_size de su create_window).
 MIN_PRINCIPAL = (420, 480)
 GEOMETRIA = "widget.json"
@@ -20,6 +23,10 @@ _principal = None
 _url_base = ""
 _minimizada = False
 _lock = threading.Lock()
+# ⚠️ Propio, y no el de arriba: la geometría la escriben los manejadores de eventos de la
+# ventana (`moved` y `resized`), que corren por su cuenta y pueden pisarse —ver
+# `_escribir_geometria`—, mientras que `_lock` protege la creación de la ventana.
+_geo_lock = threading.Lock()
 
 
 def configurar(ventana_principal, url_base: str):
@@ -77,9 +84,22 @@ def leer_geometria() -> dict:
 
 def _escribir_geometria(d: dict):
     """Escritura atómica, como profiles.guardar(): un JSON a medio escribir dejaría al widget
-    sin saber dónde ponerse."""
+    sin saber dónde ponerse.
+
+    ⚠️ **El leer-modificar-escribir va bajo `_geo_lock`** (en `guardar_geometria`). Los dos que
+    escriben acá son manejadores de eventos de la ventana —`moved` y `resized`— y llegan JUNTOS:
+    en GTK cada redimensionado viene con su `moved` pegado. Cada uno leía el archivo, cambiaba lo
+    suyo y lo escribía entero, así que el que escribía último lo hacía sobre una foto vieja y le
+    devolvía al archivo las claves del otro **como estaban antes**: movés el widget y pierde el
+    tamaño recién elegido, o al revés. Lo cazó `hacer.ps1 smoke widget` en Linux y lo fija
+    `test_mover_y_redimensionar_a_la_vez_no_se_pisan`.
+
+    El temporal lleva además el id del hilo: compartido, uno podía truncarlo justo cuando el otro
+    estaba por renombrarlo y lo que quedaba en disco era un JSON vacío. Es mucho más raro que lo
+    anterior —y por eso no tiene test propio—, pero cuesta una línea evitarlo.
+    """
     try:
-        tmp = _ruta_geometria() + ".tmp"
+        tmp = "{}.{}.tmp".format(_ruta_geometria(), threading.get_ident())
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(d, f)
         os.replace(tmp, _ruta_geometria())
@@ -90,16 +110,18 @@ def _escribir_geometria(d: dict):
 def guardar_geometria(**campos):
     if not hay_escritorio():
         return
-    d = leer_geometria()
-    d.update({k: int(v) for k, v in campos.items() if isinstance(v, (int, float))})
-    _escribir_geometria(d)
+    with _geo_lock:
+        d = leer_geometria()
+        d.update({k: int(v) for k, v in campos.items() if isinstance(v, (int, float))})
+        _escribir_geometria(d)
 
 
 def olvidar_posicion():
     """Saca x/y y deja el tamaño: la posición guardada ya no cae en ninguna pantalla."""
-    d = leer_geometria()
-    if "x" in d or "y" in d:
-        _escribir_geometria({k: v for k, v in d.items() if k in ("w", "h")})
+    with _geo_lock:
+        d = leer_geometria()
+        if "x" in d or "y" in d:
+            _escribir_geometria({k: v for k, v in d.items() if k in ("w", "h")})
 
 
 # ⚠️ Cuánto del widget tiene que quedar dentro de una pantalla para poder agarrarlo. No alcanza
@@ -180,7 +202,7 @@ def abrir():
                 width=ancho, height=alto,
                 x=x, y=y,
                 frameless=True, easy_drag=True, on_top=True,
-                resizable=True, min_size=(260, 320), text_select=True,
+                resizable=True, min_size=MIN_WIDGET, text_select=True,
             )
         except Exception:
             _ventana = None
@@ -227,6 +249,63 @@ def minimizar():
             _ventana.minimize()
         except Exception:
             pass
+
+
+def _acotar(w, h):
+    """El tamaño pedido, con piso en `MIN_WIDGET` y techo en la pantalla más grande."""
+    w, h = int(w), int(h)
+    w, h = max(w, MIN_WIDGET[0]), max(h, MIN_WIDGET[1])
+    pantallas = _pantallas()
+    if pantallas:
+        w = min(w, max(p[2] for p in pantallas))
+        h = min(h, max(p[3] for p in pantallas))
+    return w, h
+
+
+def redimensionar(w, h):
+    """Cambiar el tamaño del widget. La pide la página mientras arrastrás el agarre.
+
+    ⚠️ **El agarre lo tiene que poner la página.** La ventana es `frameless`, y en Windows eso es
+    `FormBorderStyle = None`: no tiene borde de redimensionado, así que el `resizable=True` con el
+    que se crea **no hace nada** y con el mouse no hay de dónde agarrarla. Renunciar a `frameless`
+    para ganar el borde del sistema le devolvería la barra de título, que es justo lo que el
+    widget no tiene.
+
+    No guarda nada a propósito: `resize()` dispara el evento `resized` que ya está enganchado en
+    `abrir()` (es el `Resize` de WinForms, que salta igual sea del mouse o nuestro), y ese escribe
+    la geometría. Dos caminos de guardado serían dos verdades.
+
+    Devuelve la medida que aplicó —o la que habría aplicado si no hay ventana—, y la página la
+    usa para seguir el arrastre desde ahí: así el tope vive en un solo lado y el agarre no sigue
+    contando por su cuenta una ventana que ya no se achicó más.
+    """
+    ancho, alto = _acotar(w, h)
+    if _ventana is not None:
+        try:
+            _ventana.resize(ancho, alto)
+        except Exception:
+            pass
+    return ancho, alto
+
+
+def tamano_original():
+    """Doble clic en el agarre: vuelve a la medida de fábrica.
+
+    Es el mismo gesto que ya resetea el ancho de los paneles del día, así que no hay nada nuevo
+    que aprender y la barra de 340px no pierde otro botón.
+    """
+    return redimensionar(ANCHO, ALTO)
+
+
+def tamano_actual():
+    """Con qué medida está el widget ahora, para que la página arranque el arrastre desde ahí.
+
+    ⚠️ Sale de la geometría guardada —que el evento `resized` mantiene al día— y no de
+    `_ventana.width`, que **espera hasta 15 segundos** a que la ventana se haya mostrado: esto lo
+    lee un request que puede llegar justo mientras el widget se está abriendo.
+    """
+    g = leer_geometria()
+    return g.get("w", ANCHO), g.get("h", ALTO)
 
 
 def _principal_viva():
