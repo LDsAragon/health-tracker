@@ -30,6 +30,76 @@ def test_cada_animacion_tiene_su_coreografia():
     assert en_js == set(despedidas.SLUGS), (en_js, despedidas.SLUGS)
 
 
+def test_todos_los_bichos_tienen_cuadros_propios():
+    """El movimiento lo dan las transformaciones, pero el bicho además se anima por dentro: la
+    mandíbula que se abre, la cresta que rompe, la estela que titila. Es la mitad que faltaba para
+    poder usar arte de las galerías de ASCII animado (o el propio, hecho con ASCII Motion)."""
+    js = _leer("bitacora", "static", "js", "despedidas.js")
+    bloque = js[js.index("const COREOGRAFIAS = {"):js.index("// ── El reproductor")]
+    for slug in despedidas.SLUGS:
+        cuerpo = bloque[bloque.index(slug + ": function (e)"):]
+        cuerpo = cuerpo[:cuerpo.index("return anime.timeline()")]
+        assert "cuadros(e, [" in cuerpo, slug
+
+
+# ⚠️ Medidos EN EL NAVEGADOR, en la fuente del bicho (16 caracteres seguidos, en px):
+#     ~ ≈ V _ ‾ ▲ x . · '  →  228.72   ← la grilla
+#     ∼ (U+223C)          →  296.36   un 30% más ancho
+#     ⌓ (U+2313)          →  398.53
+#     ☄ (U+2604)          →  378.63
+# Un carácter fuera de la grilla hace que el dibujo TIEMBLE al cambiar de cuadro. Ya pasó: la
+# estela del tiburón y la ola mezclaban `~` con `∼`.
+GRILLA = {"·", "‾", "≈", "▲"}
+# Excepción medida y aceptada: va sola al final de su línea y está en TODOS los cuadros por
+# igual, así que corre el dibujo pero no lo hace temblar.
+FUERA_DE_GRILLA_OK = {"☄"}
+
+
+def _cuadros_del_arte():
+    """Los literales de los `cuadros(e, [...])`, que es donde vive el dibujo.
+
+    Se lee por líneas y no con una expresión regular: el arte está lleno de barras invertidas
+    (las mandíbulas, la estela del meteorito) y un patrón que las contemple es justo el tipo de
+    cosa que se rompe sola.
+    """
+    fuera = []
+    dentro = False
+    for linea in _leer("bitacora", "static", "js", "despedidas.js").splitlines():
+        t = linea.strip()
+        if t.startswith("cuadros(e, ["):
+            dentro = True
+        elif dentro and t.startswith("],"):
+            dentro = False
+        elif dentro and t.startswith("'"):
+            fuera.append(t.rstrip(",").strip("'"))
+    return fuera
+
+
+def test_el_arte_no_usa_escapes(  ):
+    """El dibujo tiene que leerse EN el archivo. Escrito con el escape de JavaScript es correcto para el
+    navegador e ilegible para quien lo edita, que es justo lo contrario de lo que se busca."""
+    assert _cuadros_del_arte(), "no se encontro ningun cuadro"
+    for cuadro in _cuadros_del_arte():
+        assert (chr(92) + "u") not in cuadro, cuadro
+
+
+def test_el_arte_respeta_la_grilla_del_monoespaciado():
+    """⚠️ El fallo es visual y callado: un carácter más ancho que los demás corre la fila y el
+    dibujo tiembla al pasar de cuadro. Los anchos están medidos arriba."""
+    for cuadro in _cuadros_del_arte():
+        for c in cuadro:
+            if ord(c) > 127:
+                assert c in GRILLA or c in FUERA_DE_GRILLA_OK,                     "U+%04X (%s) no esta medido: ver GRILLA" % (ord(c), c)
+
+
+def test_el_reloj_de_los_cuadros_se_corta_al_terminar():
+    """⚠️ Los cuadros los cambia un `setInterval` que corre por su cuenta, no anime.js. Sin
+    cortarlo queda vivo sobre una página que se está yendo —y el borrado recarga la página—."""
+    js = _leer("bitacora", "static", "js", "despedidas.js")
+    terminar = js[js.index("const terminar = function ()"):]
+    assert "clearInterval(e.reloj)" in terminar[:400]
+
+
 def test_el_texto_que_se_destruye_es_el_de_la_tarea():
     """Es el pedido: el render de la tarea siendo destruido, no un dibujo al lado. Las dos
     pantallas que borran una tarea la muestran en un `.todo-text`."""

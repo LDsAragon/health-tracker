@@ -60,6 +60,31 @@
     return letras;
   }
 
+  // El bicho se mueve con transformaciones —eso lo hace anime.js y es lo que da la fluidez—,
+  // pero ADEMÁS puede animarse por dentro, cambiando de cuadro: la mandíbula que se abre y se
+  // cierra, la cresta de la ola que rompe, la estela del meteorito que titila. Son las dos
+  // mitades y hacen falta las dos: sin cuadros, un dibujo que se desplaza tieso; sin
+  // transformaciones, la animación a saltos de una celda que ya se descartó.
+  //
+  // Es también lo que deja usar arte de las galerías de ASCII animado (asciiart.eu, ascii.co.uk)
+  // o dibujar el propio con ASCII Motion, que es MIT: son listas de cuadros y entran acá.
+  // ⚠️ Los cuadros de un bicho tienen que tener el mismo alto, o el dibujo salta de lugar al
+  // pasar. `cuadros()` lo empareja.
+  function cuadros(e, lista, ms) {
+    const alto = Math.max.apply(null, lista.map(function (c) { return c.split('\n').length; }));
+    const parejos = lista.map(function (c) {
+      const filas = c.split('\n');
+      while (filas.length < alto) filas.push('');
+      return filas.join('\n');
+    });
+    let i = 0;
+    e.bicho.textContent = parejos[0];
+    e.reloj = setInterval(function () {
+      i = (i + 1) % parejos.length;
+      e.bicho.textContent = parejos[i];
+    }, ms || 90);
+  }
+
   // ── Las coreografías ───────────────────────────────────────────────────────
   // Una por animación del catálogo. Reciben el escenario ya armado y devuelven la línea de
   // tiempo; quien las llama engancha el final.
@@ -70,7 +95,12 @@
 
   const COREOGRAFIAS = {
     meteorito: function (e) {
-      e.bicho.textContent = '  \\\n   \\\n    \u2604';
+      // La estela titila: tres cuadros y la roca siempre en el mismo lugar.
+      cuadros(e, [
+        '  .\n   \\\n    ☄',
+        ' ·\n  \\\n    ☄',
+        '  \'\n   \\\n    ☄',
+      ], 70);
       return anime.timeline()
         .add({
           targets: e.bicho,
@@ -98,7 +128,12 @@
     },
 
     ola: function (e) {
-      e.bicho.textContent = '\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\n \u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248\u2248';
+      // La cresta rompe: las dos filas de agua se corren una contra otra.
+      cuadros(e, [
+        '≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈\n ~~~~~~~~~~~~~~~',
+        ' ≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈\n~~~~~~~~~~~~~~~~',
+        '~≈~≈~≈~≈~≈~≈~≈~≈\n ≈~≈~≈~≈~≈~≈~≈~≈',
+      ], 100);
       return anime.timeline()
         .add({
           targets: e.bicho,
@@ -123,9 +158,13 @@
     },
 
     parca: function (e) {
-      // \u26a0\ufe0f Una calavera derecha y no un monigote que rota: el mismo dibujo girado se le\u00eda como un
-      // garabato. Ac\u00e1 el sprite se queda quieto y el trabajo lo hacen las letras cayendo.
-      e.bicho.textContent = ' .----.\n( x  x )\n|  ||  |\n \'-\\/-\'';
+      // ⚠️ Una calavera derecha y no un monigote que rota: el mismo dibujo girado se leía como un
+      // garabato. Acá el sprite se queda en su lugar y el trabajo lo hacen las letras cayendo;
+      // lo único que se mueve por dentro es la mandíbula, que castañetea.
+      cuadros(e, [
+        ' .----.\n( x  x )\n|  ||  |\n \'-\\/-\'',
+        ' .----.\n( x  x )\n|  ||  |\n \'-||-\'',
+      ], 150);
       return anime.timeline()
         .add({
           targets: e.bicho,
@@ -149,7 +188,13 @@
     },
 
     cocodrilo: function (e) {
-      e.bicho.textContent = '   ____\n\u2313/VVVV\\\n \\____/';
+      // La mandíbula se abre y se cierra mientras avanza: es la que se come las letras, así que
+      // es la que tiene que moverse. Tres cuadros, siempre el mismo alto.
+      cuadros(e, [
+        '  ____\n /VVVV\\\n \\____/',
+        '  ____\n /VVVV\\\n  \\VV/ ',
+        '  ____\n /‾‾‾‾\\\n  \\__/ ',
+      ], 110);
       return anime.timeline()
         .add({
           targets: e.bicho,
@@ -173,7 +218,13 @@
     },
 
     tiburon: function (e) {
-      e.bicho.textContent = '   \u25b2\n~~~~~~~~~~~~~~~~';
+      // La aleta queda quieta y lo que se mueve es la estela: es lo que la hace leer como que
+      // avanza cortando el agua.
+      cuadros(e, [
+        '   ▲\n~~~~~~~~~~~~~~~~',
+        '   ▲\n≈~≈~≈~≈~≈~≈~≈~≈~',
+        '   ▲\n~≈~≈~≈~≈~≈~≈~≈~≈',
+      ], 90);
       return anime.timeline()
         .add({
           targets: e.bicho,
@@ -218,6 +269,9 @@
       if (listo) return;
       listo = true;
       cerrarActual = null;
+      // El reloj de los cuadros del bicho sigue corriendo por su cuenta: si no se corta acá,
+      // queda un intervalo vivo sobre una página que se está yendo.
+      if (e.reloj) { clearInterval(e.reloj); e.reloj = null; }
       e.overlay.style.display = 'none';
       e.texto.textContent = '';
       fin();

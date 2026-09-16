@@ -1027,6 +1027,21 @@ que saca la fila de la lista.
   retardo y su rotación. El espacio va como **espacio duro**, porque un `inline-block` con un
   espacio normal mide cero y la frase se vería toda pegada. `perspective` en la escena es lo que
   convierte los `rotateX/rotateY` en profundidad en vez de un aplastado.
+- **El bicho se mueve Y se anima por dentro**, y hacen falta las dos mitades: las
+  transformaciones lo desplazan (eso da la fluidez) y `cuadros()` le cambia el dibujo con un
+  `setInterval` propio —la mandíbula del cocodrilo que muerde, la cresta de la ola que rompe, la
+  estela del tiburón, la mandíbula de la calavera—. Sin cuadros es un dibujo tieso que se
+  desliza; sin transformaciones, la animación a saltos de una celda que ya se descartó. Es
+  además lo que deja usar arte de las galerías de ASCII animado o dibujar el propio con
+  **ASCII Motion** (MIT): son listas de cuadros y entran ahí.
+  ⚠️ **Ese reloj no lo maneja anime.js**: se corta en `terminar()` o queda vivo sobre una
+  página que se está yendo —y el borrado recarga la página—.
+- ⚠️ **El arte tiene que caer en la grilla del monoespaciado, y no todo carácter lo hace.**
+  Medido en la fuente del bicho: `~ ≈ V _ ‾ ▲ . ·` avanzan todos igual, pero `∼` (U+223C) es
+  **30% más ancho** y `⌓` (U+2313) casi el doble. Mezclar `~` con `∼` —que se ven igual— hacía
+  **temblar** la estela al cambiar de cuadro. Hay un tripwire con los anchos medidos, y el arte
+  se escribe con los caracteres de verdad y no con escapes `\uXXXX`: un dibujo que no se lee en
+  el archivo no se puede corregir.
 - **El motor es anime.js** (`static/js/vendor/anime.min.js`, 17 KB, UMD como Chart.js). Da las
   líneas de tiempo, las curvas y `anime.stagger`, que es exactamente la forma de esta animación
   ("cada letra sale 14 ms después que la anterior, desde donde pasó el bicho"). Por debajo son
