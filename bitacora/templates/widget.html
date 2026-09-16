@@ -282,7 +282,8 @@ recordarColapsable('w-notas-hoy', 'widgetNotasHoy', false);
    redimensionado: sin esto, con el mouse no hay de dónde agarrarla (el `resizable=True` con el que
    se crea no alcanza). Doble clic vuelve a la medida original, el mismo gesto que resetea el ancho
    de los paneles del día. #}
-<div class="w-grip" id="w-grip" title="Arrastrá para cambiar el tamaño · doble clic para el original"></div>
+{% if agarre_propio %}<div class="w-grip" id="w-grip"
+     title="Arrastrá para cambiar el tamaño · doble clic para volver al original"></div>{% endif %}
 <script>window.WIDGET_TAMANO = {{ tamano_widget | tojson }};</script>
 <script>
 (function () {

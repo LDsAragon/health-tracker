@@ -120,8 +120,33 @@ def guion():
             estilo = ctypes.windll.user32.GetWindowLongW(widget._hwnd(), widget.GWL_STYLE)
             _check(bool(estilo & widget.WS_THICKFRAME),
                    "WS_THICKFRAME quedó puesto: el borde de la ventana ya es el agarre del sistema")
-            _check(widget.empezar_arrastre_de_tamano() is not None,
-                   "pedirle el arrastre al sistema no explota")
+            # ⚠️ Que el agarre de la esquina ARRANQUE de verdad el bucle del sistema. Devolver
+            # True no alcanza: la primera versión devolvía True y no pasaba nada, porque llamaba
+            # a ReleaseCapture() desde el hilo del request —que no suelta la captura del hilo de
+            # la ventana— y el agarre quedaba de adorno. `GUI_INMOVESIZE` lo dice sin tener que
+            # mover el mouse de nadie.
+            class GUITHREADINFO(ctypes.Structure):
+                _fields_ = [("cbSize", ctypes.c_ulong), ("flags", ctypes.c_ulong),
+                            ("hwndActive", ctypes.c_void_p), ("hwndFocus", ctypes.c_void_p),
+                            ("hwndCapture", ctypes.c_void_p), ("hwndMenuOwner", ctypes.c_void_p),
+                            ("hwndMoveSize", ctypes.c_void_p), ("hwndCaret", ctypes.c_void_p),
+                            ("rcCaret", ctypes.c_long * 4)]
+
+            u32 = ctypes.windll.user32
+            hilo = u32.GetWindowThreadProcessId(widget._hwnd(), None)
+
+            def _en_bucle():
+                gi = GUITHREADINFO()
+                gi.cbSize = ctypes.sizeof(GUITHREADINFO)
+                u32.GetGUIThreadInfo(hilo, ctypes.byref(gi))
+                return bool(gi.flags & 0x00000002)      # GUI_INMOVESIZE
+
+            _check(not _en_bucle(), "antes de pedirlo, la ventana no está redimensionando")
+            widget.empezar_arrastre_de_tamano()
+            _check(_esperar(_en_bucle, 3),
+                   "el agarre le pasa el arrastre AL SISTEMA (entra al bucle de resize)")
+            u32.PostMessageW(widget._hwnd(), 0x0100, 0x1B, 0)     # Escape: salir del bucle
+            _check(_esperar(lambda: not _en_bucle(), 3), "y sale del bucle al cancelarlo")
         else:
             _check(widget.poner_borde_nativo() is False,
                    "en Linux el borde nativo no aplica y no rompe")

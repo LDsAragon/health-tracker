@@ -16,6 +16,19 @@ from bitacora import app as flask_app
 from bitacora.appconfig import SETTINGS
 
 
+@pytest.fixture(autouse=True)
+def _widget_limpio():
+    """⚠️ `widget.configurar()` escribe globales del módulo con `global`, y a eso monkeypatch no
+    llega: el test de la bandeja llama a `_al_mostrarse()`, que configura el widget, y desde ahí
+    `hay_escritorio()` quedaba en True para TODO lo que viniera después. Un test que pasa por lo
+    que dejó otro no prueba nada —y acá hizo pasar uno que solíto fallaba—.
+    """
+    previos = {k: getattr(widget, k) for k in ("_url_base", "_ventana", "_principal")}
+    yield
+    for k, v in previos.items():
+        setattr(widget, k, v)
+
+
 @pytest.fixture
 def cliente(tmp_path, monkeypatch):
     monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "t.db"))
@@ -471,10 +484,21 @@ def test_sin_ventana_no_explota(cliente):
     assert widget.redimensionar(500, 600) == (500, 600)
 
 
-def test_la_pagina_trae_el_agarre_y_la_medida_de_la_que_parte(cliente):
+def test_sin_ventana_el_agarre_NO_se_dibuja(cliente):
+    """⚠️ En el modo navegador el widget se ve igual pero no hay ventana del sistema que estirar.
+    Dibujar el agarre ahí es prometer algo que no existe: se pinta al pasarle por encima, parece
+    que habilita a redimensionar y no hace nada. Un agarre que miente es peor que ninguno."""
+    html = cliente.get("/widget").data.decode()
+    assert widget.hay_escritorio() is False
+    assert 'id="w-grip"' not in html
+    # La medida sí viaja siempre: no promete nada, solo dice de dónde partiría.
+    assert "window.WIDGET_TAMANO = [340, 520]" in html
+
+
+def test_con_ventana_el_agarre_SI_se_dibuja(cliente, monkeypatch):
+    monkeypatch.setattr(widget, "_url_base", "http://127.0.0.1:1")
     html = cliente.get("/widget").data.decode()
     assert 'id="w-grip"' in html
-    assert "window.WIDGET_TAMANO = [340, 520]" in html
 
 
 def test_el_arrastre_se_lo_queda_el_sistema(cliente):

@@ -323,6 +323,17 @@ def poner_borde_nativo() -> bool:
         return False
 
 
+def hace_falta_agarre() -> bool:
+    """¿Hay que dibujar el agarre de la esquina en la página?
+
+    ⚠️ **No, si no hay una ventana que redimensionar.** En el modo navegador el widget se ve
+    igual pero no hay ventana del sistema, así que el agarre no puede hacer nada: dibujarlo es
+    prometer algo que no existe —y un agarre que se pinta al pasarle por encima y no responde es
+    justo lo que hay que evitar—.
+    """
+    return hay_escritorio()
+
+
 def empezar_arrastre_de_tamano(x=None, y=None) -> bool:
     """Le pide al sistema que tome el arrastre desde la esquina. Un pedido por arrastre, no uno
     por movimiento del mouse: de ahí en más la ventana la sigue el sistema, sin HTTP en el medio.
@@ -335,12 +346,23 @@ def empezar_arrastre_de_tamano(x=None, y=None) -> bool:
             return False
         try:
             import ctypes
+            from System import Action           # pythonnet, como la bandeja
             u32 = ctypes.windll.user32
-            # Soltar la captura que tomó el navegador al apretar, o el bucle del sistema no ve
-            # el mouse. Y PostMessage y no SendMessage: el bucle es MODAL y bloquearía el hilo
-            # del request hasta que sueltes.
-            u32.ReleaseCapture()
-            return bool(u32.PostMessageW(hwnd, WM_NCLBUTTONDOWN, HTBOTTOMRIGHT, 0))
+
+            def en_el_hilo_de_la_ventana():
+                # ⚠️ Las dos llamadas TIENEN que correr acá y no en el hilo del request.
+                # `ReleaseCapture()` solo suelta la captura DEL HILO QUE LA LLAMA, y la del mouse
+                # la tiene el hilo de la ventana desde que apretaste dentro del WebView: llamarla
+                # desde afuera no suelta nada y el bucle del sistema nunca ve el mouse. Ese era
+                # el agarre que se pintaba al pasarle por encima y no hacía nada.
+                u32.ReleaseCapture()
+                # SendMessage y no PostMessage: acá ya estamos en el hilo correcto y el bucle
+                # modal es justo lo que queremos que pase. Se llega por BeginInvoke, así que el
+                # request vuelve en el acto y no espera a que sueltes.
+                u32.SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTBOTTOMRIGHT, 0)
+
+            _ventana.native.BeginInvoke(Action(en_el_hilo_de_la_ventana))
+            return True
         except Exception:
             return False
     try:

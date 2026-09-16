@@ -63,6 +63,8 @@ def vista():
         # Desde dónde arranca a contar el agarre de la esquina. El valor se corrige solo con lo
         # que devuelve /widget/tamano, así que alcanza con que sea el de la última vez.
         tamano_widget=widget.tamano_actual(),
+        # En el navegador no hay ventana que estirar: el agarre no se dibuja.
+        agarre_propio=widget.hace_falta_agarre(),
     )
 
 
