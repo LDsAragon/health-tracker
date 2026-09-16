@@ -119,6 +119,11 @@
     });
     capa.style.fontSize = Math.max(6, Math.min(26, e.ancho / (cols * 0.62))) + 'px';
     cuadros(e, capa, lista, (conv && conv.ms) || ms);
+    // ⚠️ Devuelve si el arte es convertido, y no es un detalle: el dibujado a mano son ~35
+    // columnas y hay que AGRANDARLO para que llene la escena, mientras que el convertido ya
+    // entra justo y ampliarlo 2,7× destruye el detalle que es justamente su valor. Cada escena
+    // elige su recorrido de escala con esto.
+    return !!(conv && conv.cuadros && conv.cuadros.length);
   }
 
   // ── La cámara ──────────────────────────────────────────────────────────────
@@ -191,7 +196,7 @@
         '      .        ·       .        ·      .\n' +
         '  ·       .        ·       .        ·      .',
       ]);
-      cuadros(e, e.capas[2], [
+      const conv = pintar(e, e.capas[2], 'meteorito', [
         '    .\n   \'\\\n  . \\\\\n    \\\\\\\n   \' \\\\\\\n      \\\\\\\\\n       ☄',
         '    ·\n   .\\\n  \' \\\\\n    \\\\\n   . \\\\\\\n      \\\\\\\n       ☄',
         '    \'\n   ·\\\n  . \\\\\n    \\\\\\\n   \' \\\\\n      \\\\\\\\\n       ☄',
@@ -207,21 +212,25 @@
         })
         .add({                            // la roca, desde muy lejos y muy chica
           targets: e.capas[2],
-          translateX: [-e.ancho * 0.42, xi - e.ancho * 0.5],
-          translateY: [-e.alto * 0.62, e.alto * 0.10],
-          scale: [0.18, 1.75],
+          translateX: conv ? [-e.ancho * 0.30, xi - e.ancho * 0.52]
+                           : [-e.ancho * 0.42, xi - e.ancho * 0.5],
+          translateY: conv ? [-e.alto * 0.58, e.alto * 0.06]
+                           : [-e.alto * 0.62, e.alto * 0.10],
+          // El convertido ya entra justo en la escena: se lo acerca apenas, no se lo infla.
+          scale: conv ? [0.62, 1.15] : [0.18, 1.75],
           rotate: [-6, 10],
           opacity: [0, 1],
           duration: 1550,
           easing: 'easeInQuad',
         }, '-=1400')
-        .add({ targets: e.capas[2], opacity: 0, scale: 3.4, duration: 260, easing: 'easeOutQuad' });
+        .add({ targets: e.capas[2], opacity: 0, scale: conv ? 1.6 : 3.4,
+               duration: 260, easing: 'easeOutQuad' });
     },
 
     // Se la ve venir de lejos, se acerca de golpe, pega un guadañazo y el flash parte el texto
     // en dos mitades que salen para lados opuestos.
     parca: function (e, tl) {
-      cuadros(e, e.capas[1], [
+      const conv = pintar(e, e.capas[1], 'parca', [
         '     ___\n   /     \\      |\n  |  x x  |     |\n  |   _   |    /\n   \\_____/  __/',
         '     ___\n   /     \\      |\n  |  x x  |     |\n  |   o   |    /\n   \\_____/  __/',
       ], 220);
@@ -232,14 +241,14 @@
         .add({                            // lejos, chiquita, esperando
           targets: e.capas[1],
           opacity: [0, 0.8],
-          scale: [0.3, 0.38],
+          scale: conv ? [0.42, 0.5] : [0.3, 0.38],
           translateY: [-e.alto * 0.26, -e.alto * 0.24],
           duration: 900,
           easing: 'easeOutQuad',
         })
         .add({                            // y encima tuyo en un parpadeo
           targets: e.capas[1],
-          scale: 2.6,
+          scale: conv ? 1.25 : 2.6,
           opacity: 1,
           translateY: -e.alto * 0.06,
           duration: 260,

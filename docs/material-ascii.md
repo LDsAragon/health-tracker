@@ -11,6 +11,14 @@ convertirlas a ASCII sigue siendo una obra derivada.
 | Escena | Origen | Autor | Licencia |
 |---|---|---|---|
 | `ola` | [La gran ola de Kanagawa](https://commons.wikimedia.org/wiki/File:Tsunami_by_hokusai_19th_century.jpg) (1831) | Katsushika Hokusai | Dominio público |
+| `meteorito` | [GIF de Giphy](https://giphy.com/gifs/mograph-meteor-end-of-the-world-l46CvyAn1oBTOZtZK) (`l46CvyAn1oBTOZtZK`) | sin identificar | ⚠️ de terceros |
+| `parca` | [GIF de Giphy](https://giphy.com/gifs/wave-xcopy-deathwave-xfkB0MewxbRt9BMxIK) (`xfkB0MewxbRt9BMxIK`) | atribuido a xcopy | ⚠️ de terceros |
+
+⚠️ **Las dos últimas son obra de terceros y entran por decisión expresa del dueño del repo**
+(2026-09-16), sobre la premisa de que el material de Giphy es re-subida de contenido ajeno. Queda
+anotado acá porque una decisión así tiene que poder revisarse: si alguna vez hay que sacarlas,
+basta con borrar su entrada de `tools/ascii_arte.json` y regenerar —las escenas vuelven solas al
+dibujo a mano, que sigue en `despedidas.js` como respaldo—.
 
 ## Qué material convierte bien
 
