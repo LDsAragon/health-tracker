@@ -14,3 +14,6 @@ _version.py
 # playwright para las auditorias de navegador; se instala aparte
 /node_modules
 /package-lock.json
+# El material de origen de las animaciones (gifs, videos): pesa y no se distribuye.
+# Solo viaja el ASCII que sale de tools/ascii_video.py.
+/material
