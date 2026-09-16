@@ -138,7 +138,9 @@
     });
     capa.style.fontSize = Math.max(6, Math.min(26, e.ancho / (cols * 0.62))) + 'px';
     const convertida = !!(conv && conv.cuadros && conv.cuadros.length);
-    cuadros(e, capa, lista, (conv && conv.ms) || ms, convertida);
+    // El material largo se reproduce entero UNA vez a lo largo de la escena; el corto
+    // —medio segundo de bucle— cicla a su ritmo, o iria en cámara lentísima.
+    cuadros(e, capa, lista, (conv && conv.ms) || ms, convertida && !(conv && conv.bucle));
     // ⚠️ Devuelve si el arte es convertido, y no es un detalle: el dibujado a mano son ~35
     // columnas y hay que AGRANDARLO para que llene la escena, mientras que el convertido ya
     // entra justo y ampliarlo 2,7× destruye el detalle que es justamente su valor. Cada escena
@@ -344,7 +346,7 @@
     // Una tormenta: llueve, y por la izquierda se levanta una ola enorme que se curva sobre el
     // texto y se lo lleva puesto.
     ola: function (e, tl) {
-      cuadros(e, e.capas[0], [
+      const fondo = pintar(e, e.capas[0], 'ola.fondo', [
         '  /  /  /  /  /  /  /  /  /  /  /  /  /  /\n' +
         ' /  /  /  /  /  /  /  /  /  /  /  /  /  / \n' +
         '/  /  /  /  /  /  /  /  /  /  /  /  /  /  \n' +
@@ -357,7 +359,7 @@
       // ⚠️ Asimétrica a propósito: la primera versión era un montículo con la misma rampa de los
       // dos lados y se leía como una loma, no como una ola. La de Hokusai sube por la izquierda,
       // rompe arriba a la derecha y deja las garras de espuma colgando sobre lo que va a tapar.
-      pintar(e, e.capas[1], 'ola', [
+      const ola = pintar(e, e.capas[1], 'ola', [
         '                      ,   ,   ,\n' +
         '                     /|  /|  /|\n' +
         '              _,-~~~~ \'   \'   \'\n' +
@@ -376,19 +378,26 @@
         '≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈~≈',
       ], 150);
       return tl
-        .add({                            // la tormenta
+        .add({                            // el horizonte, lejos
           targets: e.capas[0],
-          opacity: [0, 0.55],
-          translateY: [-e.alto * 0.36, -e.alto * 0.30],
-          duration: 800,
+          opacity: [0, fondo ? 0.32 : 0.55],
+          scale: fondo ? [0.55, 0.62] : [1, 1],
+          translateY: fondo ? [-e.alto * 0.30, -e.alto * 0.26]
+                            : [-e.alto * 0.36, -e.alto * 0.30],
+          duration: 900,
           easing: 'linear',
         })
-        .add({                            // y la ola, que crece hasta taparlo todo
+        .add({                            // y la ola, que crece hasta no entrar en la pantalla
           targets: e.capas[1],
           opacity: [0, 1],
-          translateX: [-e.ancho * 0.85, -e.ancho * 0.10],
-          translateY: [e.alto * 0.34, -e.alto * 0.17],
-          scale: [0.45, 2.7],
+          // ⚠️ Lo que da la escala es que TERMINE sin entrar en el cuadro. Con el recorte al
+          // rompiente más este recorrido, la ola se te viene encima; con la estampa entera y
+          // chiquita se leía "un cuadro de una ola", que es lo que le faltaba.
+          translateX: ola ? [-e.ancho * 0.22, e.ancho * 0.06]
+                          : [-e.ancho * 0.85, -e.ancho * 0.10],
+          translateY: ola ? [e.alto * 0.30, -e.alto * 0.12]
+                          : [e.alto * 0.34, -e.alto * 0.17],
+          scale: ola ? [0.8, 2.05] : [0.45, 2.7],
           duration: 1850,
           easing: 'easeInQuad',
         }, '-=620');

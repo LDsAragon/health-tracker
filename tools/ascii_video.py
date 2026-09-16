@@ -52,18 +52,44 @@ def _ffmpeg(*args):
         sys.exit("ffmpeg fallo:\n" + r.stderr.strip())
 
 
-def extraer(origen: Path, carpeta: Path, cols: int, cuadros: int) -> list:
+def extraer(origen: Path, carpeta: Path, cols: int, cuadros: int,
+            recorte: str = "", interpolar: bool = False) -> list:
     """Saca `cuadros` PNG en escala de grises, ya con la grilla de caracteres como resolución."""
     filas = max(6, int(round(cols * PROPORCION_CELDA * 0.62)))
     # `fps` se calcula para repartir los cuadros a lo largo de TODO el material: con un fps fijo,
     # un clip largo daba 200 cuadros y uno corto tres.
     dur = duracion(origen)
     fps = max(1e-3, cuadros / dur) if dur else 12
-    _ffmpeg("-i", str(origen),
-            "-vf", "fps={:.4f},scale={}:{}:flags=lanczos,format=gray".format(fps, cols, filas),
-            "-frames:v", str(cuadros),
+
+    filtros = []
+    if recorte:
+        filtros.append("crop=" + recorte)
+    if interpolar:
+        # Genera cuadros intermedios de verdad, calculando el movimiento. Es lento pero es la
+        # unica forma de tener MAS cuadros que los que trae el material.
+        filtros.append("minterpolate=fps={:.4f}:mi_mode=mci".format(fps))
+    else:
+        filtros.append("fps={:.4f}".format(fps))
+    filtros.append("scale={}:{}:flags=lanczos".format(cols, filas))
+    filtros.append("format=gray")
+
+    _ffmpeg("-i", str(origen), "-vf", ",".join(filtros), "-frames:v", str(cuadros),
             str(carpeta / "c%04d.png"))
     return sorted(carpeta.glob("*.png"))
+
+
+def cuadros_nativos(origen: Path) -> int:
+    """Cuantos cuadros trae el material. Pedir mas SOLO los duplica: pesan igual y no se ven."""
+    exe = shutil.which("ffprobe")
+    if not exe:
+        return 0
+    r = subprocess.run([exe, "-v", "error", "-count_frames", "-select_streams", "v:0",
+                        "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", str(origen)],
+                       capture_output=True, text=True)
+    try:
+        return int(r.stdout.strip().rstrip(","))
+    except ValueError:
+        return 0
 
 
 def duracion(origen: Path) -> float:
@@ -122,6 +148,11 @@ def main():
     p.add_argument("--ms", type=int, default=90, help="milisegundos por cuadro (90)")
     p.add_argument("--invertir", action="store_true", help="para material claro sobre fondo claro")
     p.add_argument("--piso", type=int, default=28, help="por debajo de esto es fondo (28)")
+    p.add_argument("--recorte", default="", help="recorte ffmpeg ancho:alto:x:y, para acercarse")
+    p.add_argument("--bucle", action="store_true",
+                   help="material corto que CICLA a su ritmo, en vez de estirarse sobre la escena")
+    p.add_argument("--interpolar", action="store_true",
+                   help="inventa cuadros intermedios calculando el movimiento (lento)")
     a = p.parse_args()
 
     origen = Path(a.origen)
@@ -132,13 +163,24 @@ def main():
     if SALIDA_JSON.exists():
         arte = json.loads(SALIDA_JSON.read_text(encoding="utf-8"))
 
+    nativos = cuadros_nativos(origen)
+    if nativos and a.cuadros > nativos and not a.interpolar:
+        print("Ojo: el material trae %d cuadros y pediste %d. Se acota a %d —pedir mas solo los "
+              "duplica—. Con --interpolar se generan intermedios de verdad."
+              % (nativos, a.cuadros, nativos))
+        a.cuadros = nativos
+
     tmp = Path(tempfile.mkdtemp(prefix="ascii-"))
     try:
-        pngs = extraer(origen, tmp, a.cols, a.cuadros)
+        pngs = extraer(origen, tmp, a.cols, a.cuadros, a.recorte, a.interpolar)
         if not pngs:
             sys.exit("ffmpeg no saco ningun cuadro.")
         cuadros = [a_ascii(f, a.invertir, a.piso) for f in pngs]
         arte[a.nombre] = {"ms": a.ms, "cols": a.cols, "cuadros": cuadros}
+        if a.bucle:
+            # Un material de medio segundo estirado sobre una escena de cuatro va en camara
+            # lentisima. Los cortos ciclan a su ritmo; los largos se reproducen enteros una vez.
+            arte[a.nombre]["bucle"] = True
         escribir_js(arte)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
