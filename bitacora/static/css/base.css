@@ -173,8 +173,11 @@ a { color: inherit; text-decoration: none; }
 
 .despedida-escena {
   position: relative;
-  width: min(560px, 86vw);
-  height: 240px;
+  width: min(620px, 88vw);
+  /* ⚠️ Alta a propósito: el bicho tiene cuatro o cinco líneas y entra desde afuera, así que con
+     240px el viaje de llegada quedaba recortado contra el borde —el meteorito se veía recién
+     cuando ya había pegado—. Acá hay lugar para la aproximación y para los escombros. */
+  height: 340px;
   display: flex;
   align-items: center;
   justify-content: center;

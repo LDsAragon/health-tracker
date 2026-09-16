@@ -1023,6 +1023,20 @@ que saca la fila de la lista.
   cargaron, `confirmar.js` envía derecho. Es el mismo criterio que el `onsubmit="return false;"` de
   ese archivo y que el botón Guardar que sigue en la plantilla de Ajustes: lo decorativo puede
   fallar, la acción no. Lo fijan dos tripwires en `tests/test_despedidas.py`.
+- ⚠️ **La destrucción SIGUE al bicho, y eso es lo que la saca de "simplona".** La primera
+  versión mandaba las letras para cualquier lado con un retardo parejo: pasaba algo, pero no
+  pasaba **por culpa de nada**. Ahora `ubicar()` mide dónde quedó cada letra dentro de la escena y
+  cada coreografía usa esa posición: la ola las arrastra de izquierda a derecha a medida que les
+  llega, el cocodrilo se las come de derecha a izquierda cuando pasa la mandíbula, el meteorito
+  las revienta **desde el punto de impacto** —las de más lejos salen después y más fuerte—.
+- ⚠️ **El ritmo tiene tres tiempos y los tres importan.** La primera versión duraba 1,2 s y *"no
+  se apreciaba"*: arrancaba con la destrucción ya empezada y terminaba antes de que pudieras
+  mirar. Hoy: la tarea **aparece y se queda** un momento (la leés), pasa lo que pasa, y queda un
+  respiro de vacío antes de cerrar. Entre 2,5 y 3,3 s según la animación. `entrada()` y `salida()`
+  son comunes a las cinco justamente para que el ritmo no se decida cinco veces.
+- **La escena mide 340px de alto** y no los 240 de antes: el bicho tiene cuatro o cinco líneas y
+  entra desde afuera, así que el viaje de llegada quedaba recortado contra el borde —el meteorito
+  se veía recién cuando ya había pegado—.
 - **Cada letra del texto es un `<span>`**, y de ahí sale todo: cada una se va por su lado, con su
   retardo y su rotación. El espacio va como **espacio duro**, porque un `inline-block` con un
   espacio normal mide cero y la frase se vería toda pegada. `perspective` en la escena es lo que

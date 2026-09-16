@@ -26,7 +26,7 @@ def test_cada_animacion_tiene_su_coreografia():
     marcado y al borrar no pasa nada. El fallo callado de siempre."""
     js = _leer("bitacora", "static", "js", "despedidas.js")
     bloque = js[js.index("const COREOGRAFIAS = {"):js.index("// ── El reproductor")]
-    en_js = set(re.findall(r"^    (\w+): function \(e\)", bloque, re.M))
+    en_js = set(re.findall(r"^    (\w+): function \(e, tl\)", bloque, re.M))
     assert en_js == set(despedidas.SLUGS), (en_js, despedidas.SLUGS)
 
 
@@ -37,8 +37,8 @@ def test_todos_los_bichos_tienen_cuadros_propios():
     js = _leer("bitacora", "static", "js", "despedidas.js")
     bloque = js[js.index("const COREOGRAFIAS = {"):js.index("// ── El reproductor")]
     for slug in despedidas.SLUGS:
-        cuerpo = bloque[bloque.index(slug + ": function (e)"):]
-        cuerpo = cuerpo[:cuerpo.index("return anime.timeline()")]
+        cuerpo = bloque[bloque.index(slug + ": function (e, tl)"):]
+        cuerpo = cuerpo[:cuerpo.index("return tl")]
         assert "cuadros(e, [" in cuerpo, slug
 
 
@@ -113,7 +113,8 @@ def test_cada_letra_es_un_elemento():
     """Es lo que deja que cada una se vaya por su lado. Y el espacio va como espacio duro: un
     inline-block con un espacio normal mide cero y la frase se vería toda pegada."""
     js = _leer("bitacora", "static", "js", "despedidas.js")
-    assert r"ch === ' ' ? '\u00a0' : ch" in js
+    assert "ch === ' ' ? NBSP : ch" in js
+    assert "const NBSP = String.fromCharCode(160);" in js
     css = _leer("bitacora", "static", "css", "base.css")
     assert ".despedida-l" in css and "display: inline-block;" in css
     # Sin perspective, los rotateX/rotateY se ven aplastados y no hay 3D.

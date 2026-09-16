@@ -1,13 +1,9 @@
 // La muerte de una tarea: la animación que se reproduce al borrarla.
 //
-// La primera versión la dibujaba ENCIMA de la fila, con cuadros ASCII intercambiados cada 110ms.
-// No se apreciaba —se encimaba con el texto que estaba borrando, en una fila de 34px— y seis
-// cuadros no pueden verse fluidos. Ahora abre un modal, pone adentro **el texto de la tarea** y
-// lo destruye de verdad: cada letra es un elemento y se va con su propia trayectoria.
-//
-// El motor es anime.js (vendorizado). Por debajo son transformaciones 3D de CSS, así que hay
-// profundidad sin WebGL — que es lo que descartó three.js: en Linux la app corre con el renderer
-// acelerado de WebKitGTK apagado a propósito porque crashea.
+// Se abre un modal, adentro va **el texto real de la tarea** y eso es lo que se destruye: cada
+// letra es un elemento y se va por su lado. El motor es anime.js (vendorizado); por debajo son
+// transformaciones 3D de CSS, así que hay profundidad sin WebGL — que es lo que descartó three.js:
+// en Linux la app corre con el renderer acelerado de WebKitGTK apagado a propósito porque crashea.
 //
 // ⚠️ LA REGLA QUE NO SE NEGOCIA: borrar no puede depender de esto. `despedir()` recibe el callback
 // que envía el formulario y **tiene que llamarlo siempre**: si anime.js no cargó, si el catálogo
@@ -17,9 +13,10 @@
 // puede fallar, la acción no.
 (function () {
   const CATALOGO = window.DESPEDIDAS || [];
-  const TOPE_MS = 3000;          // pase lo que pase, a los 3 s el formulario se envía
+  const TOPE_MS = 5000;          // pase lo que pase, a los 5 s el formulario se envía
   const AZAR = 'aleatorio';
   const APAGADO = 'off';
+  const NBSP = String.fromCharCode(160);
 
   function elegir(slug) {
     if (!CATALOGO.length || slug === APAGADO) return null;
@@ -40,6 +37,7 @@
   function escena() {
     return {
       overlay: document.getElementById('despedida-modal'),
+      caja: document.querySelector('.despedida-escena'),
       bicho: document.getElementById('despedida-bicho'),
       texto: document.getElementById('despedida-texto'),
     };
@@ -53,23 +51,36 @@
     Array.from(String(texto || '').slice(0, 120)).forEach(function (ch) {
       const s = document.createElement('span');
       s.className = 'despedida-l';
-      s.textContent = ch === ' ' ? '\u00a0' : ch;
+      s.textContent = ch === ' ' ? NBSP : ch;
       cont.appendChild(s);
       letras.push(s);
     });
     return letras;
   }
 
+  // ⚠️ Dónde quedó cada letra dentro de la escena. Es lo que hace que la destrucción **siga al
+  // bicho** —la ola las arrastra de izquierda a derecha, el cocodrilo se las come de derecha a
+  // izquierda, el meteorito las revienta desde donde cayó— en vez de ser un estallido al azar,
+  // que era lo que hacía que la animación se viera simplona: pasaba algo, pero no pasaba por
+  // culpa de nada.
+  function ubicar(e) {
+    const caja = e.caja.getBoundingClientRect();
+    e.ancho = caja.width || 480;
+    e.x = e.letras.map(function (l) {
+      const r = l.getBoundingClientRect();
+      return r.left + r.width / 2 - caja.left;
+    });
+  }
+
   // El bicho se mueve con transformaciones —eso lo hace anime.js y es lo que da la fluidez—,
-  // pero ADEMÁS puede animarse por dentro, cambiando de cuadro: la mandíbula que se abre y se
-  // cierra, la cresta de la ola que rompe, la estela del meteorito que titila. Son las dos
-  // mitades y hacen falta las dos: sin cuadros, un dibujo que se desplaza tieso; sin
-  // transformaciones, la animación a saltos de una celda que ya se descartó.
+  // pero ADEMÁS se anima por dentro cambiando de cuadro: la mandíbula que muerde, la cresta que
+  // rompe, la estela que arde. Son las dos mitades y hacen falta las dos.
   //
   // Es también lo que deja usar arte de las galerías de ASCII animado (asciiart.eu, ascii.co.uk)
   // o dibujar el propio con ASCII Motion, que es MIT: son listas de cuadros y entran acá.
-  // ⚠️ Los cuadros de un bicho tienen que tener el mismo alto, o el dibujo salta de lugar al
-  // pasar. `cuadros()` lo empareja.
+  // ⚠️ Los cuadros tienen que tener el mismo alto, o el dibujo salta al pasar. `cuadros()` los
+  // empareja. Y todos los caracteres tienen que caer en la grilla del monoespaciado: hay un
+  // tripwire con los anchos medidos, porque `~` y `∼` se ven igual y miden distinto.
   function cuadros(e, lista, ms) {
     const alto = Math.max.apply(null, lista.map(function (c) { return c.split('\n').length; }));
     const parejos = lista.map(function (c) {
@@ -85,167 +96,190 @@
     }, ms || 90);
   }
 
+  // ── El ritmo, que es de todas ──────────────────────────────────────────────
+  // ⚠️ La primera versión duraba 1,2 s y "no se apreciaba": arrancaba con la destrucción ya
+  // empezada y terminaba antes de que pudieras mirar. Ahora hay tres tiempos y los tres importan:
+  // la tarea **aparece y se queda** un momento (la leés), pasa lo que pasa, y queda un respiro de
+  // vacío antes de cerrar. Son ~2,4 s.
+
+  function entrada(e, tl) {
+    return tl
+      .add({
+        targets: e.letras,
+        opacity: [0, 1],
+        translateY: [16, 0],
+        duration: 420,
+        delay: anime.stagger(8),
+        easing: 'easeOutQuad',
+      })
+      .add({ targets: e.texto, opacity: 1, duration: 380 });   // el respiro para leerla
+  }
+
+  function salida(e, tl) {
+    return tl
+      .add({ targets: e.bicho, opacity: 0, duration: 300, easing: 'easeOutQuad' }, '-=260')
+      .add({ targets: e.texto, opacity: 0, duration: 320 });   // el vacío que queda
+  }
+
   // ── Las coreografías ───────────────────────────────────────────────────────
-  // Una por animación del catálogo. Reciben el escenario ya armado y devuelven la línea de
-  // tiempo; quien las llama engancha el final.
+  // Una por animación del catálogo. Le agregan su acto a la línea de tiempo, entre la entrada y
+  // la salida.
   //
   // ⚠️ Las claves tienen que ser EXACTAMENTE los slugs de bitacora/despedidas.py, que es de donde
   // salen las opciones del ajuste. Una animación elegible sin coreografía es un ajuste que no
   // hace nada. Hay un tripwire.
 
   const COREOGRAFIAS = {
-    meteorito: function (e) {
-      // La estela titila: tres cuadros y la roca siempre en el mismo lugar.
+    meteorito: function (e, tl) {
+      // La estela arde: cambia el fuego, la roca se queda quieta.
       cuadros(e, [
-        '  .\n   \\\n    ☄',
-        ' ·\n  \\\n    ☄',
-        '  \'\n   \\\n    ☄',
-      ], 70);
-      return anime.timeline()
+        '  \'\n   \\\n    \\\\\n     \\\\\n      ☄',
+        '  ·\n   \\\n    \\\\\n     \\\\\\\n      ☄',
+        '  .\n   \\\\\n    \\\\\n     \\\\\\\n      ☄',
+      ], 80);
+      const xi = e.ancho * 0.42;          // dónde pega
+      return tl
         .add({
           targets: e.bicho,
-          translateX: [-e.ancho * 0.55, e.ancho * 0.30],
-          translateY: [-170, 60],
-          rotate: [-8, 14],
+          translateX: [-e.ancho * 0.5, xi - e.ancho * 0.5],
+          translateY: [-230, 40],
+          rotate: [-10, 12],
           opacity: [0, 1],
-          duration: 560,
+          duration: 760,
           easing: 'easeInQuad',
         })
         .add({
-          // El impacto: las letras salen para todos lados y para el fondo.
+          // La onda expansiva: cada letra sale DESDE el impacto, y las de más lejos tardan más.
           targets: e.letras,
-          translateX: function () { return anime.random(-190, 190); },
-          translateY: function () { return anime.random(-130, 210); },
-          translateZ: function () { return anime.random(-240, 320); },
+          translateX: function (l, i) {
+            return (e.x[i] - xi) * 1.9 + anime.random(-45, 45);
+          },
+          translateY: function () { return anime.random(-190, 220); },
+          translateZ: function () { return anime.random(-260, 340); },
           rotateX: function () { return anime.random(-720, 720); },
-          rotateZ: function () { return anime.random(-360, 360); },
+          rotateZ: function () { return anime.random(-380, 380); },
           opacity: [1, 0],
-          duration: 880,
-          delay: anime.stagger(11, { from: 'center' }),
+          duration: 1000,
+          delay: function (l, i) { return 40 + Math.abs(e.x[i] - xi) * 0.95; },
           easing: 'easeOutQuint',
-        }, '-=90')
-        .add({ targets: e.bicho, opacity: 0, scale: 2.4, duration: 320 }, '-=860');
+        }, '-=60');
     },
 
-    ola: function (e) {
-      // La cresta rompe: las dos filas de agua se corren una contra otra.
+    ola: function (e, tl) {
+      // Una ola con cresta, y el agua que se mueve por debajo.
       cuadros(e, [
-        '≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈\n ~~~~~~~~~~~~~~~',
-        ' ≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈\n~~~~~~~~~~~~~~~~',
-        '~≈~≈~≈~≈~≈~≈~≈~≈\n ≈~≈~≈~≈~≈~≈~≈~≈',
-      ], 100);
-      return anime.timeline()
+        '    ____\n ≈≈/    \\≈≈≈≈≈≈\n≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈\n~~~~~~~~~~~~~~~~',
+        '    ____\n ≈≈/    \\~≈~≈~≈\n~≈~≈~≈~≈~≈~≈~≈~≈\n≈~≈~≈~≈~≈~≈~≈~≈~',
+        '    ____\n ≈≈/    \\≈~≈~≈~\n≈~≈~≈~≈~≈~≈~≈~≈\n~≈~≈~≈~≈~≈~≈~≈~≈',
+      ], 110);
+      return tl
         .add({
           targets: e.bicho,
-          translateX: [-e.ancho * 0.9, e.ancho * 0.7],
-          translateY: [50, 34],
+          translateX: [-e.ancho * 0.95, e.ancho * 0.75],
+          translateY: [60, 44],
           opacity: [0, 1],
-          duration: 1050,
+          duration: 1150,
           easing: 'easeInOutSine',
         })
         .add({
-          // Se la lleva: todas para el mismo lado, con la cresta.
+          // Se las lleva: cada una arranca cuando la ola le llega, y todas para el mismo lado.
           targets: e.letras,
-          translateX: function () { return anime.random(150, 360); },
-          translateY: function () { return anime.random(10, 95); },
-          rotateZ: function () { return anime.random(-45, 45); },
+          translateX: function () { return anime.random(200, 430); },
+          translateY: function (l, i) { return 55 + Math.sin(i * 0.7) * 34; },  // montadas en la cresta
+          rotateZ: function () { return anime.random(-50, 50); },
           opacity: [1, 0],
-          duration: 780,
-          delay: anime.stagger(21, { from: 'first' }),
+          duration: 820,
+          delay: function (l, i) { return e.x[i] * 1.15; },
           easing: 'easeInOutQuad',
-        }, '-=880')
-        .add({ targets: e.bicho, opacity: 0, duration: 260 }, '-=240');
+        }, '-=1060');
     },
 
-    parca: function (e) {
-      // ⚠️ Una calavera derecha y no un monigote que rota: el mismo dibujo girado se leía como un
-      // garabato. Acá el sprite se queda en su lugar y el trabajo lo hacen las letras cayendo;
-      // lo único que se mueve por dentro es la mandíbula, que castañetea.
+    parca: function (e, tl) {
+      // La parca con su guadaña. ⚠️ Quieta y derecha: el mismo dibujo rotando se leía como un
+      // garabato. Lo único que se mueve por dentro es la cara.
       cuadros(e, [
-        ' .----.\n( x  x )\n|  ||  |\n \'-\\/-\'',
-        ' .----.\n( x  x )\n|  ||  |\n \'-||-\'',
-      ], 150);
-      return anime.timeline()
+        '    ___\n   /   \\    |\n  | x x |   |\n  |  _  |  /\n   \\___/ _/',
+        '    ___\n   /   \\    |\n  | x x |   |\n  |  o  |  /\n   \\___/ _/',
+      ], 200);
+      return tl
         .add({
           targets: e.bicho,
-          translateY: [-120, -58],
-          scale: [0.7, 1],
+          translateX: [-e.ancho * 0.6, -e.ancho * 0.22],
+          translateY: [-40, -30],
           opacity: [0, 1],
-          duration: 430,
+          duration: 620,
           easing: 'easeOutQuad',
         })
         .add({
-          // El tajo y la gravedad: caen, no vuelan.
+          // El tajo pasa y lo que sigue es la gravedad: caen, no vuelan.
           targets: e.letras,
-          translateY: [0, 280],
-          rotateZ: function () { return anime.random(-140, 140); },
+          translateY: [0, 330],
+          rotateZ: function () { return anime.random(-150, 150); },
           opacity: [1, 0],
-          duration: 700,
-          delay: anime.stagger(9, { from: 'first' }),
+          duration: 880,
+          delay: function (l, i) { return e.x[i] * 1.05; },
           easing: 'easeInQuad',
-        }, '-=60')
-        .add({ targets: e.bicho, opacity: 0, duration: 300 }, '-=420');
+        }, '-=120');
     },
 
-    cocodrilo: function (e) {
+    cocodrilo: function (e, tl) {
       // La mandíbula se abre y se cierra mientras avanza: es la que se come las letras, así que
-      // es la que tiene que moverse. Tres cuadros, siempre el mismo alto.
+      // es la que tiene que moverse.
       cuadros(e, [
-        '  ____\n /VVVV\\\n \\____/',
-        '  ____\n /VVVV\\\n  \\VV/ ',
-        '  ____\n /‾‾‾‾\\\n  \\__/ ',
-      ], 110);
-      return anime.timeline()
+        '     ______\n  __/      \\\n /  VVVVVV  \\\n \\__________/',
+        '     ______\n  __/      \\\n /  VVVV   /\n \\________/',
+        '     ______\n  __/      \\\n /_________/',
+      ], 130);
+      return tl
         .add({
           targets: e.bicho,
-          translateX: [e.ancho * 0.6, -e.ancho * 0.55],
-          translateY: [8, 8],
+          translateX: [e.ancho * 0.62, -e.ancho * 0.6],
+          translateY: [10, 10],
           opacity: [0, 1],
-          duration: 980,
+          duration: 1200,
           easing: 'easeInOutQuad',
         })
         .add({
-          // Se las traga de a una, de derecha a izquierda, justo cuando pasa la mandíbula.
+          // De derecha a izquierda, cada una justo cuando le llega la mandíbula: un tironcito
+          // hacia adentro de la boca y adentro.
           targets: e.letras,
+          translateX: 22,
           scale: [1, 0],
-          rotateY: function () { return anime.random(-110, 110); },
+          rotateY: function () { return anime.random(-120, 120); },
           opacity: [1, 0],
-          duration: 240,
-          delay: anime.stagger(25, { from: 'last' }),
+          duration: 300,
+          delay: function (l, i) { return (e.ancho - e.x[i]) * 1.15; },
           easing: 'easeInBack',
-        }, '-=900')
-        .add({ targets: e.bicho, opacity: 0, duration: 240 }, '-=120');
+        }, '-=1120');
     },
 
-    tiburon: function (e) {
-      // La aleta queda quieta y lo que se mueve es la estela: es lo que la hace leer como que
-      // avanza cortando el agua.
+    tiburon: function (e, tl) {
+      // La aleta corta el agua y la estela corre por debajo.
       cuadros(e, [
-        '   ▲\n~~~~~~~~~~~~~~~~',
-        '   ▲\n≈~≈~≈~≈~≈~≈~≈~≈~',
-        '   ▲\n~≈~≈~≈~≈~≈~≈~≈~≈',
-      ], 90);
-      return anime.timeline()
+        '      /|\n     / |\n~~~~~~~~~~~~~~~~\n  ≈≈≈≈≈≈≈≈≈≈≈≈',
+        '      /|\n     / |\n≈~≈~≈~≈~≈~≈~≈~≈~\n  ~~~~~~~~~~~~',
+        '      /|\n     / |\n~≈~≈~≈~≈~≈~≈~≈~≈\n  ≈≈≈≈≈≈≈≈≈≈≈≈',
+      ], 100);
+      return tl
         .add({
           targets: e.bicho,
-          translateX: [e.ancho * 0.5, -e.ancho * 0.5],
-          translateY: [72, 72],
+          translateX: [e.ancho * 0.55, -e.ancho * 0.55],
+          translateY: [86, 86],
           opacity: [0, 1],
-          duration: 930,
+          duration: 1150,
           easing: 'easeInOutSine',
         })
         .add({
-          // Las chupa para abajo, aplastándolas contra el agua.
+          // Las chupa para abajo al pasar, aplastándolas contra el agua.
           targets: e.letras,
-          translateY: [0, 150],
-          scaleY: [1, 0.12],
-          rotateX: [0, 75],
+          translateY: [0, 175],
+          scaleY: [1, 0.1],
+          rotateX: [0, 80],
           opacity: [1, 0],
-          duration: 400,
-          delay: anime.stagger(19, { from: 'last' }),
+          duration: 460,
+          delay: function (l, i) { return (e.ancho - e.x[i]) * 1.1; },
           easing: 'easeInQuad',
-        }, '-=830')
-        .add({ targets: e.bicho, opacity: 0, duration: 240 }, '-=180');
+        }, '-=1080');
     },
   };
 
@@ -255,14 +289,15 @@
 
   function reproducir(anim, texto, fin) {
     const e = escena();
-    if (!e.overlay || !e.bicho || !e.texto || typeof anime === 'undefined') return false;
+    if (!e.overlay || !e.bicho || !e.texto || !e.caja || typeof anime === 'undefined') return false;
     const coreo = COREOGRAFIAS[anim.slug];
     if (!coreo) return false;
 
     e.letras = repartir(e.texto, texto);
     anime.set(e.bicho, { translateX: 0, translateY: 0, rotate: 0, scale: 1, opacity: 0 });
+    anime.set(e.texto, { opacity: 1 });
     e.overlay.style.display = 'flex';
-    e.ancho = e.overlay.querySelector('.despedida-escena').clientWidth || 480;
+    ubicar(e);                      // después de mostrarlo: antes las letras no miden nada
 
     let listo = false;
     const terminar = function () {
@@ -279,10 +314,13 @@
     cerrarActual = terminar;
 
     if (quietito()) {                 // sin animación, pero el modal no se saltea en silencio
-      setTimeout(terminar, 260);
+      setTimeout(terminar, 400);
       return true;
     }
-    const tl = coreo(e);
+    const tl = anime.timeline();
+    entrada(e, tl);
+    coreo(e, tl);
+    salida(e, tl);
     tl.finished.then(terminar).catch(terminar);
     return true;
   }
