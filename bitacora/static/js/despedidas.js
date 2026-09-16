@@ -43,7 +43,7 @@
       caja: document.getElementById('despedida-escena'),
       texto: document.getElementById('despedida-texto'),
       flash: document.getElementById('despedida-flash'),
-      relojes: [],
+      planos: [],
     };
     e.capas = [0, 1, 2].map(function (n) { return document.getElementById('despedida-capa' + n); });
     return e;
@@ -87,20 +87,39 @@
   // ⚠️ Los cuadros tienen que tener el mismo alto, o el dibujo salta al pasar. `cuadros()` los
   // empareja. Y todos los caracteres tienen que caer en la grilla del monoespaciado: hay un
   // tripwire con los anchos medidos, porque `~` y `∼` se ven igual y miden distinto.
-  function cuadros(e, capa, lista, ms) {
+  function cuadros(e, capa, lista, ms, unaVez) {
     const alto = Math.max.apply(null, lista.map(function (c) { return c.split('\n').length; }));
     const parejos = lista.map(function (c) {
       const filas = c.split('\n');
       while (filas.length < alto) filas.push('');
       return filas.join('\n');
     });
-    let i = 0;
     capa.textContent = parejos[0];
-    if (parejos.length < 2) return;
-    e.relojes.push(setInterval(function () {
-      i = (i + 1) % parejos.length;
-      capa.textContent = parejos[i];
-    }, ms || 90));
+    e.planos.push({ capa: capa, cuadros: parejos, ms: ms || 90, unaVez: !!unaVez, i: 0 });
+  }
+
+  // ⚠️ **Los cuadros los manda la línea de tiempo, no un reloj aparte.** Antes cada plano
+  // corría con su `setInterval`, o sea que de un GIF de varios segundos se veía un bucle corto
+  // mientras la escena duraba el triple: había muchísimo más material del que se mostraba. Ahora
+  // el material **convertido se reproduce entero y una sola vez** a lo largo de la escena, y el
+  // dibujado a mano —que son dos o tres cuadros pensados para ciclar rápido— sigue en bucle,
+  // pero contra el mismo reloj.
+  //
+  // De paso desaparecen los intervalos sueltos: no puede quedar ninguno vivo sobre una página
+  // que se está yendo, y buscar un instante con `seek()` muestra el cuadro que corresponde.
+  function avanzarCuadros(e, anim) {
+    const p = Math.max(0, Math.min(1, (anim.progress || 0) / 100));
+    e.planos.forEach(function (pl) {
+      const n = pl.cuadros.length;
+      if (n < 2) return;
+      const i = pl.unaVez
+        ? Math.min(n - 1, Math.floor(p * n))
+        : Math.floor((anim.currentTime || 0) / pl.ms) % n;
+      if (i !== pl.i) {
+        pl.i = i;
+        pl.capa.textContent = pl.cuadros[i];
+      }
+    });
   }
 
   // ⚠️ El arte convertido de material real (tools/ascii_video.py) le GANA al dibujado a mano.
@@ -118,12 +137,13 @@
       c.split('\n').forEach(function (l) { if (l.length > cols) cols = l.length; });
     });
     capa.style.fontSize = Math.max(6, Math.min(26, e.ancho / (cols * 0.62))) + 'px';
-    cuadros(e, capa, lista, (conv && conv.ms) || ms);
+    const convertida = !!(conv && conv.cuadros && conv.cuadros.length);
+    cuadros(e, capa, lista, (conv && conv.ms) || ms, convertida);
     // ⚠️ Devuelve si el arte es convertido, y no es un detalle: el dibujado a mano son ~35
     // columnas y hay que AGRANDARLO para que llene la escena, mientras que el convertido ya
     // entra justo y ampliarlo 2,7× destruye el detalle que es justamente su valor. Cada escena
     // elige su recorrido de escala con esto.
-    return !!(conv && conv.cuadros && conv.cuadros.length);
+    return convertida;
   }
 
   // ── La cámara ──────────────────────────────────────────────────────────────
@@ -533,10 +553,7 @@
       if (listo) return;
       listo = true;
       cerrarActual = null;
-      // Los relojes de los cuadros siguen corriendo por su cuenta: si no se cortan acá, quedan
-      // intervalos vivos sobre una página que se está yendo.
-      e.relojes.forEach(clearInterval);
-      e.relojes = [];
+      e.planos = [];
       e.overlay.style.display = 'none';
       e.texto.textContent = '';
       fin();
@@ -547,7 +564,9 @@
       setTimeout(terminar, 400);
       return true;
     }
-    const tl = anime.timeline();
+    const tl = anime.timeline({
+      update: function (anim) { avanzarCuadros(e, anim); },
+    });
     entrada(e, tl);
     coreo(e, tl);
     romper(e, tl);

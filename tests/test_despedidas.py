@@ -7,6 +7,8 @@ no pueden dejar una tarea sin borrar después de que confirmaste.
 import pathlib
 import re
 
+import pytest
+
 from bitacora import database as db
 from bitacora import despedidas
 from bitacora.appconfig import SETTINGS
@@ -125,12 +127,23 @@ def test_el_arte_respeta_la_grilla_del_monoespaciado():
                 assert c in GRILLA or c in FUERA_DE_GRILLA_OK,                     "U+%04X (%s) no esta medido: ver GRILLA" % (ord(c), c)
 
 
-def test_el_reloj_de_los_cuadros_se_corta_al_terminar():
-    """⚠️ Los cuadros los cambia un `setInterval` que corre por su cuenta, no anime.js. Sin
-    cortarlo queda vivo sobre una página que se está yendo —y el borrado recarga la página—."""
+def test_los_cuadros_los_manda_la_linea_de_tiempo():
+    """⚠️ Antes cada plano corría con su `setInterval`, y eso tenía dos problemas. El visible: de
+    un GIF de varios segundos se veía un bucle corto mientras la escena duraba el triple —había
+    muchísimo más material del que se mostraba—. El callado: un intervalo que quedara vivo sobre
+    una página que se está yendo, y el borrado recarga la página.
+
+    Con los cuadros colgados del `update` de la línea de tiempo los dos desaparecen, y además
+    buscar un instante con `seek()` muestra el cuadro que corresponde.
+    """
     js = _leer("bitacora", "static", "js", "despedidas.js")
-    terminar = js[js.index("const terminar = function ()"):]
-    assert "e.relojes.forEach(clearInterval)" in terminar[:500]
+    for linea in js.splitlines():
+        if linea.strip().startswith("//"):
+            continue          # el comentario que explica por qué ya no hay ninguno
+        assert "setInterval" not in linea, "volvio un reloj suelto: " + linea.strip()
+    assert "update: function (anim) { avanzarCuadros(e, anim); }" in js
+    # El convertido va una sola vez a lo largo de la escena; el de a mano sigue en bucle.
+    assert "Math.min(n - 1, Math.floor(p * n))" in js
 
 
 def test_el_texto_que_se_destruye_es_el_de_la_tarea():
@@ -257,3 +270,29 @@ def test_escape_termina_la_animacion_en_vez_de_cancelarla():
     bloque = js[js.index("ev.key === 'Escape'"):]
     assert "ev.stopPropagation();" in bloque[:200]
     assert "cerrarActual();" in bloque[:200]
+
+
+# ── Que el archivo al menos PARSEE ─────────────────────────────────────────────
+
+def test_todo_el_javascript_de_la_app_parsea():
+    """⚠️ Dos veces quedó `despedidas.js` con un error de sintaxis y la suite entera siguió en
+    verde: los tests leen los archivos como texto, así que un JS roto les da igual. En la app eso
+    es una pantalla que se ve perfecta y una feature que no existe —el modal no abría y el
+    borrado seguía andando por el camino de respaldo, que es justo el fallo callado de siempre—.
+
+    Se saltea si no hay node: es una herramienta de desarrollo, no un requisito para correr.
+    """
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("sin node: el chequeo de sintaxis es opcional")
+
+    rotos = []
+    for f in sorted((RAIZ / "bitacora" / "static" / "js").rglob("*.js")):
+        r = subprocess.run([node, "--check", str(f)], capture_output=True, text=True)
+        if r.returncode:
+            primera = (r.stderr or "").strip().splitlines()
+            rotos.append("%s: %s" % (f.name, primera[3] if len(primera) > 3 else primera[:1]))
+    assert rotos == [], rotos

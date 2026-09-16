@@ -1029,6 +1029,13 @@ que saca la fila de la lista.
   es lo que da la profundidad: el meteorito baja desde un cielo estrellado que queda quieto atrás,
   el tiburón sube desde el fondo del mar creciendo, la ola se levanta por la izquierda hasta tapar
   todo. La escala es la herramienta principal: **algo chico y lejos que se vuelve enorme**.
+- ⚠️ **Los cuadros los manda la línea de tiempo, no un reloj aparte.** Cada plano corría con su
+  `setInterval`, y eso tenía dos problemas. El visible: de un GIF de varios segundos se veía un
+  bucle corto mientras la escena duraba el triple —*"tenemos muchísimo más tiempo de animación del
+  que estamos mostrando"*—. El callado: un intervalo vivo sobre una página que se está yendo, y el
+  borrado recarga la página. Hoy el material **convertido se reproduce entero y una sola vez** a lo
+  largo de la escena, el dibujado a mano sigue en bucle contra el mismo reloj, y buscar un instante
+  con `seek()` muestra el cuadro que corresponde.
 - ⚠️ **Hay cámara, y es la mitad del golpe**: `sacudir()` mueve la ESCENA entera (no el dibujo —si
   sacudiera el dibujo no sería un temblor—) y `destello()` tapa todo un instante con blanco. Son
   las que dan el impacto del meteorito y el flash del guadañazo.
