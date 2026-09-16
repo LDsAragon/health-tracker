@@ -39,7 +39,8 @@ def test_todos_los_bichos_tienen_cuadros_propios():
     for slug in despedidas.SLUGS:
         cuerpo = bloque[bloque.index(slug + ": function (e, tl)"):]
         cuerpo = cuerpo[:cuerpo.index("return tl")]
-        assert "cuadros(e, e.capas[" in cuerpo, slug
+        # `pintar` es `cuadros` con el arte convertido por delante: las dos pintan un plano.
+        assert ("cuadros(e, e.capas[" in cuerpo or "pintar(e, e.capas[" in cuerpo), slug
 
 
 def test_cada_animacion_tiene_su_destruccion():
@@ -98,7 +99,7 @@ def _cuadros_del_arte():
     dentro = False
     for linea in _leer("bitacora", "static", "js", "despedidas.js").splitlines():
         t = linea.strip()
-        if t.startswith("cuadros(e, e.capas["):
+        if t.startswith("cuadros(e, e.capas[") or "pintar(e, e.capas[" in t:
             dentro = True
         elif dentro and t.startswith("],"):
             dentro = False

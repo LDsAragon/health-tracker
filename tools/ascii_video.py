@@ -7,6 +7,12 @@ hacen las animaciones ASCII que valen la pena.
     .\\hacer.ps1 ascii material\\ola.mp4 --nombre ola
     .\\hacer.ps1 ascii material\\meteorito.gif --nombre meteorito --cols 80 --cuadros 18
 
+Una escena puede componerse con VARIOS materiales, uno por plano, con la convencion
+`escena.plano`. El de fondo va mas chico, mas lento y mas apagado que el de adelante: eso es el
+parallax, y sin esa diferencia los dos dibujos se leen como uno encima del otro.
+
+    .\\hacer.ps1 ascii material\\asteroide.gif --nombre meteorito.fondo
+
 Sale a `bitacora/static/js/despedidas-arte.js`, que define `window.DESPEDIDAS_ARTE[nombre]` y lo
 lee `despedidas.js`. Se regenera entero cada vez a partir de lo que haya en el JSON de al lado,
 así agregar una animación no pisa las otras.

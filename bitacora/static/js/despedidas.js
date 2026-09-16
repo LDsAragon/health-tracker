@@ -189,13 +189,13 @@
     // Baja desde el espacio: el cielo estrellado queda atrás y quieto mientras la roca crece y
     // entra en la atmósfera. Cuando pega: destello, temblor y onda expansiva.
     meteorito: function (e, tl) {
-      cuadros(e, e.capas[0], [
+      const fondo = pintar(e, e.capas[0], 'meteorito.fondo', [
         '  .      ·        .       ·      .        ·\n' +
         '       ·      .        ·      .       ·\n' +
         '  ·        .       ·        .      ·       .\n' +
         '      .        ·       .        ·      .\n' +
         '  ·       .        ·       .        ·      .',
-      ]);
+      ], 260);
       const conv = pintar(e, e.capas[2], 'meteorito', [
         '    .\n   \'\\\n  . \\\\\n    \\\\\\\n   \' \\\\\\\n      \\\\\\\\\n       ☄',
         '    ·\n   .\\\n  \' \\\\\n    \\\\\n   . \\\\\\\n      \\\\\\\n       ☄',
@@ -205,8 +205,13 @@
       return tl
         .add({                            // el cielo, lejos: casi no se mueve
           targets: e.capas[0],
-          opacity: [0, 0.75],
-          translateY: [-16, 10],
+          opacity: [0, fondo ? 0.5 : 0.75],
+          // ⚠️ Con otro material atrás, el plano de fondo tiene que ir MÁS CHICO, MÁS LENTO y
+          // MÁS APAGADO que el de adelante. Eso es el parallax; sin esa diferencia los dos
+          // dibujos se leen como uno encima del otro y la profundidad desaparece.
+          scale: fondo ? [0.5, 0.62] : [1, 1],
+          translateX: fondo ? [e.ancho * 0.16, e.ancho * 0.05] : [0, 0],
+          translateY: fondo ? [-e.alto * 0.24, -e.alto * 0.10] : [-16, 10],
           duration: 1500,
           easing: 'linear',
         })
