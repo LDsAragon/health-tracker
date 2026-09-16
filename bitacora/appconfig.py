@@ -16,6 +16,20 @@ THEMES = [
 ]
 THEME_SLUGS = {t["slug"] for t in THEMES}
 
+
+def color_de_fondo(slug) -> str:
+    """El fondo del tema, para pintárselo a la VENTANA y no solo a la página.
+
+    ⚠️ pywebview pinta el Form y el `DefaultBackgroundColor` del WebView2 con su
+    `background_color`, que por defecto es **blanco**. Como el WebView2 tarda un pelín en
+    repintar al redimensionar, lo que asoma en el hueco es ese blanco: es el "parpadeo de bordes
+    blancos" al estirar el widget. Con el color del tema, el hueco deja de notarse.
+    """
+    for t in THEMES:
+        if t["slug"] == slug:
+            return t["bg"]
+    return THEMES[0]["bg"]
+
 # Paleta de las notas, rutinas y categorias. Estaba repetida como literal en SEIS
 # plantillas; tambien es el `choices` del ajuste `nota_color`.
 NOTE_COLORS = ("#6366f1", "#22c55e", "#3b82f6", "#f97316", "#ef4444",

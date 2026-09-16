@@ -158,6 +158,24 @@ def minimizar():
     return _volver(request.form.get("p", "tareas"))
 
 
+@bp.route("/widget/tamano/arrastrar", methods=["POST"])
+def tamano_arrastrar():
+    """El agarre de la esquina, **una sola vez** por arrastre.
+
+    De acá en más la ventana la sigue el sistema operativo con su propio bucle, que es lo único
+    que lo hace fluido: la versión anterior posteaba el tamaño en cada movimiento del mouse y eso
+    eran decenas de `resize()` por segundo —se veía vibrar—. En Linux hacen falta las coordenadas
+    del puntero, que es lo que pide `begin_resize_drag` de GTK.
+    """
+    try:
+        x = int(request.form.get("x") or 0)
+        y = int(request.form.get("y") or 0)
+    except (TypeError, ValueError):
+        x = y = 0
+    widget.empezar_arrastre_de_tamano(x, y)
+    return "", 204
+
+
 @bp.route("/widget/tamano", methods=["POST"])
 def tamano():
     """El agarre de la esquina, mientras lo arrastrás. 204 y a otra cosa.

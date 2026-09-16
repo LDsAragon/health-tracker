@@ -112,6 +112,20 @@ def guion():
         _check(_esperar(lambda: _geometria() == (widget.ANCHO, widget.ALTO)),
                f"el doble clic del agarre devuelve la medida de fábrica: {_geometria()}")
 
+        # El borde con el que el SISTEMA redimensiona. En Windows es reponerle WS_THICKFRAME a
+        # una ventana frameless; en Linux no aplica (ahí va begin_resize_drag de GTK).
+        if sys.platform == "win32":
+            import ctypes
+            _check(widget.poner_borde_nativo(), "se le repone el borde de redimensionado")
+            estilo = ctypes.windll.user32.GetWindowLongW(widget._hwnd(), widget.GWL_STYLE)
+            _check(bool(estilo & widget.WS_THICKFRAME),
+                   "WS_THICKFRAME quedó puesto: el borde de la ventana ya es el agarre del sistema")
+            _check(widget.empezar_arrastre_de_tamano() is not None,
+                   "pedirle el arrastre al sistema no explota")
+        else:
+            _check(widget.poner_borde_nativo() is False,
+                   "en Linux el borde nativo no aplica y no rompe")
+
         # El punto del widget: la ventana grande se cierra y él sigue vivo.
         principal.destroy()
         time.sleep(2)

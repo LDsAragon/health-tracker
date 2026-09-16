@@ -288,24 +288,12 @@ recordarColapsable('w-notas-hoy', 'widgetNotasHoy', false);
 (function () {
   const agarre = document.getElementById('w-grip');
   if (!agarre) return;
-  let actual = window.WIDGET_TAMANO || [340, 520];
-  let x0 = 0, y0 = 0, w0 = 0, h0 = 0, arrastrando = false;
-  let enVuelo = false, pendiente = null;
+  let x0 = 0, y0 = 0, apretado = false, avisado = false;
 
-  // Una medida a la vez: mientras una está viajando, la siguiente espera y se pisa con la que
-  // venga después. Arrastrar dispara decenas de eventos por segundo y no hay nada que ganar
-  // mandándolos todos.
-  function mandar(url, datos) {
-    if (enVuelo) { pendiente = [url, datos]; return; }
-    enVuelo = true;
-    fetch(url, { method: 'POST', body: new URLSearchParams(datos || {}) })
-      .then(function (r) { return r.json(); })
-      .then(function (t) { actual = [t.w, t.h]; })
-      .catch(function () {})
-      .then(function () {
-        enVuelo = false;
-        if (pendiente) { const p = pendiente; pendiente = null; mandar(p[0], p[1]); }
-      });
+  function post(url, datos) {
+    try {
+      fetch(url, { method: 'POST', body: new URLSearchParams(datos || {}) }).catch(function () {});
+    } catch (e) { /* sin fetch no se redimensiona, pero la página sigue andando */ }
   }
 
   agarre.addEventListener('mousedown', function (e) {
@@ -314,24 +302,30 @@ recordarColapsable('w-notas-hoy', 'widgetNotasHoy', false);
     // mientras se redimensiona, y se ve como que el widget se escapa.
     e.preventDefault();
     e.stopPropagation();
-    arrastrando = true;
-    x0 = e.screenX; y0 = e.screenY;
-    w0 = actual[0]; h0 = actual[1];
+    apretado = true;
+    avisado = false;
+    x0 = e.screenX;
+    y0 = e.screenY;
   });
 
-  // En `window` y no en el agarre: al agrandar, el puntero le va ganando de mano a la esquina.
+  // ⚠️ Se le pasa el arrastre al sistema recién cuando el mouse se MOVIÓ unos píxeles, no al
+  // apretar: el bucle del sistema es modal y se queda con el mouse, así que arrancarlo en el
+  // `mousedown` se comería el segundo clic y el doble clic no existiría más.
   window.addEventListener('mousemove', function (e) {
-    if (!arrastrando) return;
-    mandar('/widget/tamano', { w: Math.round(w0 + (e.screenX - x0)),
-                               h: Math.round(h0 + (e.screenY - y0)) });
+    if (!apretado || avisado) return;
+    if (Math.abs(e.screenX - x0) < 4 && Math.abs(e.screenY - y0) < 4) return;
+    avisado = true;
+    apretado = false;
+    post('/widget/tamano/arrastrar', { x: e.screenX, y: e.screenY });
   });
-  window.addEventListener('mouseup', function () { arrastrando = false; });
+
+  window.addEventListener('mouseup', function () { apretado = false; });
 
   agarre.addEventListener('dblclick', function (e) {
     e.preventDefault();
     e.stopPropagation();
-    arrastrando = false;
-    mandar('/widget/tamano/original', {});
+    apretado = false;
+    post('/widget/tamano/original', {});
   });
 })();
 </script>

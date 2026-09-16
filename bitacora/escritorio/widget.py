@@ -5,6 +5,7 @@ rutas pueden llamar a estas funciones sin preguntar.
 """
 import json
 import os
+import sys
 import threading
 
 TITULO = "Bitácora"
@@ -60,6 +61,17 @@ def _seguir_el_estado(ventana):
 
 def hay_escritorio() -> bool:
     return bool(_url_base)
+
+
+def color_de_fondo() -> str:
+    """El fondo con el que se crea la ventana. Import local, como `medidas_ventana`: este módulo
+    no arrastra la capa de datos al importarse."""
+    from bitacora.appconfig import color_de_fondo as _color, THEMES
+    try:
+        from bitacora import database as db
+        return _color(db.get_all_settings().get("theme"))
+    except Exception:
+        return THEMES[0]["bg"]
 
 
 # ── Geometría (archivo de DISPOSITIVO, no de perfil) ─────────────────────────
@@ -203,6 +215,10 @@ def abrir():
                 x=x, y=y,
                 frameless=True, easy_drag=True, on_top=True,
                 resizable=True, min_size=MIN_WIDGET, text_select=True,
+                # ⚠️ Sin esto el fondo de la ventana Y el del WebView2 son BLANCOS (el default de
+                # pywebview), y es justo lo que asoma mientras el WebView2 repinta al
+                # redimensionar: el parpadeo de bordes blancos al estirar el widget.
+                background_color=color_de_fondo(),
             )
         except Exception:
             _ventana = None
@@ -210,6 +226,8 @@ def abrir():
     _ventana.events.moved += _al_mover
     _ventana.events.resized += lambda w, h: guardar_geometria(w=w, h=h)
     _ventana.events.closed += _olvidar
+    # El handle recién existe cuando la ventana se muestra, así que el borde se repone ahí.
+    _ventana.events.shown += poner_borde_nativo
     return True
 
 
@@ -249,6 +267,89 @@ def minimizar():
             _ventana.minimize()
         except Exception:
             pass
+
+
+# ── El redimensionado lo hace el SISTEMA ─────────────────────────────────────
+# ⚠️ La ventana es `frameless` y eso en Windows es FormBorderStyle = None: sin borde de
+# redimensionado. La primera versión lo resolvía desde la página, posteando el tamaño nuevo en
+# CADA mousemove; eran decenas de `resize()` por segundo y se veía vibrar. Ahora se le devuelve el
+# trabajo al sistema operativo, que es el único que lo hace fluido: en Windows alcanza con
+# reponerle el bit WS_THICKFRAME (medido: queda puesto, el hit-test de la esquina responde
+# HTBOTTOMRIGHT y en Win11 el marco **no se ve**), y en Linux GTK tiene su propio
+# `begin_resize_drag`.
+
+GWL_STYLE = -16
+WS_THICKFRAME = 0x00040000
+WM_NCLBUTTONDOWN = 0x00A1
+HTBOTTOMRIGHT = 17
+SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_FRAMECHANGED = 0x0002, 0x0001, 0x0004, 0x0020
+
+
+def _hwnd() -> int:
+    """El handle de la ventana del widget. `Window.native` es API pública de pywebview."""
+    try:
+        return int(str(_ventana.native.Handle))
+    except Exception:
+        return 0
+
+
+def poner_borde_nativo() -> bool:
+    """Reponerle a la ventana el bit que la hace redimensionable por el sistema (solo Windows).
+
+    Con esto el borde de la ventana pasa a ser el agarre de siempre, el de cualquier programa:
+    cero requests mientras arrastrás.
+
+    ⚠️ **El marco le saca 14x14 px al área cliente y NO se compensan.** Agrandar la ventana para
+    recuperarlos dispararía `resized`, que guarda la geometría, y al próximo arranque se volvería
+    a aplicar sobre un tamaño ya crecido: el widget ganaría 14 px por arranque, para siempre. La
+    página es fluida y 7 px por lado no se notan; el crecimiento sin techo sí.
+    """
+    if sys.platform != "win32" or _ventana is None:
+        return False
+    hwnd = _hwnd()
+    if not hwnd:
+        return False
+    try:
+        import ctypes
+        u32 = ctypes.windll.user32
+        estilo = u32.GetWindowLongW(hwnd, GWL_STYLE)
+        if estilo & WS_THICKFRAME:
+            return True
+        u32.SetWindowLongW(hwnd, GWL_STYLE, estilo | WS_THICKFRAME)
+        u32.SetWindowPos(hwnd, 0, 0, 0, 0, 0,
+                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
+        return True
+    except Exception:
+        return False
+
+
+def empezar_arrastre_de_tamano(x=None, y=None) -> bool:
+    """Le pide al sistema que tome el arrastre desde la esquina. Un pedido por arrastre, no uno
+    por movimiento del mouse: de ahí en más la ventana la sigue el sistema, sin HTTP en el medio.
+    """
+    if _ventana is None:
+        return False
+    if sys.platform == "win32":
+        hwnd = _hwnd()
+        if not hwnd:
+            return False
+        try:
+            import ctypes
+            u32 = ctypes.windll.user32
+            # Soltar la captura que tomó el navegador al apretar, o el bucle del sistema no ve
+            # el mouse. Y PostMessage y no SendMessage: el bucle es MODAL y bloquearía el hilo
+            # del request hasta que sueltes.
+            u32.ReleaseCapture()
+            return bool(u32.PostMessageW(hwnd, WM_NCLBUTTONDOWN, HTBOTTOMRIGHT, 0))
+        except Exception:
+            return False
+    try:
+        from gi.repository import Gdk
+        _ventana.native.begin_resize_drag(
+            Gdk.WindowEdge.SOUTH_EAST, 1, int(x or 0), int(y or 0), Gdk.CURRENT_TIME)
+        return True
+    except Exception:
+        return False
 
 
 def _acotar(w, h):

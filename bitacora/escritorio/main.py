@@ -389,6 +389,7 @@ def main():
     # botón "Descargar backup" no hace nada. Con esto: diálogo de guardado en
     # Windows, carpeta de descargas en Linux.
     webview.settings["ALLOW_DOWNLOADS"] = True
+    from bitacora.escritorio import widget       # import local, como el resto de este módulo
     ancho, alto, maximizada = tamano_inicial()
     principal = webview.create_window(
         WINDOW_TITLE,
@@ -402,6 +403,10 @@ def main():
         # servidor en _initialize() y ahí solo llega el http_port de create_window. El del
         # widget no hace falta — reusa este mismo servidor.
         http_port=puerto_seguro(),
+        # ⚠️ El default de pywebview es BLANCO, y pinta con él el fondo de la ventana y el del
+        # WebView2. Es lo que asoma mientras el WebView2 repinta al redimensionar —el parpadeo
+        # blanco— y también el fogonazo al abrir con un tema oscuro.
+        background_color=widget.color_de_fondo(),
     )
     principal.events.shown += lambda: _al_mostrarse(principal)
     # private_mode=False + storage_path: persistir localStorage (zoom, tamaño de

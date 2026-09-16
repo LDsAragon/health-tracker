@@ -477,6 +477,53 @@ def test_la_pagina_trae_el_agarre_y_la_medida_de_la_que_parte(cliente):
     assert "window.WIDGET_TAMANO = [340, 520]" in html
 
 
+def test_el_arrastre_se_lo_queda_el_sistema(cliente):
+    """⚠️ Antes se posteaba el tamaño en CADA mousemove —decenas de `resize()` por segundo— y la
+    ventana vibraba. Ahora va un solo pedido por arrastre y de ahí en más la sigue el sistema
+    operativo con su propio bucle, que es lo único que lo hace fluido."""
+    assert cliente.post("/widget/tamano/arrastrar",
+                        data={"x": "900", "y": "700"}).status_code == 204
+    # Sin coordenadas también: en Windows no hacen falta, las pide GTK.
+    assert cliente.post("/widget/tamano/arrastrar").status_code == 204
+    assert widget.empezar_arrastre_de_tamano(1, 2) is False        # no-op sin ventana
+
+    html = (RAIZ / "bitacora" / "templates" / "widget.html").read_text(encoding="utf-8")
+    assert "/widget/tamano/arrastrar" in html
+    assert "mousemove" in html and "screenX" in html
+
+
+def test_el_arrastre_empieza_al_MOVERSE_y_no_al_apretar():
+    """⚠️ El bucle del sistema es modal y se queda con el mouse. Arrancarlo en el `mousedown` se
+    comería el segundo clic, y el doble clic —que es lo que devuelve la medida original— no
+    existiría más. Por eso espera a que el mouse se haya movido unos píxeles."""
+    html = (RAIZ / "bitacora" / "templates" / "widget.html").read_text(encoding="utf-8")
+    mousedown = html[html.index("agarre.addEventListener('mousedown'"):]
+    assert "/widget/tamano/arrastrar" not in mousedown[:500]
+    assert "< 4 && Math.abs(e.screenY - y0) < 4) return;" in html
+    assert "agarre.addEventListener('dblclick'" in html
+
+
+def test_la_ventana_se_pinta_con_el_fondo_del_tema(tmp_path, monkeypatch):
+    """⚠️ El default de pywebview es BLANCO y con él pinta el Form y el WebView2. Es lo que asoma
+    mientras el WebView2 repinta al redimensionar: el parpadeo de bordes blancos al estirar."""
+    from bitacora.appconfig import THEMES
+    monkeypatch.setattr("bitacora.database.conn.DB_PATH", str(tmp_path / "t.db"))
+    db.init_db()
+    db.set_setting("theme", "claude")
+    esperado = next(t["bg"] for t in THEMES if t["slug"] == "claude")
+    assert widget.color_de_fondo() == esperado
+
+    for archivo in ("bitacora/escritorio/widget.py", "bitacora/escritorio/main.py"):
+        texto = (RAIZ / archivo).read_text(encoding="utf-8")
+        assert "background_color=" in texto, archivo
+
+
+def test_el_borde_nativo_es_no_op_sin_ventana():
+    """En el navegador y en los tests no hay ventana que tocar. En Linux tampoco aplica: ahí el
+    agarre de la página llama a `begin_resize_drag` de GTK, que es el equivalente."""
+    assert widget.poner_borde_nativo() is False
+
+
 def test_el_agarre_corta_la_propagacion_del_mousedown():
     """⚠️ Tripwire de un fallo callado: `easy_drag` de pywebview engancha su `mousedown` en
     `window`, así que sin el stopPropagation arrastrar el agarre MOVERÍA la ventana mientras se

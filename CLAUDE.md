@@ -79,7 +79,7 @@ bitacora/
       ekman-wheel*.js   # Rueda Ekman (Atlas of Emotions, 2 niveles) + contenido
       emotion-wheel-visual.js  # Render SVG data-driven, común a ambas ruedas
       emotion-guided.js # Exploración guiada (árbol de decisión, tercer tab del modal)
-      vendor/           # chart.umd.min.js
+      vendor/           # chart.umd.min.js, anime.min.js (la animación de borrado)
   escritorio/           # Solo la app de ventana. Nada del resto del paquete importa de acá.
     main.py             # Arranque pywebview; preparar_datos() (migraciones, perfil, backup
                         #   diario y esquema); APP_DIR por plataforma; arrancar() = main()
@@ -415,6 +415,53 @@ Segunda ventana de pywebview **en el mismo proceso**, `frameless` + `easy_drag` 
   cierra la *última* ventana. Es la razón de ser de la feature.
 - ⚠️ **Una ventana destruida NO tira excepción al navegarla.** Hay que preguntarle a pywebview si
   todavía la tiene (`_principal_viva()`), o el clic en un día se pierde en silencio.
+- ⚠️ **Las dos escrituras de `widget.json` van bajo un lock** (`_geo_lock`). Los que escriben son
+  manejadores de eventos de la ventana —`moved` y `resized`— y **llegan juntos**: en GTK cada
+  redimensionado viene con su `moved` pegado. Cada uno leía el archivo, cambiaba lo suyo y lo
+  escribía entero, así que el que escribía último lo hacía sobre una foto vieja y le devolvía al
+  archivo las claves del otro como estaban antes: **mover el widget le borraba el tamaño recién
+  elegido**. Sin error en ningún lado. El temporal lleva además el id del hilo, porque compartido
+  uno podía truncarlo justo cuando el otro estaba por renombrarlo.
+- ⚠️ **La geometría del widget va a `APP_DIR/widget.json`, nunca a `settings`**: los ajustes
+  sincronizan entre máquinas y el widget aparecería corrido o fuera de pantalla en la otra.
+- ⚠️ **Una posición guardada se valida contra los monitores, al guardarla y al abrir**
+  (`posicion_visible`, con `webview.screens`). Windows le pone **(-32000, -32000)** a una ventana
+  minimizada y pywebview lo dispara como un evento `moved`: **minimizar el widget una vez lo
+  mandaba fuera de toda pantalla para siempre**, y como `esta_abierto()` seguía devolviendo True
+  la app decía que estaba abierto mientras no se veía por ningún lado. Desenchufar el monitor
+  donde vivía hacía lo mismo. Al abrir, una posición imposible se descarta y se olvida
+  (`olvidar_posicion()` deja el tamaño), así la ventana nace donde la ponga el sistema.
+- ⚠️ **El widget lo redimensiona el SISTEMA, no la página.** La ventana es `frameless`, y en
+  Windows eso es `FormBorderStyle = None` (`webview/platforms/winforms.py`): **no tiene borde de
+  redimensionado**, así que el `resizable=True` con el que se crea es inerte y con el mouse no había
+  de dónde agarrarla. La solución es reponerle el bit a mano:
+  `escritorio.widget.poner_borde_nativo()` le mete `WS_THICKFRAME` por `ctypes` cuando la ventana se
+  muestra, y el borde vuelve a ser el agarre de siempre. **Medido antes de escribirlo**: el estilo
+  queda puesto, el hit-test de la esquina responde `HTBOTTOMRIGHT` y en Win11 **el marco no se ve**.
+  - ⚠️ **El marco le saca 14×14 px al área cliente y NO se compensan.** Agrandar la ventana para
+    recuperarlos dispararía `resized`, que guarda la geometría, y al próximo arranque se aplicaría
+    sobre un tamaño ya crecido: 14 px por arranque, para siempre. La página es fluida y 7 px por
+    lado no se notan; el crecimiento sin techo sí.
+  - **La primera versión lo hacía desde la página y se descartó**: posteaba el tamaño nuevo en
+    **cada `mousemove`**, o sea decenas de `resize()` por segundo, y se veía vibrar. Hoy el agarre
+    de la esquina (`.w-grip`) manda **un solo** pedido por arrastre —`POST /widget/tamano/arrastrar`,
+    que en Windows postea `WM_NCLBUTTONDOWN` con `HTBOTTOMRIGHT` y en Linux llama a
+    `begin_resize_drag` de GTK— y de ahí en más la ventana la sigue el sistema.
+  - ⚠️ **El arrastre arranca en el `mousemove`, no en el `mousedown`.** El bucle del sistema es
+    modal y se queda con el mouse: arrancarlo al apretar se comería el segundo clic y el **doble
+    clic** —que devuelve la medida original— dejaría de existir. Espera a que el mouse se haya
+    movido unos píxeles.
+  - ⚠️ El `mousedown` del agarre **corta la propagación**: `easy_drag` engancha el suyo en `window`
+    y sin eso arrastrar el agarre **movería** la ventana mientras se redimensiona. Va con tripwire.
+  - **Doble clic en el agarre vuelve a 340×520**, el mismo gesto que resetea el ancho de los paneles
+    del día. Por eso no hizo falta darle menú contextual al widget ni otro botón a una barra de
+    340px.
+- ⚠️ **Las dos ventanas se crean con `background_color`, y no es cosmética.** pywebview pinta con
+  él el fondo del Form **y** el `DefaultBackgroundColor` del WebView2, y su default es **blanco**
+  (`webview/window.py`). Es exactamente lo que asoma mientras el WebView2 repinta al redimensionar:
+  el parpadeo de bordes blancos al estirar el widget. Sale de `appconfig.color_de_fondo(tema)`.
+  Como se fija al crear la ventana, cambiar de tema actualiza ese color recién al reabrir: es un
+  artefacto de menos de 100 ms y no vale un camino nuevo.
 - ⚠️ **Las dos escrituras de `widget.json` van bajo un lock** (`_geo_lock`). Los que escriben son
   manejadores de eventos de la ventana —`moved` y `resized`— y **llegan juntos**: en GTK cada
   redimensionado viene con su `moved` pegado. Cada uno leía el archivo, cambiaba lo suyo y lo
@@ -956,34 +1003,52 @@ cada formulario **declara** lo suyo:
 ## La muerte de una tarea
 
 Borrar una tarea era lo más silencioso de la app: confirmabas y la fila desaparecía en la recarga.
-Ahora se reproduce una animación ASCII corta encima de la fila —un meteorito, una ola, la parca, un
-cocodrilo o un tiburón— y recién después se envía el formulario.
+Ahora se abre un modal con **el texto de la tarea** adentro y algo se lo lleva —un meteorito, una
+ola, la parca, un cocodrilo o un tiburón—; recién cuando termina se envía el formulario, que es lo
+que saca la fila de la lista.
 
-- **Engancha en `confirmar.js`, en el botón OK del modal**, que es el único punto por donde pasan
-  los 16 borrados de la app: ahí ya confirmaste y todavía no se envió nada. El formulario lo pide
-  con `data-despedida`, y lo llevan **solo los dos que borran una tarea** (el día y el visor). Un
-  meteorito arriba de "Eliminar este perfil" sería un chiste sobre un borrado grande.
+- ⚠️ **La primera versión la dibujaba ENCIMA de la fila y se descartó**: se encimaba con el texto
+  que estaba borrando, en una fila de 34px y con la letra achicada para entrar, así que no se
+  apreciaba. Y eran seis cuadros ASCII intercambiados cada 110ms: seis pasos no pueden verse
+  fluidos. El modal no es estética, es lo que hace que la animación tenga dónde pasar.
+- **Engancha en `confirmar.js`, en el botón OK del modal de confirmación**, que es el único punto
+  por donde pasan los 16 borrados de la app: ahí ya confirmaste y todavía no se envió nada. El
+  formulario lo pide con `data-despedida`, y lo llevan **solo los dos que borran una tarea** (el
+  día y el visor). Un meteorito arriba de "Eliminar este perfil" sería un chiste sobre un borrado
+  grande.
 - ⚠️ **Borrar no puede depender de la animación.** `window.despedir(form, enviar)` tiene que llamar
-  a `enviar` siempre: hay un **tope duro de 1,5 s agendado ANTES del `try`** (para el caso en que
-  el reproductor explote al armarse), un `catch` que envía igual, y una guarda de "una sola vez"
-  porque el tope y el final de la animación pueden llegar los dos. Si `despedidas.js` no cargó,
-  `confirmar.js` envía derecho. Es el mismo criterio que el `onsubmit="return false;"` de ese
-  archivo y que el botón Guardar que sigue en la plantilla de Ajustes: lo decorativo puede fallar,
-  la acción no. Lo fijan dos tripwires en `tests/test_despedidas.py`.
-- **El catálogo vive en Python** (`bitacora/despedidas.py`) porque tiene tres lectores —el día, el
-  visor y el control de Ajustes que las previsualiza—, y de ahí **se derivan las `choices` del
-  ajuste**, como `TIPOS_GRAFICABLES` sale de `FIELD_TYPES`: sumar una animación es una entrada.
-- ⚠️ **Los cuadros se escriben sueltos y los normaliza `_cuadros()`** a una grilla única. Un cuadro
-  más angosto o más bajo que el anterior corre el dibujo entero al pasar y la animación se ve como
-  un temblor. Y se saca **un solo salto de línea** de cada punta, no un `strip()`: las líneas en
-  blanco de arriba y de abajo son las que dejan al meteorito alto y a la ola baja.
-- **Se dibuja pegada a la izquierda y con un tamaño calculado**, no fijo: el panel del día puede
-  estar en su mínimo (manda el ancho) y la fila del visor mide 900px (manda el alto, o el dibujo
-  taparía tres tareas para arriba y tres para abajo). Centrada quedaba flotando lejos del texto:
-  lo que se están llevando es **esa** tarea.
-- El `<pre>` va al `<body>` con `position: fixed` sobre el rectángulo de la fila, y con
-  `pointer-events: none`: así no se le toca el layout a `.todo-row` —que es un flex con su propio
-  arreglo— ni se come el clic del botón de al lado.
+  a `enviar` siempre: hay un **tope duro de 3 s agendado ANTES del `try`** (para el caso en que el
+  reproductor explote al armarse), un `catch` que envía igual, y una guarda de "una sola vez"
+  porque el tope y el final de la animación pueden llegar los dos. Si `despedidas.js` o anime.js no
+  cargaron, `confirmar.js` envía derecho. Es el mismo criterio que el `onsubmit="return false;"` de
+  ese archivo y que el botón Guardar que sigue en la plantilla de Ajustes: lo decorativo puede
+  fallar, la acción no. Lo fijan dos tripwires en `tests/test_despedidas.py`.
+- **Cada letra del texto es un `<span>`**, y de ahí sale todo: cada una se va por su lado, con su
+  retardo y su rotación. El espacio va como **espacio duro**, porque un `inline-block` con un
+  espacio normal mide cero y la frase se vería toda pegada. `perspective` en la escena es lo que
+  convierte los `rotateX/rotateY` en profundidad en vez de un aplastado.
+- **El motor es anime.js** (`static/js/vendor/anime.min.js`, 17 KB, UMD como Chart.js). Da las
+  líneas de tiempo, las curvas y `anime.stagger`, que es exactamente la forma de esta animación
+  ("cada letra sale 14 ms después que la anterior, desde donde pasó el bicho"). Por debajo son
+  transformaciones 3D de CSS, así que **hay profundidad sin WebGL**.
+  ⚠️ **three.js se descartó y no por el peso**: en Linux la app corre con
+  `WEBKIT_DISABLE_DMABUF_RENDERER=1` porque el renderer acelerado de WebKitGTK crashea en
+  NVIDIA + Wayland (`tools/linux/bitacora.sh`), así que estrenar WebGL sería entrar justo por ahí.
+  Y se carga **solo donde se usa** —`base.html`, no `widget.html`—, como Chart.js en `stats.html`.
+- ⚠️ **El catálogo está partido a propósito y las dos mitades tienen que coincidir**:
+  `bitacora/despedidas.py` tiene la **identidad** (slug, nombre, icono), que es de donde salen las
+  `choices` del ajuste y los chips de Ajustes; `COREOGRAFIAS` en `static/js/despedidas.js` tiene el
+  **dibujo**, que es comportamiento y corre en el navegador. Una animación elegible sin coreografía
+  es un ajuste que no hace nada: hay un tripwire que compara las dos listas.
+- **La cortina del modal es propia y más oscura** (`#despedida-modal`, 86% de negro) que el 55% de
+  `.update-modal-overlay`. Ese 55% alcanza cuando arriba hay una caja con fondo y borde; acá no hay
+  caja —es un escenario, no un cartel— y con la cortina común la animación flotaba sobre la lista
+  y parecía un accidente.
+- ⚠️ **Escape TERMINA la animación, no la cancela**, y corta la propagación para que el handler
+  global de `base.html` no te saque de la pantalla en el medio. Ya confirmaste el borrado: dejar la
+  tarea sin borrar después de haber dicho que sí sería el peor de los finales.
+- Con `prefers-reduced-motion` el modal se abre igual pero sin animación: saltearlo del todo
+  dejaría el borrado sin ninguna señal.
 - **En el widget no hay** (no tiene botón de borrar) y **completar una tarea no se anima**: eso ya
   tiene su festejo, la mascotita ASCII al cerrar el día, y dos festejos compitiendo se anulan.
 
@@ -1071,9 +1136,10 @@ Cero `<select>` entre los 18 ajustes, seis secciones colapsables y **guardado al
   borrado, que son siete opciones y no entran en un segmentado; y el de **medida** (tamaño de
   ventana), que es un segmentado de medidas comunes más dos números para escribir la tuya. Un
   switch en "24 h" haría preguntar *"¿12 h está prendido?"*.
-- El de chips además **reproduce la animación al elegirla**, sobre una tarea de mentira: entre
-  cinco nombres, elegir sin ver no significa nada. Encaja con que la pantalla guarde al instante
-  —se aplica y queda— y es el mismo patrón visual que los chips de plantilla de `/journal`.
+- El de chips además **reproduce la animación al elegirla**, en el mismo modal en el que se va a
+  ver de verdad y con una tarea de mentira: entre cinco nombres, elegir sin ver no significa nada.
+  Encaja con que la pantalla guarde al instante —se aplica y queda— y es el mismo patrón visual
+  que los chips de plantilla de `/journal`.
 - ⚠️ **`window_size` es el único ajuste sin whitelist cerrada.** Admite `maximizada`, una de
   `VENTANA_PRESETS` o una medida escrita a mano, así que trae **su propio validador** en el
   esquema (`valida: es_resolucion`) y toda la app valida por `appconfig.valor_valido()`. Eso no es
