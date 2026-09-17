@@ -99,14 +99,18 @@ async function quedoViejo(page) {
     const r = await fetch(location.href, { cache: 'no-store' });
     if (!r.ok) return { cubierta: true };
     const doc = new DOMParser().parseFromString(await r.text(), 'text/html');
+    // El tema vive fuera de <main>, así que la comparación de abajo no lo ve.
+    const miTema = document.documentElement.getAttribute('data-theme');
+    const suTema = doc.documentElement.getAttribute('data-theme');
+    const tema = miTema === suTema ? null : { enPantalla: miTema, enElServidor: suTema };
     const norm = (n) => (n ? n.textContent.replace(/\s+/g, ' ').trim() : '');
     const mio = norm(document.querySelector('main'));
     const suyo = norm(doc.querySelector('main'));
-    if (mio === suyo) return { cubierta: true };
+    if (mio === suyo) return { cubierta: true, tema };
     // Dónde empieza a diferir, que es lo único accionable del reporte.
     let i = 0;
     while (i < mio.length && i < suyo.length && mio[i] === suyo[i]) i++;
-    return { cubierta: true,
+    return { cubierta: true, tema,
              diff: { enPantalla: mio.slice(Math.max(0, i - 30), i + 70),
                      enElServidor: suyo.slice(Math.max(0, i - 30), i + 70) } };
   });
@@ -133,15 +137,28 @@ async function quePaso(page) {
 // tipo de dato quedaban zonas sin ejercitar (la pestaña de tareas del widget no muestra notas, y
 // ahí viven el "⚠️ Sin cerrar · N" y el "Nada anotado para hoy", que también tienen que
 // actualizarse).
+//
+// ⚠️ Y se cambia el TEMA, que no es un dato sino un ajuste que vive en el `<html data-theme>`,
+// FUERA de toda zona. Sin esto la auditoría no lo miraba y el bug vivió publicado: cambiar el
+// tema en una ventana dejaba a la otra con el estilo viejo **y convencida de estar al día**,
+// porque las zonas venían idénticas. Ninguno de los dos temas es el default, así que cada vuelta
+// cambia de verdad.
+const TEMAS = ['bosque', 'claude'];
+let vueltaTema = 0;
+
 async function hacerCambios(page, marca) {
-  await page.evaluate(async ([fecha, t]) => {
+  const tema = TEMAS[vueltaTema++ % TEMAS.length];
+  await page.evaluate(async ([fecha, t, elTema]) => {
     await fetch(`/day/${fecha}/note/add`, {
       method: 'POST', body: new URLSearchParams({ content: 'nota ' + t, color: '' }),
     });
     await fetch(`/day/${fecha}/todo/add`, {
       method: 'POST', body: new URLSearchParams({ text: 'tarea ' + t }),
     });
-  }, [HOY, marca]);
+    await fetch('/ajustes/set', {
+      method: 'POST', body: new URLSearchParams({ key: 'theme', value: elTema }),
+    });
+  }, [HOY, marca, tema]);
 }
 
 async function run() {
@@ -182,8 +199,8 @@ async function run() {
       // aunque no haya cambiado nada visible (una nota nueva no toca la pestaña de tareas del
       // widget). En las demás, que se hayan enterado: actualizando, recargando o avisando.
       const seEntero = r.zonaCambio || r.recargo || r.aviso;
-      resultados.push({ ...p, ...r, viejo,
-                        ok: estado.cubierta ? !viejo : seEntero });
+      resultados.push({ ...p, ...r, viejo, tema: estado.tema || null,
+                        ok: estado.cubierta ? !viejo && !estado.tema : seEntero });
     } catch (e) {
       resultados.push({ ...p, ok: false, error: String(e).slice(0, 80) });
     } finally {
@@ -231,6 +248,8 @@ async function run() {
   console.log('\n  ¿Se entera de los cambios de la otra ventana?\n');
   for (const r of resultados) {
     const como = r.error ? r.error :
+                 r.tema ? `QUEDÓ CON EL TEMA VIEJO (${r.tema.enPantalla}, el servidor ya sirve ` +
+                          `${r.tema.enElServidor})` :
                  r.viejo ? 'QUEDÓ CONTENIDO VIEJO' :
                  r.zonaCambio ? 'se actualizó sin recargar' :
                  r.recargo ? 'recargó (fallback)' :

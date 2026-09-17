@@ -669,6 +669,19 @@ igual**.
   Hoy lo usa una sola cosa: las ruedas de emociones de las notas especiales (`day.js`).
   `date-es.js` ya estaba listo (`initDateEs(root)`, y su input/change/click son delegados en
   `document`).
+- ⚠️ **El TEMA se sincroniza aparte, y es el único de su clase.** Vive en `<html data-theme>`,
+  o sea **fuera de `<main>` y de toda zona**, así que cambiarlo en una ventana dejaba a la otra
+  con el estilo viejo **y convencida de estar al día**: las zonas venían idénticas, `actualizarZonas`
+  devolvía "todo bien" y no había ni recarga ni aviso. Afectaba a las **6 pantallas cubiertas**
+  (las otras 8 recargan y por eso quedaban bien), y se veía como "el widget dejó de sincronizarse
+  y se arregla en cuanto toco un botón". Lo arregla `sincronizarTema()` en `refresco.js`.
+  ⚠️ **No se compara el documento entero** para encontrar más casos así: el formulario de nota
+  trae un `color_sugerido` que se sortea **por página**, así que daría distinto en cada vuelta y
+  volvería el parpadeo que este rediseño vino a sacar.
+  ⚠️ **La auditoría no lo cazaba porque solo miraba `<main>`**, que es donde estaba buscando el
+  fallo anterior. Ahora `hacer.ps1 refresco` **cambia el tema** junto con la nota y la tarea, y
+  compara el `data-theme` además del contenido — sin eso el chequeo nuevo no tendría con qué
+  fallar. Verificado por contraste: sin el arreglo marca las 6 en rojo.
 - Cubiertas: **día, mes, semana y las pestañas de tareas y mes del widget**. El resto recarga, que
   es lo que hacía siempre.
 

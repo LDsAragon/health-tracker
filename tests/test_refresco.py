@@ -322,3 +322,35 @@ def test_el_dia_con_notas_especiales_trae_su_zona(client):
                                                          "placeholder": ""}])})
     html = client.get("/day/2026-06-10").data.decode()
     assert 'data-refresco="especiales"' in html
+
+
+def test_el_refresco_parcial_sincroniza_el_TEMA(client):
+    """⚠️ Tripwire de un fallo callado que vivió publicado: el tema es lo único que la pantalla
+    muestra y que **no está en ninguna zona** —vive en `<html data-theme>`, fuera de `<main>`—.
+    Cambiarlo en una ventana dejaba a la otra con el estilo viejo **y convencida de estar al
+    día**: las zonas venían idénticas, así que `actualizarZonas` devolvía "todo bien" y no había
+    ni recarga ni aviso. Se veía como "el widget dejó de sincronizarse".
+
+    No se compara el documento entero a propósito: el formulario de nota trae un color sugerido
+    que se sortea por página, así que daría distinto en cada vuelta y volvería el parpadeo.
+    """
+    js = _refresco_js()
+    assert "sincronizarTema" in js
+    assert "data-theme" in js
+
+    # Y que siga siendo cierto que el tema está fuera de las zonas, que es lo que lo hace
+    # necesario: si algún día entrara en una, este camino sobra.
+    import pathlib
+    raiz = pathlib.Path(__file__).resolve().parent.parent
+    for plantilla in ("base.html", "widget.html"):
+        html = (raiz / "bitacora" / "templates" / plantilla).read_text(encoding="utf-8")
+        assert 'data-theme="{{ settings.theme }}"' in html, plantilla
+
+
+def test_el_tema_del_widget_cambia_con_el_ajuste(client):
+    """La otra mitad: que el servidor sirva el tema nuevo. Sin esto el tripwire de arriba fijaría
+    un camino que no tendría con qué trabajar."""
+    db.set_setting("theme", "bosque")
+    assert 'data-theme="bosque"' in client.get("/widget").data.decode()
+    db.set_setting("theme", "claude")
+    assert 'data-theme="claude"' in client.get("/widget").data.decode()

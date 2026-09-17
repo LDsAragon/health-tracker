@@ -251,8 +251,24 @@
 
   // Devuelve true si pudo dejar la página al día (aunque haya salteado alguna zona en uso).
   // Devuelve false para que el llamador caiga al camino de recargar.
+  // ⚠️ El TEMA vive en el `<html>`, fuera de toda zona, y es el único de su clase: cambiarlo en
+  // una ventana dejaba a la otra con el estilo viejo **y convencida de estar al día** —las zonas
+  // venían idénticas, así que ni recargaba ni mostraba el aviso—. Es el fallo callado de siempre,
+  // y se ve tan claro como "el widget dejó de sincronizarse".
+  //
+  // Se sincroniza este atributo y no "todo lo que esté fuera de las zonas": el formulario de nota
+  // trae un color sugerido que se sortea POR PÁGINA (`services.color_sugerido`), así que comparar
+  // el documento entero daría distinto en cada vuelta y volvería el parpadeo que este rediseño
+  // vino a sacar.
+  function sincronizarTema(doc) {
+    const nuevo = doc.documentElement.getAttribute('data-theme');
+    const actual = document.documentElement.getAttribute('data-theme');
+    if (nuevo && nuevo !== actual) document.documentElement.setAttribute('data-theme', nuevo);
+  }
+
   function actualizarZonas(html) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
+    sincronizarTema(doc);
     const nuevas = zonas(doc);
     const actuales = zonas();
     if (!actuales.size || !nuevas.size) return false;
