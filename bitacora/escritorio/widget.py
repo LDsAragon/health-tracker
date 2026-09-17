@@ -213,7 +213,13 @@ def abrir():
                 TITULO, f"{_url_base}/widget",
                 width=ancho, height=alto,
                 x=x, y=y,
-                frameless=True, easy_drag=True, on_top=True,
+                # ⚠️ `easy_drag=False` a propósito: el arrastre de pywebview es puro
+                # JavaScript y manda un mensaje al proceso por CADA mousemove
+                # (`webview/js/customize.js`), así que la ventana va siempre atrasada del cursor
+                # y, cuando el cursor se adelanta y sale del WebView, deja de llegar el
+                # mousemove y el arrastre **se corta solo**. Lo mueve el sistema — ver
+                # `empezar_arrastre_de_ventana`.
+                frameless=True, easy_drag=False, on_top=True,
                 resizable=True, min_size=MIN_WIDGET, text_select=True,
                 # ⚠️ Sin esto el fondo de la ventana Y el del WebView2 son BLANCOS (el default de
                 # pywebview), y es justo lo que asoma mientras el WebView2 repinta al
@@ -227,7 +233,7 @@ def abrir():
     _ventana.events.resized += lambda w, h: guardar_geometria(w=w, h=h)
     _ventana.events.closed += _olvidar
     # El handle recién existe cuando la ventana se muestra, así que el borde se repone ahí.
-    _ventana.events.shown += poner_borde_nativo
+    _ventana.events.shown += preparar_marco_nativo
     return True
 
 
@@ -269,18 +275,26 @@ def minimizar():
             pass
 
 
-# ── El redimensionado lo hace el SISTEMA ─────────────────────────────────────
-# ⚠️ La ventana es `frameless` y eso en Windows es FormBorderStyle = None: sin borde de
-# redimensionado. La primera versión lo resolvía desde la página, posteando el tamaño nuevo en
-# CADA mousemove; eran decenas de `resize()` por segundo y se veía vibrar. Ahora se le devuelve el
-# trabajo al sistema operativo, que es el único que lo hace fluido: en Windows alcanza con
-# reponerle el bit WS_THICKFRAME (medido: queda puesto, el hit-test de la esquina responde
-# HTBOTTOMRIGHT y en Win11 el marco **no se ve**), y en Linux GTK tiene su propio
-# `begin_resize_drag`.
+# ── Mover y estirar: los dos gestos se los queda el SISTEMA ──────────────────
+# ⚠️ La ventana es `frameless` y eso en Windows es FormBorderStyle = None: sin barra de título
+# (nada de dónde agarrarla para moverla) y sin borde de redimensionado.
+#
+# La forma obvia de resolverlo desde la página —seguir el mouse y mandar la posición nueva en
+# cada mousemove— es la que hay que evitar, y las dos mitades de este archivo lo aprendieron por
+# separado: el redimensionado así **vibraba** (decenas de `resize()` por segundo), y el arrastre
+# de pywebview (`easy_drag`, que hace exactamente eso: un mensaje al proceso por cada mousemove)
+# deja la ventana atrasada del cursor y **se corta solo** en cuanto el cursor se adelanta y sale
+# del WebView, que es cuando dejan de llegar los mousemove.
+#
+# La única forma fluida es pedirle el arrastre al sistema operativo UNA vez y dejar que lo lleve
+# él con su propio bucle: en Windows `WM_NCLBUTTONDOWN` con el código de la zona (el borde o la
+# barra de título), en Linux los `begin_*_drag` de GTK.
 
 GWL_STYLE = -16
 WS_THICKFRAME = 0x00040000
+WS_MAXIMIZEBOX = 0x00010000
 WM_NCLBUTTONDOWN = 0x00A1
+HTCAPTION = 2
 HTBOTTOMRIGHT = 17
 SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_FRAMECHANGED = 0x0002, 0x0001, 0x0004, 0x0020
 
@@ -293,11 +307,19 @@ def _hwnd() -> int:
         return 0
 
 
-def poner_borde_nativo() -> bool:
-    """Reponerle a la ventana el bit que la hace redimensionable por el sistema (solo Windows).
+def preparar_marco_nativo() -> bool:
+    """Dejar el marco de la ventana como lo necesita el widget (solo Windows).
 
-    Con esto el borde de la ventana pasa a ser el agarre de siempre, el de cualquier programa:
-    cero requests mientras arrastrás.
+    Dos bits, y los dos se midieron con una ventana de prueba antes de escribirlos:
+
+    - **`WS_THICKFRAME` puesto**: le devuelve el borde de redimensionado, que es el agarre de
+      siempre, el de cualquier programa. En Win11 el marco **no se ve** y el hit-test de la
+      esquina responde `HTBOTTOMRIGHT`.
+    - ⚠️ **`WS_MAXIMIZEBOX` sacado**: es lo que apaga Aero Snap. Con el arrastre en manos del
+      sistema, llevar el widget al borde izquierdo lo estiraba a **media pantalla** (340x520 →
+      1292x1398) y al borde de arriba lo **maximizaba** (2574x1454). Sin ese bit se mueve hasta
+      el borde y no se deforma. Un widget de 340px no se maximiza, así que no se pierde nada;
+      `minimizar()` usa `WS_MINIMIZEBOX`, que no se toca.
 
     ⚠️ **El marco le saca 14x14 px al área cliente y NO se compensan.** Agrandar la ventana para
     recuperarlos dispararía `resized`, que guarda la geometría, y al próximo arranque se volvería
@@ -313,14 +335,78 @@ def poner_borde_nativo() -> bool:
         import ctypes
         u32 = ctypes.windll.user32
         estilo = u32.GetWindowLongW(hwnd, GWL_STYLE)
-        if estilo & WS_THICKFRAME:
+        querido = (estilo | WS_THICKFRAME) & ~WS_MAXIMIZEBOX
+        if estilo == querido:
             return True
-        u32.SetWindowLongW(hwnd, GWL_STYLE, estilo | WS_THICKFRAME)
+        u32.SetWindowLongW(hwnd, GWL_STYLE, querido)
         u32.SetWindowPos(hwnd, 0, 0, 0, 0, 0,
                          SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
         return True
     except Exception:
         return False
+
+
+def _arrastre_del_sistema(zona: int, borde_gtk, x, y) -> bool:
+    """Le pide al sistema que tome el arrastre desde acá. Un pedido, y de ahí en más la ventana
+    la sigue él: sin HTTP ni mensajes en el medio mientras arrastrás.
+
+    `zona` es el código de hit-test de Windows (`HTCAPTION` para mover, `HTBOTTOMRIGHT` para
+    estirar) y `borde_gtk` el `Gdk.WindowEdge` equivalente, o None para mover.
+    """
+    if _ventana is None:
+        return False
+    if sys.platform == "win32":
+        hwnd = _hwnd()
+        if not hwnd:
+            return False
+        try:
+            import ctypes
+            from System import Action           # pythonnet, como la bandeja
+            u32 = ctypes.windll.user32
+
+            def en_el_hilo_de_la_ventana():
+                # ⚠️ Las dos llamadas TIENEN que correr acá y no en el hilo del request.
+                # `ReleaseCapture()` solo suelta la captura DEL HILO QUE LA LLAMA, y la del mouse
+                # la tiene el hilo de la ventana desde que apretaste dentro del WebView: llamarla
+                # desde afuera no suelta nada y el bucle del sistema nunca ve el mouse. Medido:
+                # sin este paso el arrastre directamente no arranca.
+                u32.ReleaseCapture()
+                # SendMessage y no PostMessage: acá ya estamos en el hilo correcto y el bucle
+                # modal es justo lo que queremos que pase. Se llega por BeginInvoke, así que el
+                # request vuelve en el acto y no espera a que sueltes.
+                u32.SendMessageW(hwnd, WM_NCLBUTTONDOWN, zona, 0)
+
+            _ventana.native.BeginInvoke(Action(en_el_hilo_de_la_ventana))
+            return True
+        except Exception:
+            return False
+    try:
+        from gi.repository import Gdk
+        nativa = _ventana.native
+        if borde_gtk is None:
+            nativa.begin_move_drag(1, int(x or 0), int(y or 0), Gdk.CURRENT_TIME)
+        else:
+            nativa.begin_resize_drag(
+                getattr(Gdk.WindowEdge, borde_gtk), 1, int(x or 0), int(y or 0), Gdk.CURRENT_TIME)
+        return True
+    except Exception:
+        return False
+
+
+def empezar_arrastre_de_tamano(x=None, y=None) -> bool:
+    """El agarre de la esquina: estirar la ventana."""
+    return _arrastre_del_sistema(HTBOTTOMRIGHT, "SOUTH_EAST", x, y)
+
+
+def empezar_arrastre_de_ventana(x=None, y=None) -> bool:
+    """Arrastrar la ventana desde la página, que sin barra de título es el único lugar que hay.
+
+    ⚠️ Es `HTCAPTION` —"apretaste en la barra de título"— aunque la ventana no tenga ninguna:
+    es el código que hace que el sistema la mueva. Por eso `preparar_marco_nativo()` le saca el
+    `WS_MAXIMIZEBOX`: con ese bit, moverla contra un borde de la pantalla dispara Aero Snap y el
+    widget se deforma.
+    """
+    return _arrastre_del_sistema(HTCAPTION, None, x, y)
 
 
 def hace_falta_agarre() -> bool:

@@ -518,13 +518,52 @@ def test_el_arrastre_se_lo_queda_el_sistema(cliente):
 
 def test_el_arrastre_empieza_al_MOVERSE_y_no_al_apretar():
     """⚠️ El bucle del sistema es modal y se queda con el mouse. Arrancarlo en el `mousedown` se
-    comería el segundo clic, y el doble clic —que es lo que devuelve la medida original— no
-    existiría más. Por eso espera a que el mouse se haya movido unos píxeles."""
+    comería el clic, y el doble clic del agarre —que es lo que devuelve la medida original— no
+    existiría más. Por eso espera a que el mouse se haya movido unos píxeles, y por eso el
+    umbral vive en UN solo lugar: los dos gestos (mover y estirar) pasan por el mismo helper."""
     html = (RAIZ / "bitacora" / "templates" / "widget.html").read_text(encoding="utf-8")
-    mousedown = html[html.index("agarre.addEventListener('mousedown'"):]
-    assert "/widget/tamano/arrastrar" not in mousedown[:500]
-    assert "< 4 && Math.abs(e.screenY - y0) < 4) return;" in html
+    apretar = html[html.index("sobre.addEventListener('mousedown'"):]
+    cuerpo = apretar[:apretar.index("window.addEventListener('mousemove'")]
+    assert "post(" not in cuerpo                       # al apretar NO se le pide nada al sistema
+    assert "< UMBRAL && Math.abs(e.screenY - y0) < UMBRAL) return;" in html
     assert "agarre.addEventListener('dblclick'" in html
+
+
+def test_mover_la_ventana_tambien_se_lo_queda_el_sistema(cliente):
+    """⚠️ El bug de fondo: `easy_drag` de pywebview mueve la ventana desde JavaScript, mandando
+    un mensaje al proceso por CADA mousemove. La ventana va siempre atrasada del cursor y, en
+    cuanto el cursor se adelanta y sale del WebView, dejan de llegar los mousemove y el arrastre
+    se corta a mitad de camino: el widget "deja de ser arrastrable" sin ningún error. Es el
+    mismo diagnóstico que ya tenía el redimensionado, con el otro síntoma."""
+    assert cliente.post("/widget/mover", data={"x": "900", "y": "700"}).status_code == 204
+    assert cliente.post("/widget/mover").status_code == 204        # en Windows no hacen falta
+    assert widget.empezar_arrastre_de_ventana(1, 2) is False       # no-op sin ventana
+
+    ventana = (RAIZ / "bitacora" / "escritorio" / "widget.py").read_text(encoding="utf-8")
+    assert "easy_drag=False" in ventana
+    html = (RAIZ / "bitacora" / "templates" / "widget.html").read_text(encoding="utf-8")
+    assert "/widget/mover" in html
+
+
+def test_no_se_arrastra_desde_donde_apretar_significa_otra_cosa():
+    """Sin esta lista, intentar seleccionar lo que escribiste en un campo mueve la ventana, y el
+    clic derecho la movía al abrir el menú. El agarre entra por el mismo filtro."""
+    html = (RAIZ / "bitacora" / "templates" / "widget.html").read_text(encoding="utf-8")
+    filtro = html[html.index("const NO_ARRASTRA"):]
+    filtro = filtro[:filtro.index(chr(10))]
+    for control in ("input", "textarea", "select", "button", "a", "label", "#w-grip"):
+        assert control in filtro, control
+    assert "e.button !== 0" in html
+
+
+def test_el_marco_del_widget_no_deja_que_el_borde_lo_deforme():
+    """⚠️ Medido con una ventana de prueba: con el arrastre en manos del sistema y el bit
+    `WS_MAXIMIZEBOX` puesto, llevar el widget al borde izquierdo lo estiraba a media pantalla
+    (340x520 → 1292x1398) y al borde de arriba lo maximizaba (2574x1454). Es Aero Snap, y se
+    apaga sacando ese bit. `minimizar()` usa WS_MINIMIZEBOX, que no se toca."""
+    ventana = (RAIZ / "bitacora" / "escritorio" / "widget.py").read_text(encoding="utf-8")
+    assert "& ~WS_MAXIMIZEBOX" in ventana
+    assert "WS_MAXIMIZEBOX = 0x00010000" in ventana
 
 
 def test_la_ventana_se_pinta_con_el_fondo_del_tema(tmp_path, monkeypatch):
@@ -545,16 +584,16 @@ def test_la_ventana_se_pinta_con_el_fondo_del_tema(tmp_path, monkeypatch):
 def test_el_borde_nativo_es_no_op_sin_ventana():
     """En el navegador y en los tests no hay ventana que tocar. En Linux tampoco aplica: ahí el
     agarre de la página llama a `begin_resize_drag` de GTK, que es el equivalente."""
-    assert widget.poner_borde_nativo() is False
+    assert widget.preparar_marco_nativo() is False
 
 
 def test_el_agarre_corta_la_propagacion_del_mousedown():
-    """⚠️ Tripwire de un fallo callado: `easy_drag` de pywebview engancha su `mousedown` en
+    """⚠️ Tripwire de un fallo callado: el arrastre de la ventana engancha su `mousedown` en
     `window`, así que sin el stopPropagation arrastrar el agarre MOVERÍA la ventana mientras se
     redimensiona — se ve como que el widget se escapa, y no hay error en ningún lado."""
     html = (RAIZ / "bitacora" / "templates" / "widget.html").read_text(encoding="utf-8")
-    mousedown = html[html.index("agarre.addEventListener('mousedown'"):]
-    assert "e.stopPropagation();" in mousedown[:600]
+    apretar = html[html.index("sobre.addEventListener('mousedown'"):]
+    assert "e.stopPropagation();" in apretar[:800]
 
 
 def test_el_tamano_no_viaja_en_el_sync():

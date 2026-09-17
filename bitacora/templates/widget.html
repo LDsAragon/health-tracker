@@ -16,7 +16,8 @@
 <body class="widget-body" data-vista="widget">
 
 {# Sin barra de título del sistema (la ventana es frameless): esta fila es la nuestra.
-   El resto de la ventana arrastra solo, por easy_drag. #}
+   El resto de la ventana también arrastra —ver el script del final—, salvo donde apretar ya
+   significa otra cosa. #}
 <header class="w-bar">
   <span class="w-marca">Bitácora</span>
   <div class="w-bar-acciones">
@@ -278,58 +279,82 @@ function editarEnLinea(lapiz) {
 recordarColapsable('w-notas-hoy', 'widgetNotasHoy', false);
 </script>
 
-{# El agarre para estirar la ventana. ⚠️ La ventana es `frameless`, o sea que NO tiene borde de
-   redimensionado: sin esto, con el mouse no hay de dónde agarrarla (el `resizable=True` con el que
-   se crea no alcanza). Doble clic vuelve a la medida original, el mismo gesto que resetea el ancho
-   de los paneles del día. #}
+{# Los dos gestos de la ventana: moverla y estirarla. ⚠️ La ventana es `frameless` —ni barra de
+   título ni borde de redimensionado—, así que los dos agarres los tiene que ofrecer la página;
+   el arrastre en sí se lo queda el sistema. Doble clic en el de la esquina vuelve a la medida
+   original, el mismo gesto que resetea el ancho de los paneles del día. #}
 {% if agarre_propio %}<div class="w-grip" id="w-grip"
      title="Arrastrá para cambiar el tamaño · doble clic para volver al original"></div>{% endif %}
 <script>window.WIDGET_TAMANO = {{ tamano_widget | tojson }};</script>
+{% if agarre_propio %}
 <script>
 (function () {
-  const agarre = document.getElementById('w-grip');
-  if (!agarre) return;
-  let x0 = 0, y0 = 0, apretado = false, avisado = false;
+  // ⚠️ Un solo pedido por arrastre, y de ahí en más la ventana la sigue el SISTEMA con su propio
+  // bucle. Seguirla desde acá —mandar la posición nueva en cada mousemove, que es lo que hacía
+  // `easy_drag` de pywebview— la deja siempre atrasada del cursor, y en cuanto el cursor se
+  // adelanta y sale del WebView dejan de llegar los mousemove: el arrastre se corta a mitad de
+  // camino y el widget parece haber "dejado de ser arrastrable". El redimensionado ya había
+  // aprendido lo mismo, con el otro síntoma: ahí se veía vibrar.
+  const UMBRAL = 4;
+
+  // Dónde NO se arrastra la ventana: donde apretar ya significa otra cosa. Sin esta lista,
+  // intentar seleccionar lo que escribiste en un campo termina moviendo la ventana.
+  const NO_ARRASTRA = 'input, textarea, select, button, a, label, summary, [contenteditable], #w-grip';
 
   function post(url, datos) {
     try {
       fetch(url, { method: 'POST', body: new URLSearchParams(datos || {}) }).catch(function () {});
-    } catch (e) { /* sin fetch no se redimensiona, pero la página sigue andando */ }
+    } catch (e) { /* sin fetch no se arrastra, pero la página sigue andando */ }
   }
 
-  agarre.addEventListener('mousedown', function (e) {
-    // ⚠️ El stopPropagation NO es opcional: easy_drag de pywebview engancha su `mousedown` en
-    // `window`, así que sin cortar la propagación arrastrar el agarre **movería** la ventana
-    // mientras se redimensiona, y se ve como que el widget se escapa.
-    e.preventDefault();
-    e.stopPropagation();
-    apretado = true;
-    avisado = false;
-    x0 = e.screenX;
-    y0 = e.screenY;
-  });
-
-  // ⚠️ Se le pasa el arrastre al sistema recién cuando el mouse se MOVIÓ unos píxeles, no al
+  // ⚠️ El arrastre se le pasa al sistema recién cuando el mouse se MOVIÓ unos píxeles, no al
   // apretar: el bucle del sistema es modal y se queda con el mouse, así que arrancarlo en el
-  // `mousedown` se comería el segundo clic y el doble clic no existiría más.
-  window.addEventListener('mousemove', function (e) {
-    if (!apretado || avisado) return;
-    if (Math.abs(e.screenX - x0) < 4 && Math.abs(e.screenY - y0) < 4) return;
-    avisado = true;
-    apretado = false;
-    post('/widget/tamano/arrastrar', { x: e.screenX, y: e.screenY });
-  });
+  // `mousedown` se comería el clic —y el doble clic del agarre, que devuelve la medida original,
+  // no existiría más.
+  function alArrastrar(sobre, url, propio) {
+    let x0 = 0, y0 = 0, apretado = false;
 
-  window.addEventListener('mouseup', function () { apretado = false; });
+    sobre.addEventListener('mousedown', function (e) {
+      // Solo el botón izquierdo: con el derecho, abrir el menú contextual movía la ventana.
+      if (e.button !== 0) return;
+      if (propio) {
+        // ⚠️ El stopPropagation NO es opcional: el arrastre de la ventana engancha su `mousedown`
+        // en `window`, así que sin cortar la propagación estirar desde el agarre MOVERÍA la
+        // ventana al mismo tiempo, y se ve como que el widget se escapa.
+        e.preventDefault();
+        e.stopPropagation();
+      } else if (e.target.closest && e.target.closest(NO_ARRASTRA)) {
+        return;
+      }
+      apretado = true;
+      x0 = e.screenX;
+      y0 = e.screenY;
+    });
 
-  agarre.addEventListener('dblclick', function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    apretado = false;
-    post('/widget/tamano/original', {});
-  });
+    window.addEventListener('mousemove', function (e) {
+      if (!apretado) return;
+      if (Math.abs(e.screenX - x0) < UMBRAL && Math.abs(e.screenY - y0) < UMBRAL) return;
+      apretado = false;
+      post(url, { x: e.screenX, y: e.screenY });
+    });
+
+    window.addEventListener('mouseup', function () { apretado = false; });
+  }
+
+  alArrastrar(window, '/widget/mover', false);
+
+  const agarre = document.getElementById('w-grip');
+  if (agarre) {
+    alArrastrar(agarre, '/widget/tamano/arrastrar', true);
+    agarre.addEventListener('dblclick', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      post('/widget/tamano/original', {});
+    });
+  }
 })();
 </script>
+{% endif %}
 
 {# ⚠️ tojson, y NO el valor entre comillas — ver la nota en base.html: las barras invertidas de
    la ruta de Windows se comían como escapes de JavaScript y la página se recargaba sin parar. #}

@@ -160,6 +160,26 @@ def minimizar():
     return _volver(request.form.get("p", "tareas"))
 
 
+@bp.route("/widget/mover", methods=["POST"])
+def mover():
+    """Arrastrar la ventana, **una sola vez** por arrastre.
+
+    ⚠️ Es lo que reemplaza al `easy_drag` de pywebview, que movía la ventana desde JavaScript
+    mandando un mensaje al proceso por cada mousemove: iba siempre atrasada del cursor y, cuando
+    el cursor se adelantaba y salía del WebView, dejaba de recibir mousemove y el arrastre se
+    cortaba a mitad de camino. Es el mismo diagnóstico que ya tenía el redimensionado.
+
+    Las coordenadas del puntero las pide `begin_move_drag` de GTK; en Windows no hacen falta.
+    """
+    try:
+        x = int(request.form.get("x") or 0)
+        y = int(request.form.get("y") or 0)
+    except (TypeError, ValueError):
+        x = y = 0
+    widget.empezar_arrastre_de_ventana(x, y)
+    return "", 204
+
+
 @bp.route("/widget/tamano/arrastrar", methods=["POST"])
 def tamano_arrastrar():
     """El agarre de la esquina, **una sola vez** por arrastre.

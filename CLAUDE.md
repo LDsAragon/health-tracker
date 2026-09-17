@@ -402,7 +402,7 @@ ninguno de los 33 puntos de escritura de `database/*.py` los conoce.
 
 ## Widget de escritorio y bandeja
 
-Segunda ventana de pywebview **en el mismo proceso**, `frameless` + `easy_drag` + `on_top`.
+Segunda ventana de pywebview **en el mismo proceso**, `frameless` + `on_top`, y el arrastre en manos del sistema (ver abajo).
 
 - ⚠️ **A la ventana del widget se le pasa una URL string, NO el objeto Flask.** Con la app,
   `webview/window.py:194` le levanta **un servidor Bottle propio a cada ventana**. La URL se captura
@@ -431,77 +431,70 @@ Segunda ventana de pywebview **en el mismo proceso**, `frameless` + `easy_drag` 
   la app decía que estaba abierto mientras no se veía por ningún lado. Desenchufar el monitor
   donde vivía hacía lo mismo. Al abrir, una posición imposible se descarta y se olvida
   (`olvidar_posicion()` deja el tamaño), así la ventana nace donde la ponga el sistema.
-- ⚠️ **El widget lo redimensiona el SISTEMA, no la página.** La ventana es `frameless`, y en
-  Windows eso es `FormBorderStyle = None` (`webview/platforms/winforms.py`): **no tiene borde de
-  redimensionado**, así que el `resizable=True` con el que se crea es inerte y con el mouse no había
-  de dónde agarrarla. La solución es reponerle el bit a mano:
-  `escritorio.widget.poner_borde_nativo()` le mete `WS_THICKFRAME` por `ctypes` cuando la ventana se
-  muestra, y el borde vuelve a ser el agarre de siempre. **Medido antes de escribirlo**: el estilo
-  queda puesto, el hit-test de la esquina responde `HTBOTTOMRIGHT` y en Win11 **el marco no se ve**.
-  - ⚠️ **El marco le saca 14×14 px al área cliente y NO se compensan.** Agrandar la ventana para
-    recuperarlos dispararía `resized`, que guarda la geometría, y al próximo arranque se aplicaría
-    sobre un tamaño ya crecido: 14 px por arranque, para siempre. La página es fluida y 7 px por
-    lado no se notan; el crecimiento sin techo sí.
-  - **La primera versión lo hacía desde la página y se descartó**: posteaba el tamaño nuevo en
-    **cada `mousemove`**, o sea decenas de `resize()` por segundo, y se veía vibrar. Hoy el agarre
-    de la esquina (`.w-grip`) manda **un solo** pedido por arrastre —`POST /widget/tamano/arrastrar`,
-    que en Windows postea `WM_NCLBUTTONDOWN` con `HTBOTTOMRIGHT` y en Linux llama a
-    `begin_resize_drag` de GTK— y de ahí en más la ventana la sigue el sistema.
-  - ⚠️ **El arrastre arranca en el `mousemove`, no en el `mousedown`.** El bucle del sistema es
-    modal y se queda con el mouse: arrancarlo al apretar se comería el segundo clic y el **doble
-    clic** —que devuelve la medida original— dejaría de existir. Espera a que el mouse se haya
-    movido unos píxeles.
-  - ⚠️ El `mousedown` del agarre **corta la propagación**: `easy_drag` engancha el suyo en `window`
-    y sin eso arrastrar el agarre **movería** la ventana mientras se redimensiona. Va con tripwire.
-  - **Doble clic en el agarre vuelve a 340×520**, el mismo gesto que resetea el ancho de los paneles
-    del día. Por eso no hizo falta darle menú contextual al widget ni otro botón a una barra de
-    340px.
 - ⚠️ **Las dos ventanas se crean con `background_color`, y no es cosmética.** pywebview pinta con
   él el fondo del Form **y** el `DefaultBackgroundColor` del WebView2, y su default es **blanco**
   (`webview/window.py`). Es exactamente lo que asoma mientras el WebView2 repinta al redimensionar:
   el parpadeo de bordes blancos al estirar el widget. Sale de `appconfig.color_de_fondo(tema)`.
   Como se fija al crear la ventana, cambiar de tema actualiza ese color recién al reabrir: es un
   artefacto de menos de 100 ms y no vale un camino nuevo.
-- ⚠️ **Las dos escrituras de `widget.json` van bajo un lock** (`_geo_lock`). Los que escriben son
-  manejadores de eventos de la ventana —`moved` y `resized`— y **llegan juntos**: en GTK cada
-  redimensionado viene con su `moved` pegado. Cada uno leía el archivo, cambiaba lo suyo y lo
-  escribía entero, así que el que escribía último lo hacía sobre una foto vieja y le devolvía al
-  archivo las claves del otro como estaban antes: **mover el widget le borraba el tamaño recién
-  elegido**. Sin error en ningún lado. El temporal lleva además el id del hilo, porque compartido
-  uno podía truncarlo justo cuando el otro estaba por renombrarlo.
-- ⚠️ **La geometría del widget va a `APP_DIR/widget.json`, nunca a `settings`**: los ajustes
-  sincronizan entre máquinas y el widget aparecería corrido o fuera de pantalla en la otra.
-- ⚠️ **Una posición guardada se valida contra los monitores, al guardarla y al abrir**
-  (`posicion_visible`, con `webview.screens`). Windows le pone **(-32000, -32000)** a una ventana
-  minimizada y pywebview lo dispara como un evento `moved`: **minimizar el widget una vez lo
-  mandaba fuera de toda pantalla para siempre**, y como `esta_abierto()` seguía devolviendo True
-  la app decía que estaba abierto mientras no se veía por ningún lado. Desenchufar el monitor
-  donde vivía hacía lo mismo. Al abrir, una posición imposible se descarta y se olvida
-  (`olvidar_posicion()` deja el tamaño), así la ventana nace donde la ponga el sistema.
-- ⚠️ **El widget se estira desde un agarre de la PÁGINA, no desde el borde del sistema.** La
-  ventana es `frameless`, y en Windows eso es `FormBorderStyle = None`
-  (`webview/platforms/winforms.py`): **no tiene borde de redimensionado**, así que el
-  `resizable=True` con el que se crea es inerte y con el mouse no había de dónde agarrarla —se
-  veía como un flag correcto y no hacía nada—. Renunciar a `frameless` para ganar ese borde le
-  devolvería la barra de título, que es justo lo que el widget no tiene. El agarre vive en
-  `widget.html` (`.w-grip`, la esquina de abajo a la derecha) y postea a `POST /widget/tamano`,
-  que termina en `escritorio.widget.redimensionar()`.
-  - ⚠️ **El `mousedown` del agarre corta la propagación.** `easy_drag` engancha el suyo en
-    `window`, así que sin eso arrastrar el agarre **movería** la ventana mientras se
-    redimensiona. Es callado —parece que el widget se escapa— y por eso va con tripwire.
-  - La ruta **devuelve la medida que aplicó** (acotada a `MIN_WIDGET` y a la pantalla) y la
-    página sigue el arrastre desde ahí: el tope vive en un solo lado y el agarre no sigue
-    contando por su cuenta una ventana que ya no se achicó más. De dónde **parte** sale de
-    `tamano_actual()`, que lee la geometría guardada y no `_ventana.width` —esa propiedad
-    **espera hasta 15 s** a que la ventana se muestre, y la lee un request que puede llegar justo
-    mientras el widget se abre—.
-  - **No guarda nada**: `resize()` dispara el `Resize` de WinForms igual que el del mouse, así que
-    el `resized` que ya estaba enganchado escribe la geometría solo. Lo comprueba
-    `hacer.ps1 smoke widget`, que es lo único que puede.
-  - **Doble clic en el agarre vuelve a 340×520**, el mismo gesto que resetea el ancho de los
-    paneles del día. Por eso no hizo falta darle menú contextual al widget ni otro botón a una
-    barra de 340px.
 
+### Mover y estirar: los dos gestos se los queda el SISTEMA
+
+La ventana es `frameless`, y en Windows eso es `FormBorderStyle = None`
+(`webview/platforms/winforms.py`): **ni barra de título ni borde de redimensionado**. Los dos
+agarres los tiene que ofrecer la página — pero el arrastre en sí **no lo puede llevar ella**, y
+esa es la lección que las dos mitades aprendieron por separado, con síntomas distintos:
+
+- El redimensionado hecho desde la página posteaba el tamaño nuevo en **cada `mousemove`**,
+  decenas de `resize()` por segundo: **se veía vibrar**.
+- El arrastre lo hacía `easy_drag` de pywebview, que es exactamente lo mismo en JavaScript (un
+  mensaje al proceso por cada mousemove, `webview/js/customize.js`): la ventana va **siempre
+  atrasada del cursor** y, en cuanto el cursor se le adelanta y sale del WebView, **dejan de
+  llegar los mousemove y el arrastre se corta solo**. Se siente como "el widget a veces deja de
+  ser arrastrable", y no hay error en ningún lado. Por eso va `easy_drag=False`.
+
+Hoy la página manda **un solo pedido por arrastre** y de ahí en más la ventana la lleva el
+sistema con su propio bucle: `POST /widget/mover` y `POST /widget/tamano/arrastrar`, los dos en
+`_arrastre_del_sistema()` — en Windows `WM_NCLBUTTONDOWN` con `HTCAPTION` o `HTBOTTOMRIGHT`, en
+Linux `begin_move_drag` / `begin_resize_drag` de GTK.
+
+- ⚠️ **`ReleaseCapture()` y el `SendMessage` van en el HILO DE LA VENTANA** (por `BeginInvoke`),
+  nunca en el del request: `ReleaseCapture()` solo suelta la captura **del hilo que la llama**, y
+  la del mouse la tiene el hilo de la ventana desde que apretaste dentro del WebView. Medido: sin
+  ese paso el arrastre no arranca y la función devuelve `True` igual.
+- ⚠️ **`preparar_marco_nativo()` toca dos bits, y los dos se midieron.** Pone `WS_THICKFRAME`
+  (devuelve el borde de redimensionado del sistema; en Win11 el marco **no se ve** y el hit-test
+  de la esquina responde `HTBOTTOMRIGHT`) y **saca `WS_MAXIMIZEBOX`**, que es lo que apaga Aero
+  Snap: con ese bit puesto y el arrastre en manos del sistema, llevar el widget al borde
+  izquierdo lo estiraba a **media pantalla** (340×520 → 1292×1398) y al de arriba lo
+  **maximizaba** (2574×1454). Un widget de 340px no se maximiza, así que no se pierde nada, y
+  `minimizar()` usa `WS_MINIMIZEBOX`, que no se toca.
+  - ⚠️ **El marco le saca 14×14 px al área cliente y NO se compensan.** Agrandar la ventana para
+    recuperarlos dispararía `resized`, que guarda la geometría, y al próximo arranque se aplicaría
+    sobre un tamaño ya crecido: 14 px por arranque, para siempre. La página es fluida y 7 px por
+    lado no se notan; el crecimiento sin techo sí.
+- ⚠️ **El arrastre arranca en el `mousemove`, no en el `mousedown`.** El bucle del sistema es
+  modal y se queda con el mouse: arrancarlo al apretar se comería el clic y el **doble clic** del
+  agarre —que devuelve la medida original— dejaría de existir. Espera a que el mouse se haya
+  movido unos píxeles, y ese umbral vive en **un solo** lugar (`alArrastrar`, en `widget.html`)
+  porque los dos gestos pasan por ahí.
+- ⚠️ **La ventana no se arrastra desde donde apretar ya significa otra cosa** (`NO_ARRASTRA`:
+  campos, botones, enlaces, `<label>`, `<summary>` y el agarre). `easy_drag` no filtraba nada, así
+  que intentar seleccionar lo que escribiste en un campo movía la ventana, y el clic derecho
+  también la movía. Va con tripwire.
+- ⚠️ El `mousedown` del agarre **corta la propagación**: el arrastre de la ventana engancha el
+  suyo en `window` y sin eso estirar desde el agarre **movería** la ventana al mismo tiempo. Va
+  con tripwire.
+- **Doble clic en el agarre vuelve a 340×520**, el mismo gesto que resetea el ancho de los paneles
+  del día. Por eso no hizo falta darle menú contextual al widget ni otro botón a una barra de
+  340px.
+- ⚠️ **Lo verifica `hacer.ps1 smoke widget`, y el chequeo TIENE que apretar el botón de verdad.**
+  Medido: `HTCAPTION` **no entra al bucle** sin un botón apretado —Windows lo descarta, no hay
+  arrastre que seguir— mientras que `HTBOTTOMRIGHT` entra igual. Copiando el chequeo del agarre,
+  que no aprieta nada, el del arrastre salía **en rojo** con la app funcionando: el mismo agujero
+  que ya tuvieron `smoke_desktop` y este mismo smoke. El smoke aprieta, mueve el cursor 80 px y
+  comprueba que **la ventana lo siguió** (y que la posición quedó guardada), que es justo lo que
+  `easy_drag` no hacía.
 ### Una sola instancia
 Abrir Bitácora estando abierta **no lanza otra**: vuelve la que ya está, y donde la dejaste.
 `instancia.py` lo resuelve con dos piezas y las dos hacen falta:
