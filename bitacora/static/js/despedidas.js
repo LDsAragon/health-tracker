@@ -280,38 +280,40 @@
         '     ___\n   /     \\      |\n  |  x x  |     |\n  |   _   |    /\n   \\_____/  __/',
         '     ___\n   /     \\      |\n  |  x x  |     |\n  |   o   |    /\n   \\_____/  __/',
       ], 220);
-      cuadros(e, e.capas[2], [
-        '        /\n       /\n      /\n     /\n    /\n   /\n  /',
-      ]);
+      // La pantalla rajandose, al frente de todo y solo en el momento del golpe. Es material
+      // generado (tools/material_generado.py): una rajadura son lineas desde un punto.
+      pintar(e, e.capas[2], 'parca.grieta', [' '], 40, [0.52, 0.95]);
       return tl
         .add({                            // lejos, chiquita, esperando
           targets: e.capas[1],
-          opacity: [0, 0.8],
-          scale: conv ? [0.42, 0.5] : [0.3, 0.38],
-          translateY: [-e.alto * 0.26, -e.alto * 0.24],
-          duration: 900,
+          opacity: [0, 0.55],
+          scale: conv ? [0.28, 0.36] : [0.3, 0.38],
+          translateY: [-e.alto * 0.16, -e.alto * 0.14],
+          rotate: [-2, 1],
+          duration: 1000,
           easing: 'easeOutQuad',
         })
-        .add({                            // y encima tuyo en un parpadeo
+        .add({                            // y SE TE VIENE ENCIMA
+          // ⚠️ No se acerca: se estrella. Termina mucho mas grande que la escena, o sea
+          // fuera de cuadro: es un rostro chocando contra el vidrio, no alguien que llega.
           targets: e.capas[1],
-          scale: conv ? 1.25 : 2.6,
+          // ⚠️ 2,4 y no más: a partir de ahí el rostro deja de leerse como un rostro y queda una
+          // pared de textura. Tiene que reconocerse JUSTO cuando pega, que es de lo que se trata.
+          scale: conv ? 2.4 : 2.6,
           opacity: 1,
-          translateY: -e.alto * 0.06,
-          duration: 260,
+          translateY: -e.alto * 0.02,
+          rotate: 0,
+          duration: 230,
           easing: 'easeInQuad',
         })
-        .add({                            // el guadañazo
-          targets: e.capas[2],
-          opacity: [0, 1],
-          translateX: [-e.ancho * 0.55, e.ancho * 0.55],
-          scaleY: [2.4, 2.4],
-          scaleX: [1, 1.6],
-          duration: 190,
-          easing: 'linear',
+        .add({                            // y rebota hacia atras, como contra un vidrio
+          targets: e.capas[1],
+          scale: conv ? 2.05 : 2.2,
+          opacity: 0.75,
+          duration: 420,
+          easing: 'easeOutQuad',
         });
     },
-
-
 
   };
 
@@ -347,27 +349,28 @@
     },
 
     parca: function (e, tl) {
-      destello(e, tl, 1, 300, '-=120');
-      sacudir(e, tl, 16, 420, '-=280');
+      const xc = e.ancho / 2;
+      // El golpe contra el vidrio: seco y corto, no el fogonazo largo del meteorito.
+      destello(e, tl, 1, 220, '-=200');
+      destello(e, tl, 0.45, 700, '-=120');
+      sacudir(e, tl, 52, 1100, '-=820');
       return tl.add({
-        // Se despedaza en dos mitades: lo que quedó de un lado del tajo y lo del otro.
+        // ⚠️ Estallan HACIA ADELANTE y desde el centro: es un vidrio que se parte contra la
+        // pantalla. Antes salian en dos mitades para lados opuestos, que era el corte de una
+        // guadana; con un rostro estrellandose eso no significa nada.
         targets: e.letras,
-        translateX: function (l, i) {
-          return (e.x[i] < e.ancho / 2 ? -1 : 1) * anime.random(90, 320);
-        },
-        translateY: function (l, i) {
-          return (e.x[i] < e.ancho / 2 ? 1 : -1) * anime.random(60, 280);
-        },
-        rotateZ: function (l, i) { return (e.x[i] < e.ancho / 2 ? -1 : 1) * anime.random(60, 300); },
-        translateZ: function () { return anime.random(-200, 260); },
+        translateX: function (l, i) { return (e.x[i] - xc) * 2.8 + anime.random(-50, 50); },
+        translateY: function () { return anime.random(-280, 320); },
+        translateZ: function () { return anime.random(140, 560); },
+        rotateX: function () { return anime.random(-820, 820); },
+        rotateZ: function () { return anime.random(-520, 520); },
         opacity: [1, 0],
-        duration: 900,
-        delay: anime.stagger(5, { from: 'center' }),
+        // Casi al mismo tiempo: un estallido, no una ola que recorre la frase.
+        delay: anime.stagger(3, { from: 'center' }),
+        duration: 1500,
         easing: 'easeOutQuint',
-      }, '-=300');
+      }, '-=980');
     },
-
-
 
   };
 
