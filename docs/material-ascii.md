@@ -13,7 +13,6 @@ convertirlas a ASCII sigue siendo una obra derivada.
 | `meteorito` | [GIF de Giphy](https://giphy.com/gifs/mograph-meteor-end-of-the-world-l46CvyAn1oBTOZtZK) (`l46CvyAn1oBTOZtZK`) | sin identificar | ⚠️ de terceros |
 | `parca` | [GIF de Giphy](https://giphy.com/gifs/wave-xcopy-deathwave-xfkB0MewxbRt9BMxIK) (`xfkB0MewxbRt9BMxIK`) | atribuido a xcopy | ⚠️ de terceros |
 | `meteorito.onda` | generado con `tools/material_generado.py` | propio | sin licencia de terceros |
-| `parca.grieta` | generado con `tools/material_generado.py` | propio | sin licencia de terceros |
 | `meteorito.fondo` | [GIF de Giphy](https://giphy.com/gifs/earth-super-asteroid-YQPVI7u1Cue1W) (`YQPVI7u1Cue1W`) | sin identificar | ⚠️ de terceros |
 
 ⚠️ **Las dos últimas son obra de terceros y entran por decisión expresa del dueño del repo**
@@ -51,8 +50,8 @@ duplicados.
 ## Cuando no hay material, se genera
 
 No hay explosión libre que convierta bien: son humo y tono parejo, y dan mancha. Pero **una onda
-de choque es geometría pura** —un anillo que se abre— y una **rajadura son líneas desde un punto**,
-y eso es exactamente lo que el ASCII dibuja bien. Así que en vez de buscarla, `tools/material_generado.py` las genera y después pasa por el mismo
+de choque es geometría pura** —un anillo que se abre— y eso es exactamente lo que el ASCII dibuja
+bien. Así que en vez de buscarla, `tools/material_generado.py` las genera y después pasa por el mismo
 conversor que el resto. Sale material propio, sin licencia de nadie y reproducible desde el repo.
 
 Un plano puede ocupar **solo un tramo** de la escena (`ventana` en `pintar`): la onda dura el

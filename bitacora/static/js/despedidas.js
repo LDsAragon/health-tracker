@@ -280,39 +280,39 @@
         '     ___\n   /     \\      |\n  |  x x  |     |\n  |   _   |    /\n   \\_____/  __/',
         '     ___\n   /     \\      |\n  |  x x  |     |\n  |   o   |    /\n   \\_____/  __/',
       ], 220);
-      // La pantalla rajandose, al frente de todo y solo en el momento del golpe. Es material
-      // generado (tools/material_generado.py): una rajadura son lineas desde un punto.
-      pintar(e, e.capas[2], 'parca.grieta', [' '], 40, [0.52, 0.95]);
       return tl
-        .add({                            // lejos, chiquita, esperando
+        .add({                            // ronda arriba a la izquierda, lejos
           targets: e.capas[1],
-          opacity: [0, 0.55],
-          scale: conv ? [0.28, 0.36] : [0.3, 0.38],
-          translateY: [-e.alto * 0.16, -e.alto * 0.14],
-          rotate: [-2, 1],
-          duration: 1000,
+          opacity: [0, 0.6],
+          scale: conv ? [0.26, 0.34] : [0.3, 0.38],
+          translateX: [-e.ancho * 0.30, -e.ancho * 0.24],
+          translateY: [-e.alto * 0.30, -e.alto * 0.26],
+          rotate: [-3, 1],
+          duration: 1050,
           easing: 'easeOutQuad',
         })
-        .add({                            // y SE TE VIENE ENCIMA
-          // ⚠️ No se acerca: se estrella. Termina mucho mas grande que la escena, o sea
-          // fuera de cuadro: es un rostro chocando contra el vidrio, no alguien que llega.
+        .add({                            // y se tira ENCIMA DE LAS PALABRAS
+          // ⚠️ Ataca al TEXTO, no a la pantalla: cae sobre la linea de la tarea y se queda del
+          // tamano en que todavia se lee que es un rostro. Escalarlo hasta tapar la escena lo
+          // convertia en una pared de textura y contaba otra cosa —un choque contra el vidrio—.
           targets: e.capas[1],
-          // ⚠️ 2,4 y no más: a partir de ahí el rostro deja de leerse como un rostro y queda una
-          // pared de textura. Tiene que reconocerse JUSTO cuando pega, que es de lo que se trata.
-          scale: conv ? 2.4 : 2.6,
+          scale: conv ? 1.45 : 2.6,
           opacity: 1,
-          translateY: -e.alto * 0.02,
+          translateX: 0,
+          translateY: 0,
           rotate: 0,
-          duration: 230,
+          duration: 240,
           easing: 'easeInQuad',
         })
-        .add({                            // y rebota hacia atras, como contra un vidrio
+        .add({                            // y sigue de largo, atravesandolas
           targets: e.capas[1],
-          scale: conv ? 2.05 : 2.2,
-          opacity: 0.75,
-          duration: 420,
-          easing: 'easeOutQuad',
-        });
+          translateX: e.ancho * 0.30,
+          translateY: e.alto * 0.16,
+          scale: conv ? 1.7 : 2.2,
+          opacity: 0,
+          duration: 900,
+          easing: 'easeInQuad',
+        }, '-=120');
     },
 
   };
@@ -350,26 +350,25 @@
 
     parca: function (e, tl) {
       const xc = e.ancho / 2;
-      // El golpe contra el vidrio: seco y corto, no el fogonazo largo del meteorito.
-      destello(e, tl, 1, 220, '-=200');
-      destello(e, tl, 0.45, 700, '-=120');
-      sacudir(e, tl, 52, 1100, '-=820');
+      // Un golpe seco y corto, no el fogonazo largo del meteorito.
+      destello(e, tl, 0.8, 200, '-=210');
+      sacudir(e, tl, 34, 800, '-=740');
       return tl.add({
-        // ⚠️ Estallan HACIA ADELANTE y desde el centro: es un vidrio que se parte contra la
-        // pantalla. Antes salian en dos mitades para lados opuestos, que era el corte de una
-        // guadana; con un rostro estrellandose eso no significa nada.
+        // ⚠️ Las letras salen DESPEDIDAS POR EL BICHO, no hacia la camara: el rostro cae sobre
+        // la linea y las manda para los costados y hacia abajo, en la direccion en que sigue de
+        // largo. Tirarlas hacia adelante contaba un vidrio rompiendose, que es otra escena.
         targets: e.letras,
-        translateX: function (l, i) { return (e.x[i] - xc) * 2.8 + anime.random(-50, 50); },
-        translateY: function () { return anime.random(-280, 320); },
-        translateZ: function () { return anime.random(140, 560); },
-        rotateX: function () { return anime.random(-820, 820); },
-        rotateZ: function () { return anime.random(-520, 520); },
+        translateX: function (l, i) { return (e.x[i] - xc) * 2.4 + anime.random(20, 120); },
+        translateY: function () { return anime.random(40, 320); },
+        translateZ: function () { return anime.random(-260, 120); },
+        rotateX: function () { return anime.random(-620, 620); },
+        rotateZ: function () { return anime.random(-480, 480); },
         opacity: [1, 0],
-        // Casi al mismo tiempo: un estallido, no una ola que recorre la frase.
-        delay: anime.stagger(3, { from: 'center' }),
-        duration: 1500,
+        // De izquierda a derecha, siguiendo por donde pasa el rostro.
+        delay: function (l, i) { return e.x[i] * 0.7; },
+        duration: 1300,
         easing: 'easeOutQuint',
-      }, '-=980');
+      }, '-=760');
     },
 
   };
