@@ -143,7 +143,9 @@ def test_los_cuadros_los_manda_la_linea_de_tiempo():
         assert "setInterval" not in linea, "volvio un reloj suelto: " + linea.strip()
     assert "update: function (anim) { avanzarCuadros(e, anim); }" in js
     # El convertido va una sola vez a lo largo de la escena; el de a mano sigue en bucle.
-    assert "Math.min(n - 1, Math.floor(p * n))" in js
+    assert "Math.min(n - 1, Math.floor(local * n))" in js
+    # Y un plano puede ocupar solo un TRAMO: la onda expansiva dura el impacto, no la escena.
+    assert "(p - pl.desde) / (pl.hasta - pl.desde)" in js
 
 
 def test_el_texto_que_se_destruye_es_el_de_la_tarea():

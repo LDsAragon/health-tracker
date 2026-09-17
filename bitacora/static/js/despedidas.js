@@ -87,7 +87,7 @@
   // ⚠️ Los cuadros tienen que tener el mismo alto, o el dibujo salta al pasar. `cuadros()` los
   // empareja. Y todos los caracteres tienen que caer en la grilla del monoespaciado: hay un
   // tripwire con los anchos medidos, porque `~` y `∼` se ven igual y miden distinto.
-  function cuadros(e, capa, lista, ms, unaVez) {
+  function cuadros(e, capa, lista, ms, unaVez, ventana) {
     const alto = Math.max.apply(null, lista.map(function (c) { return c.split('\n').length; }));
     const parejos = lista.map(function (c) {
       const filas = c.split('\n');
@@ -95,7 +95,11 @@
       return filas.join('\n');
     });
     capa.textContent = parejos[0];
-    e.planos.push({ capa: capa, cuadros: parejos, ms: ms || 90, unaVez: !!unaVez, i: 0 });
+    // `ventana` acota el plano a un TRAMO de la escena, en fracciones del total. La onda
+    // expansiva dura el impacto, no los cinco segundos: sin esto se abriria durante toda la
+    // aproximacion y no seria una explosion, seria un fondo.
+    e.planos.push({ capa: capa, cuadros: parejos, ms: ms || 90, unaVez: !!unaVez, i: 0,
+                    desde: (ventana && ventana[0]) || 0, hasta: (ventana && ventana[1]) || 1 });
   }
 
   // ⚠️ **Los cuadros los manda la línea de tiempo, no un reloj aparte.** Antes cada plano
@@ -112,8 +116,11 @@
     e.planos.forEach(function (pl) {
       const n = pl.cuadros.length;
       if (n < 2) return;
+      const local = pl.hasta > pl.desde
+        ? Math.max(0, Math.min(1, (p - pl.desde) / (pl.hasta - pl.desde)))
+        : p;
       const i = pl.unaVez
-        ? Math.min(n - 1, Math.floor(p * n))
+        ? Math.min(n - 1, Math.floor(local * n))
         : Math.floor((anim.currentTime || 0) / pl.ms) % n;
       if (i !== pl.i) {
         pl.i = i;
@@ -129,7 +136,7 @@
   //
   // El tamaño de letra sale del ANCHO EN COLUMNAS del arte: el convertido tiene ~100 y el de a
   // mano ~35, así que con un tamaño fijo uno de los dos se sale de la escena.
-  function pintar(e, capa, slug, alternativa, ms) {
+  function pintar(e, capa, slug, alternativa, ms, ventana) {
     const conv = (window.DESPEDIDAS_ARTE || {})[slug];
     const lista = (conv && conv.cuadros && conv.cuadros.length) ? conv.cuadros : alternativa;
     let cols = 0;
@@ -140,7 +147,8 @@
     const convertida = !!(conv && conv.cuadros && conv.cuadros.length);
     // El material largo se reproduce entero UNA vez a lo largo de la escena; el corto
     // —medio segundo de bucle— cicla a su ritmo, o iria en cámara lentísima.
-    cuadros(e, capa, lista, (conv && conv.ms) || ms, convertida && !(conv && conv.bucle));
+    cuadros(e, capa, lista, (conv && conv.ms) || ms,
+            convertida && !(conv && conv.bucle), ventana);
     // ⚠️ Devuelve si el arte es convertido, y no es un detalle: el dibujado a mano son ~35
     // columnas y hay que AGRANDARLO para que llene la escena, mientras que el convertido ya
     // entra justo y ampliarlo 2,7× destruye el detalle que es justamente su valor. Cada escena
@@ -223,6 +231,10 @@
         '    ·\n   .\\\n  \' \\\\\n    \\\\\n   . \\\\\\\n      \\\\\\\n       ☄',
         '    \'\n   ·\\\n  . \\\\\n    \\\\\\\n   \' \\\\\n      \\\\\\\\\n       ☄',
       ], 70);
+      // La onda expansiva, en el plano del medio y solo durante el impacto. El material es
+      // generado (tools/onda_choque.py): no hay explosión libre que convierta bien, pero un
+      // anillo que se abre es geometría pura y eso el ASCII lo dibuja perfecto.
+      const onda = pintar(e, e.capas[1], 'meteorito.onda', [' '], 40, [0.60, 0.97]);
       const xi = e.ancho * 0.44;          // dónde pega
       return tl
         .add({                            // el cielo, lejos: casi no se mueve
@@ -308,21 +320,30 @@
   const DESTRUCCION = {
     meteorito: function (e, tl) {
       const xi = e.ancho * 0.44;
-      destello(e, tl, 0.85, 420, '-=180');
-      sacudir(e, tl, 26, 700, '-=400');
+      // ⚠️ El golpe es lo más largo de la escena, no un parpadeo: dos destellos —uno seco y
+      // uno que se apaga despacio— y un temblor que dura casi un segundo y medio.
+      destello(e, tl, 1, 260, '-=200');
+      destello(e, tl, 0.5, 900, '-=120');
+      sacudir(e, tl, 46, 1500, '-=1050');
+      // La onda se abre sola en el material; la escala la hace pasar de largo el borde, que es lo
+      // que la vuelve grande en vez de un anillo prolijo en el medio de la pantalla.
+      tl.add({ targets: e.capas[1], opacity: [0, 0.95], scale: [0.55, 1.35],
+               duration: 460, easing: 'easeOutQuad' }, '-=1480')
+        .add({ targets: e.capas[1], opacity: 0, scale: 2.4,
+               duration: 1000, easing: 'easeOutQuad' }, '-=760');
       return tl.add({
         // La onda expansiva: cada letra sale DESDE el impacto, y las de más lejos tardan más.
         targets: e.letras,
-        translateX: function (l, i) { return (e.x[i] - xi) * 2.2 + anime.random(-50, 50); },
-        translateY: function () { return anime.random(-230, 260); },
-        translateZ: function () { return anime.random(-300, 420); },
-        rotateX: function () { return anime.random(-760, 760); },
-        rotateZ: function () { return anime.random(-420, 420); },
+        translateX: function (l, i) { return (e.x[i] - xi) * 3.1 + anime.random(-70, 70); },
+        translateY: function () { return anime.random(-330, 360); },
+        translateZ: function () { return anime.random(-420, 620); },
+        rotateX: function () { return anime.random(-1080, 1080); },
+        rotateZ: function () { return anime.random(-620, 620); },
         opacity: [1, 0],
-        duration: 1100,
+        duration: 1900,
         delay: function (l, i) { return Math.abs(e.x[i] - xi) * 0.9; },
         easing: 'easeOutQuint',
-      }, '-=640');
+      }, '-=1700');
     },
 
     parca: function (e, tl) {
