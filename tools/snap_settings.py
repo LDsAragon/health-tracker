@@ -70,7 +70,7 @@ if seed:
                          "Tiempo": str(random.choice([30, 45, 60, 90]))})
         e(cid_medic, {"Tomada": "1" if random.random() < 0.8 else ""})
     # Un gráfico personalizado: ejercicio por tipo, semanal
-    dbm.add_chart(cid_ejer, "Tiempo", "", 90, "Tipo", "week", "")
+    dbm.add_chart(cid_ejer, "Tiempo", "", "Tipo", "week", "")
     dbm.set_setting("journal_form_default", "open")
     dbm.set_setting("show_stats", "show")
 

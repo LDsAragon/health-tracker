@@ -325,7 +325,7 @@ def _cat_trabajo(client):
 
 def test_renombrar_campo_migra_entradas_y_graficos(client):
     cid = _cat_trabajo(client)
-    db.add_chart(cid, "Horas", "", 90, "Proyecto", "week", "")
+    db.add_chart(cid, "Horas", "", "Proyecto", "week", "")
     client.post(f"/journal/{cid}/edit", data={
         "name": "Trabajo", "color": "#14b8a6", "show_in_calendar": "1",
         "field_oldlabel[]": ["Proyecto", "Horas"],

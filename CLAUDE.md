@@ -1214,6 +1214,37 @@ miraban) y **ningún número era comparativo** — un `0 / 15 · 0%` no dice si 
 - Los colores salen de `appconfig.EMOTION_COLORS` —estaban como literales dentro de `day.html`— y
   un test los compara **contra el JS de cada rueda**: una emoción que falte ahí sale del gris de
   fallback sin que nada avise, y la estadística mentiría el color.
+- ⚠️ **Un gráfico guardado se EDITA, y con el mismo constructor del alta** (macro
+  `campos_grafico` en `_macros.html`, con sufijo por tarjeta). Antes solo estaba el ✕: corregir un
+  título obligaba a rehacer las siete elecciones —categoría, campo, campo a sumar, desglose,
+  bucket, etiqueta y título—. Es el cuarto formulario del repo que se comparte así, y el primero
+  que llega al macro **antes** de divergir; los otros tres (`campos_rutina`, `campos_frecuencia`,
+  `fila_campo`) llegaron después de haber perdido datos. `_grafico_from_form()` es el único lector
+  del formulario, por el mismo motivo que `_guardar_ajuste()`.
+  - ⚠️ **El valor guardado NO puede ir como `selected` en el HTML.** Las opciones de Campo,
+    Desglose y "sumar otro" las pone `statsPopulateFields(suf)` a partir de la categoría, así que
+    cuando se rinde la página todavía no existen. Viajan en los `data-` del `<form>` y
+    `statsInicializar()` los elige después, **en este orden**: opciones → desglose → campo. Al
+    revés no: `statsGroupChanged()` rearma el select de Campo filtrando a los numéricos cuando hay
+    desglose, así que elegir el desglose último le borraría el valor recién puesto y la tarjeta
+    abriría con "Campo…" vacío justo en los gráficos más armados.
+  - ⚠️ **El `title` que precarga el formulario es el GUARDADO, no el que se muestra.** El que se
+    muestra puede ser derivado (`"Trabajo · Horas por Proyecto"`) y, si cayera en el campo,
+    guardar sin tocar nada lo clavaría como si lo hubieras escrito vos.
+  - `update_chart` reescribe el gráfico **entero** (`charts.CAMPOS`): un UPDATE parcial deja que
+    vaciar el desglose o la etiqueta no tenga efecto, y ahí la pantalla dice una cosa y el gráfico
+    dibuja otra. Hay un test por cada mitad.
+- ⚠️ **`charts.range_days` ya no se escribe.** Nadie la lee desde que hay un solo período para
+  toda la pantalla, y se seguía guardando un 90 fijo tomado de un campo que el formulario ya no
+  tiene. La columna queda **vestigial** —como `todos.snoozed_until`— porque `init_db()` corre en
+  cada request y un `DROP COLUMN` ahí sería un camino destructivo por request.
+  `test_el_periodo_manda_sobre_los_graficos_personalizados` la escribe por SQL a propósito: el
+  tripwire protege a las bases **ya instaladas**, que sí tienen un rango propio guardado.
+- **La nota con la que marcás una rutina no se edita** (decisión, sep 2026): el chip muestra la
+  nota y solo ofrece ↺, y deshacer borra la fila. `complete_event` ya es un UPSERT, así que
+  agregarlo sería solo el camino en la pantalla — no se hizo porque no se pidió. Si vuelve el
+  tema: un lápiz que reabra el mismo formulario inline con la nota precargada, y `celebrate` solo
+  en el alta (editar una nota no puede volver a disparar la mascota).
 - **No hay rachas ni gamificación.** Se rechazaron para el visor de tareas (*"el visor no es un
   tablero"*) y acá no se sumaron sin pedirlo. Queda anotado.
 

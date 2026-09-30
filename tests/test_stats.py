@@ -132,7 +132,7 @@ def test_chart_desglosado_via_ruta(client):
     _entry_tagged(cid, hoy, {"Proyecto": "B", "Franja": "09:00-10:30"})
     client.post("/estadisticas/grafico/add", data={
         "category_id": str(cid), "field_label": "Horas", "field_label2": "Franja",
-        "group_field": "Proyecto", "bucket": "week", "range_days": "90"})
+        "group_field": "Proyecto", "bucket": "week"})
     ch = db.get_charts()[0]
     assert ch["field_label"] == "Horas|Franja"
     assert ch["group_field"] == "Proyecto" and ch["bucket"] == "week"
@@ -189,15 +189,166 @@ def test_grafico_simple_de_tiempo_en_horas_via_ruta(client):
     assert '"unit": "horas"' in body
 
 
-def test_charts_crud_via_ruta(client):
+def _cat_peso():
     db.add_journal_category({"name": "Peso", "color": "#000",
-        "fields_json": json.dumps([{"label": "Peso", "type": "numero"}]), "show_in_calendar": 0})
-    cid = db.get_journal_categories()[0]["id"]
-    client.post("/estadisticas/grafico/add", data={"category_id": str(cid), "field_label": "Peso", "title": "Mi peso", "range_days": "180"})
+        "fields_json": json.dumps([{"label": "Peso", "type": "numero"},
+                                   {"label": "Cintura", "type": "numero"},
+                                   {"label": "Momento", "type": "opciones",
+                                    "placeholder": "Mañana, Noche"}]),
+        "show_in_calendar": 0})
+    return db.get_journal_categories()[0]["id"]
+
+
+def test_charts_crud_via_ruta(client):
+    cid = _cat_peso()
+    client.post("/estadisticas/grafico/add",
+                data={"category_id": str(cid), "field_label": "Peso", "title": "Mi peso"})
     charts = db.get_charts()
-    assert len(charts) == 1 and charts[0]["field_label"] == "Peso" and charts[0]["range_days"] == 180
+    assert len(charts) == 1 and charts[0]["field_label"] == "Peso"
     client.post(f"/estadisticas/grafico/{charts[0]['id']}/delete")
     assert db.get_charts() == []
+
+
+def test_un_grafico_guardado_se_edita_entero(client):
+    """Antes solo estaba el ✕: corregir un título obligaba a rehacer las siete elecciones.
+
+    Se editan todas, de una, para que no quede un campo que la edición no pueda tocar — que es
+    exactamente el defecto que tenía el formulario de rutinas con la frecuencia anual."""
+    cid = _cat_peso()
+    client.post("/estadisticas/grafico/add",
+                data={"category_id": str(cid), "field_label": "Peso", "title": "Mi peso"})
+    ch = db.get_charts()[0]
+
+    client.post(f"/estadisticas/grafico/{ch['id']}/edit",
+                data={"category_id": str(cid), "field_label": "Peso",
+                      "field_label2": "Cintura", "group_field": "Momento",
+                      "bucket": "week", "tag_filter": "control", "title": "Peso y cintura"})
+
+    de_nuevo = db.get_charts()[0]
+    assert de_nuevo["id"] == ch["id"], "editar no puede crear uno nuevo"
+    assert de_nuevo["field_label"] == "Peso|Cintura"
+    assert de_nuevo["group_field"] == "Momento"
+    assert de_nuevo["bucket"] == "week"
+    assert de_nuevo["tag_filter"] == "control"
+    assert de_nuevo["title"] == "Peso y cintura"
+
+
+def test_editar_un_grafico_puede_VACIAR_lo_que_tenia(client):
+    """⚠️ Quitar el desglose, la etiqueta o el título tiene que quedar quitado.
+
+    Es el modo de falla de un UPDATE parcial ("solo escribo lo que vino"): el campo llega vacío,
+    se lo toma por ausente y el valor viejo sobrevive. Ahí la pantalla queda diciendo una cosa y
+    el gráfico dibujando otra."""
+    cid = _cat_peso()
+    client.post("/estadisticas/grafico/add",
+                data={"category_id": str(cid), "field_label": "Peso", "title": "Mi peso",
+                      "group_field": "Momento", "tag_filter": "control", "bucket": "week"})
+    ch = db.get_charts()[0]
+
+    client.post(f"/estadisticas/grafico/{ch['id']}/edit",
+                data={"category_id": str(cid), "field_label": "Peso", "field_label2": "",
+                      "group_field": "", "bucket": "day", "tag_filter": "", "title": ""})
+
+    de_nuevo = db.get_charts()[0]
+    assert de_nuevo["group_field"] == "" and de_nuevo["tag_filter"] == ""
+    assert de_nuevo["title"] == "" and de_nuevo["bucket"] == "day"
+
+
+# ── Nada puede quedar en la base sin forma de tocarlo desde la app ───────────
+
+def test_TODO_grafico_guardado_tiene_su_tarjeta_en_la_pantalla(client):
+    """⚠️ El invariante, escrito como tal: una fila de `charts` que la pantalla no muestra es una
+    fila que **existe sin estar en ningún lado**.
+
+    Seguía en la tabla, seguía viajando en el sync, y no había ni ✕ para sacarla: la única salida
+    era abrir el SQLite a mano. Se llegaba ahí borrando la categoría —que no se lleva sus
+    gráficos— o quitándole el campo del que salían. Este test recorre la tabla y exige que cada
+    gráfico aparezca, sano o roto."""
+    cid = _cat_peso()
+    client.post("/estadisticas/grafico/add",
+                data={"category_id": str(cid), "field_label": "Peso", "title": "Mi peso"})
+    client.post("/estadisticas/grafico/add",
+                data={"category_id": str(cid), "field_label": "Cintura"})
+    client.post(f"/journal/{cid}/delete", follow_redirects=True)
+
+    guardados = db.get_charts()
+    assert len(guardados) == 2, "borrar la categoría no se lleva los gráficos (y está bien)"
+    html = client.get("/estadisticas").data.decode()
+    for ch in guardados:
+        assert f"/estadisticas/grafico/{ch['id']}/delete" in html, \
+            f"el gráfico {ch['id']} quedó en la base sin forma de sacarlo desde la app"
+        assert f"/estadisticas/grafico/{ch['id']}/edit" in html, \
+            f"el gráfico {ch['id']} quedó en la base sin forma de arreglarlo desde la app"
+
+
+def test_un_grafico_huerfano_DICE_que_le_falta(client):
+    """Que aparezca no alcanza: tiene que decir por qué no dibuja, o se lee como un gráfico roto
+    sin explicación. Y no puede decir "sin datos en este período", que mandaría a tocar el
+    selector de arriba para siempre."""
+    cid = _cat_peso()
+    client.post("/estadisticas/grafico/add",
+                data={"category_id": str(cid), "field_label": "Peso", "title": "Mi peso"})
+    client.post(f"/journal/{cid}/delete", follow_redirects=True)
+
+    html = client.get("/estadisticas").data.decode()
+    assert "stats-card-roto" in html
+    assert "ya no existe" in html
+    assert "Sin datos en este período" not in html
+
+
+def test_un_grafico_huerfano_se_puede_REAPUNTAR(client):
+    """La salida que conserva el trabajo: el gráfico sigue siendo el mismo, con otra fuente."""
+    cid = _cat_peso()
+    client.post("/estadisticas/grafico/add",
+                data={"category_id": str(cid), "field_label": "Peso", "title": "Mi peso"})
+    ch = db.get_charts()[0]
+    client.post(f"/journal/{cid}/delete", follow_redirects=True)
+
+    nuevo = _cat_peso()          # otra categoría, con los mismos campos
+    client.post(f"/estadisticas/grafico/{ch['id']}/edit",
+                data={"category_id": str(nuevo), "field_label": "Peso", "bucket": "day",
+                      "title": "Mi peso"})
+
+    de_nuevo = db.get_charts()[0]
+    assert de_nuevo["id"] == ch["id"] and de_nuevo["category_id"] == nuevo
+    assert "stats-card-roto" not in client.get("/estadisticas").data.decode()
+
+
+def test_un_campo_sumado_que_desaparecio_se_AVISA(client):
+    """El huérfano a medias: de los dos campos sumados queda uno, así que el gráfico dibuja —pero
+    no lo que su título dice—. Ahí no hay nada que desbloquear, pero callarlo es lo mismo de
+    antes: la pantalla mostrando una cosa y los datos siendo otra."""
+    cid = _cat_peso()
+    client.post("/estadisticas/grafico/add",
+                data={"category_id": str(cid), "field_label": "Peso",
+                      "field_label2": "Cintura", "title": "Peso y cintura"})
+    db.update_journal_category(cid, {
+        "name": "Peso", "color": "#000", "show_in_calendar": 0,
+        "fields_json": json.dumps([{"label": "Peso", "type": "numero"}]),   # se va Cintura
+    })
+
+    html = client.get("/estadisticas").data.decode()
+    assert "Peso y cintura" in html, "el gráfico tiene que seguir dibujando con lo que le queda"
+    assert "Cintura" in html and "no se está sumando" in html
+
+
+def test_el_alta_y_la_edicion_de_un_grafico_SON_EL_MISMO_formulario(client):
+    """Tripwire hermano del de las frecuencias de Rutinas: los dos formularios salen del macro
+    `campos_grafico`, así que ofrecen los mismos campos. Un campo que exista solo en el alta se
+    borraría al editar."""
+    import re
+    cid = _cat_peso()
+    client.post("/estadisticas/grafico/add",
+                data={"category_id": str(cid), "field_label": "Peso", "title": "Mi peso"})
+    ch = db.get_charts()[0]
+    html = client.get("/estadisticas").data.decode()
+
+    def campos(action):
+        i = html.index(f'action="{action}"')
+        trozo = html[i:html.index("</form>", i)]
+        return sorted(set(re.findall(r'name="([a-z_0-9]+)"', trozo)))
+
+    assert campos(f"/estadisticas/grafico/{ch['id']}/edit") == campos("/estadisticas/grafico/add")
 
 
 # ── El resumen de lo que ya anotás ───────────────────────────────────────────
@@ -372,7 +523,12 @@ def test_el_periodo_manda_sobre_los_graficos_personalizados(client):
         "fields_json": json.dumps([{"label": "Peso", "type": "numero"}]), "show_in_calendar": 0})
     cid = db.get_journal_categories()[0]["id"]
     _entry(cid, viejo, {"Peso": "80"})
-    db.add_chart(cid, "Peso", "Mi peso", 365)
+    db.add_chart(cid, "Peso", "Mi peso")
+    # ⚠️ El rango se clava por SQL porque `add_chart` ya no lo escribe: la columna quedó
+    # vestigial. Escribirlo a mano es justamente lo que hace falta acá — el test protege a las
+    # bases YA INSTALADAS, que sí tienen un range_days propio guardado de cuando se usaba.
+    with db.get_db() as conn:
+        conn.execute("UPDATE charts SET range_days = 365")
 
     en_un_mes = client.get("/estadisticas?range=30").data.decode("utf-8")
     assert "Sin datos en este período" in en_un_mes, "el gráfico usó su rango guardado, no el de la pantalla"

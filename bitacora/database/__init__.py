@@ -33,5 +33,5 @@ from .stats import (
     numeric_series, bool_counts, option_distribution, chartable_fields, build_series, grouped_series,
     TIME_TYPES, resumen, resumen_comparado, tiempo_comparado, emociones_frecuentes,
 )
-from .charts import get_charts, add_chart, delete_chart
+from .charts import get_charts, add_chart, update_chart, delete_chart
 from .vistas import get_prefs, set_pref, borrar_pref, reset_vista

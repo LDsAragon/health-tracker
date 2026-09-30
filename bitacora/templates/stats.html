@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import campos_grafico %}
 {% block title %}Estadísticas{% endblock %}
 
 {% block content %}
@@ -161,6 +162,8 @@
       {# Cada tarjeta dice de qué período habla, ahora que hay uno solo para toda la pantalla. #}
       <span class="stats-card-sub">{{ periodo_texto }}</span>
       {% if c.chart_id %}
+      <button type="button" class="btn-edit" title="Editar este gráfico"
+              onclick="statsEditar({{ c.chart_id }})">&#9998;</button>
       <form method="POST" action="{{ url_for('main.charts_delete', chart_id=c.chart_id) }}"
             data-confirmar="¿Quitar este gráfico?" data-confirmar-ok="Quitar"
             onsubmit="return false;" style="display:inline;">
@@ -168,7 +171,35 @@
       </form>
       {% endif %}
     </div>
-    {% if c.data or c.datasets %}<canvas id="chart-{{ loop.index0 }}"></canvas>
+
+    {% if c.roto %}
+    {# Amarillo y no rojo, como el aviso de Rutinas: no se perdió nada, hay que reapuntarlo. #}
+    <p class="stats-card-roto">{{ c.roto }} Elegí de dónde salen los datos, o quitalo con la ✕.</p>
+    {% elif c.aviso %}
+    <p class="stats-card-roto">{{ c.aviso }}</p>
+    {% endif %}
+
+    {% if c.chart_id %}
+    {# El valor guardado viaja en los `data-` y no como `selected`: las opciones de estos selects
+       las pone el JS a partir de la categoría, así que cuando se rinde el HTML todavía no
+       existen. `statsInicializar()` las elige una vez puestas.
+
+       Roto arranca ABIERTO: la tarjeta no tiene nada más que mostrar, y esconder el único
+       arreglo detrás de un clic sería otro callejón. #}
+    <form method="POST" action="{{ url_for('main.charts_edit', chart_id=c.chart_id) }}"
+          class="stats-builder-form stats-card-edit" id="stats-edit-{{ c.chart_id }}"
+          style="display:{{ 'flex' if c.roto else 'none' }};" data-suf="-{{ c.chart_id }}"
+          data-campo="{{ c.cfg.field_label }}" data-campo2="{{ c.cfg.field_label2 }}"
+          data-grupo="{{ c.cfg.group_field }}">
+      {{ campos_grafico(builder_cats, c.cfg, '-' ~ c.chart_id) }}
+      <div class="stats-edit-botones">
+        <button type="submit" class="btn-primary">Guardar</button>
+        <button type="button" class="btn-cancel" onclick="statsEditar({{ c.chart_id }})">Cancelar</button>
+      </div>
+    </form>
+    {% endif %}
+    {% if c.roto %}{# ni gráfico ni "sin datos en este período": el problema no es el período #}
+    {% elif c.data or c.datasets %}<canvas id="chart-{{ loop.index0 }}"></canvas>
     {% else %}<p class="page-sub" style="margin:0;">Sin datos en este período.</p>{% endif %}
     {% if c.totals %}
     <table class="stats-totals">
@@ -186,24 +217,7 @@
 <details class="stats-builder">
   <summary>➕ Nuevo gráfico personalizado</summary>
   <form method="POST" action="{{ url_for('main.charts_add') }}" class="stats-builder-form">
-    <select name="category_id" id="builder-cat" required onchange="statsPopulateFields()">
-      <option value="">Categoría…</option>
-      {% for c in builder_cats %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
-    </select>
-    <select name="field_label" id="builder-field" required><option value="">Campo…</option></select>
-    <select name="field_label2" id="builder-field2" title="Se suma al campo principal (ej. Horas + Franja)" style="display:none;">
-      <option value="">+ sumar otro campo…</option>
-    </select>
-    <select name="group_field" id="builder-group" style="display:none;" onchange="statsGroupChanged()">
-      <option value="">Sin desglose</option>
-    </select>
-    <select name="bucket" id="builder-bucket">
-      <option value="day">Por día</option>
-      <option value="week">Por semana</option>
-      <option value="month">Por mes</option>
-    </select>
-    <input type="text" name="tag_filter" placeholder="Etiqueta (opcional)" style="max-width:150px;">
-    <input type="text" name="title" placeholder="Título (opcional)">
+    {{ campos_grafico(builder_cats) }}
     <button type="submit" class="btn-primary">Agregar</button>
   </form>
   {{ ayuda_graficos() }}

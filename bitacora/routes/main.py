@@ -248,6 +248,7 @@ def stats_view():
     cats = db.get_journal_categories(incluir_archivadas=True)
     fieldinfo = {(c["id"], f["label"]): (f.get("type", "text"), c["name"])
                  for c in cats for f in c.get("fields", [])}
+    nombre_cat = {c["id"]: c["name"] for c in cats}
 
     def _hourify(s, ftype):
         """Series de tiempo vienen en minutos: a horas + unidad, como los agrupados."""
@@ -255,6 +256,21 @@ def stats_view():
             s["data"] = [round(v / 60, 2) for v in s["data"]]
             s["unit"] = "horas"
         return s
+
+    def _cfg(ch):
+        """La configuración CRUDA del gráfico, para precargar su formulario de edición.
+
+        ⚠️ El `title` va como está guardado y no el que se muestra: el que se muestra puede ser
+        uno derivado ("Trabajo · Horas por Proyecto") y, si cayera en el campo, guardar sin tocar
+        nada lo clavaría como si lo hubieras escrito vos. Lo mismo `field_label`, que viaja con
+        los dos campos unidos por '|' y el formulario necesita separados.
+        """
+        partes = [l for l in (ch["field_label"] or "").split("|") if l]
+        return {"category_id": ch["category_id"], "title": ch["title"] or "",
+                "field_label": partes[0] if partes else "",
+                "field_label2": partes[1] if len(partes) > 1 else "",
+                "group_field": ch["group_field"] or "", "bucket": ch["bucket"] or "day",
+                "tag_filter": ch["tag_filter"] or ""}
 
     charts = []
     # Automáticos: campos marcados con "graficar"
@@ -267,8 +283,27 @@ def stats_view():
         labels = [l for l in (ch["field_label"] or "").split("|") if l]
         infos = [(l, *fieldinfo[(ch["category_id"], l)]) for l in labels
                  if (ch["category_id"], l) in fieldinfo]
+        perdidos = [l for l in labels if (ch["category_id"], l) not in fieldinfo]
         if not infos:
-            continue   # categoría/campo borrado
+            # ⚠️ Antes esto era un `continue`, y el gráfico quedaba **existiendo sin estar en
+            # ningún lado**: seguía en la tabla, seguía viajando en el sync, y la pantalla no le
+            # daba ni el ✕. La única salida era editar el SQLite a mano. Nada puede quedar en la
+            # base sin una forma de tocarlo desde la app, así que la tarjeta se muestra igual
+            # —diciendo qué le falta— con el formulario abierto para reapuntarlo y el ✕ para
+            # sacarlo. Se llega borrando la categoría (que no se lleva sus gráficos) o quitándole
+            # el campo del que salían.
+            cat = nombre_cat.get(ch["category_id"])
+            falta = " y ".join(f"«{l}»" for l in perdidos) or "el campo"
+            charts.append({
+                "title": ch["title"] or "Gráfico sin datos",
+                "chart_id": ch["id"], "cfg": _cfg(ch),
+                "roto": (f"El campo {falta} ya no está en «{cat}»." if cat
+                         else "La categoría de la que salían los datos ya no existe."),
+            })
+            continue
+        # Uno de los dos campos sumados desapareció: el gráfico dibuja, pero no lo que decía.
+        aviso = (f"El campo {' y '.join(f'«{l}»' for l in perdidos)} ya no existe: "
+                 "no se está sumando.") if perdidos else ""
         cname  = infos[0][2]
         cstart = start          # el rango de la pantalla, no el guardado en el gráfico
         grouped = ch["group_field"] or ch["bucket"] not in ("", "day") or len(infos) > 1
@@ -287,12 +322,13 @@ def stats_view():
                 s["unit"] = "horas"
             title = ch["title"] or f"{cname} · {' + '.join(l for l, _, _ in infos)}" + \
                     (f" por {ch['group_field']}" if ch["group_field"] else "")
-            charts.append({"title": title, "chart_id": ch["id"], **s})
+            charts.append({"title": title, "chart_id": ch["id"], "cfg": _cfg(ch),
+                           "aviso": aviso, **s})
         else:
             label, ftype, _ = infos[0]
             s = _hourify(db.build_series(ch["category_id"], label, ftype, cstart, end), ftype)
             charts.append({"title": ch["title"] or f"{cname} · {label}",
-                           "chart_id": ch["id"], **s})
+                           "chart_id": ch["id"], "cfg": _cfg(ch), "aviso": aviso, **s})
 
     events = db.get_recurring_events()
     adh = db.get_completion_stats(events, days=range_days)
@@ -345,22 +381,51 @@ def stats_view():
                            back=back)
 
 
+def _grafico_from_form(form) -> dict | None:
+    """Lo que el constructor define, leído en UN solo lugar.
+
+    ⚠️ Lo comparten el alta y la edición por el mismo motivo que `_guardar_ajuste()` comparte la
+    validación entre `/ajustes/guardar` y `/ajustes/set`: dos lectores del mismo formulario
+    terminan aceptando cosas distintas, y acá la diferencia se vería como un gráfico que al
+    editarlo pierde el desglose o la etiqueta. Devuelve None si falta lo mínimo (categoría y
+    campo): sin eso no hay gráfico que dibujar.
+    """
+    cat_id = form.get("category_id", "").strip()
+    field  = form.get("field_label", "").strip()
+    if not cat_id or not field:
+        return None
+    field2 = form.get("field_label2", "").strip()   # opcional: se suma al primero
+    bucket = form.get("bucket", "day")
+    return {
+        "category_id": int(cat_id),
+        "field_label": field if not field2 or field2 == field else f"{field}|{field2}",
+        "title":       form.get("title", "").strip(),
+        "group_field": form.get("group_field", "").strip(),
+        "bucket":      bucket if bucket in ("day", "week", "month") else "day",
+        "tag_filter":  form.get("tag_filter", "").strip(),
+    }
+
+
 @bp.route("/estadisticas/grafico/add", methods=["POST"])
 def charts_add():
-    cat_id = request.form.get("category_id", "").strip()
-    field  = request.form.get("field_label", "").strip()
-    field2 = request.form.get("field_label2", "").strip()   # opcional: se suma al primero
-    title  = request.form.get("title", "").strip()
-    rng    = request.form.get("range_days", "90")
-    rng    = int(rng) if rng in ("30", "90", "180", "365") else 90
-    group  = request.form.get("group_field", "").strip()
-    bucket = request.form.get("bucket", "day")
-    bucket = bucket if bucket in ("day", "week", "month") else "day"
-    tag    = request.form.get("tag_filter", "").strip()
-    if cat_id and field:
-        labels = field if not field2 or field2 == field else f"{field}|{field2}"
-        db.add_chart(int(cat_id), labels, title, rng,
-                     group_field=group, bucket=bucket, tag_filter=tag)
+    datos = _grafico_from_form(request.form)
+    if datos:
+        db.add_chart(**datos)
+    return redirect(url_for("main.stats_view"))
+
+
+@bp.route("/estadisticas/grafico/<int:chart_id>/edit", methods=["POST"])
+def charts_edit(chart_id):
+    """Un gráfico guardado se edita, no se rehace.
+
+    Antes solo estaba el ✕: para corregir un título había que volver a elegir categoría, campo,
+    campo a sumar, desglose, bucket y etiqueta — siete decisiones para arreglar una. El
+    formulario es el mismo constructor del alta (macro `campos_grafico`), así que no hay dos
+    formularios que puedan divergir.
+    """
+    datos = _grafico_from_form(request.form)
+    if datos:
+        db.update_chart(chart_id, datos)
     return redirect(url_for("main.stats_view"))
 
 
