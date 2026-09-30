@@ -1322,6 +1322,41 @@ Cero `<select>` entre los 18 ajustes, seis secciones colapsables y **guardado al
   aparece una segunda definición, y la verificación de verdad es armar una instalación desde el
   tarball en WSL y preguntarle al updater dónde copiaría.
 
+## Nada puede quedar en la base sin forma de tocarlo desde la app
+
+> Si una fila existe, la pantalla que la administra tiene que mostrarla. Siempre. Aunque los datos
+> estén raros.
+
+Es la regla, y sale de dos bugs de la misma forma encontrados juntos (sep 2026). Los dos venían de
+un filtro razonable en la vista —saltear lo que no se puede dibujar bien— y los dos terminaban en
+el mismo lugar: **una fila que existe, que sincroniza, y que no tiene ni un ✕**. La única salida
+era abrir el SQLite a mano.
+
+- ⚠️ **Un gráfico cuya categoría o campo ya no existe** (`routes/main.stats_view`). Se llegaba
+  borrando la categoría —que a propósito **no** se lleva sus gráficos— o quitándole el campo del
+  que salían. Era un `continue`. Hoy la tarjeta se muestra igual: dice qué le falta, trae el
+  formulario **abierto** para reapuntarla y el ✕ para sacarla. No dice "sin datos en este
+  período", que mandaría a pelearse con el selector de arriba para siempre.
+- ⚠️ **Una rutina cuyo grupo ya no existe** (`routes/recurring._secciones`), y este era el caro:
+  no entraba en ningún bloque y **desaparecía de /recurring mientras seguía saliendo todos los
+  días en el calendario y en la vista del día**. Una rutina que ves a diario y no podés ni editar
+  ni borrar. Se llega por el sync, y el arreglo va en los dos lados:
+  - `sync.aplicar()` **suelta a los hijos de un padre opcional borrado**, genérico sobre
+    `PADRES_OPCIONALES`, que es lo mismo que ya hacía `delete_event_group()` en local.
+  - `_secciones` decide "Sin grupo" por **si el grupo existe**, no por si el `group_id` está
+    vacío. La pantalla no puede depender de que los datos estén sanos: es el único lugar desde
+    donde se borra una rutina, así que lo que se caiga ahí se cae para siempre.
+
+**Cómo se prueba**: el test recorre la tabla y exige que **cada** fila aparezca en su pantalla, con
+sus acciones —no que un caso puntual funcione—. Son
+`test_TODO_grafico_guardado_tiene_su_tarjeta_en_la_pantalla` y
+`test_TODA_rutina_guardada_aparece_en_la_pantalla`. Al agregar una pantalla que administre filas,
+ese es el test que va con ella.
+
+⚠️ **El primo menor: el huérfano a medias.** Un gráfico que suma dos campos y pierde uno sigue
+dibujando, pero no lo que su título dice. Ahí no hay nada que desbloquear, así que va un aviso en
+la tarjeta — callarlo es la misma familia: la pantalla mostrando una cosa y los datos siendo otra.
+
 ## Convenciones de código
 
 - Mensajes de commit en español, prefijo minúscula: `fix:`, `stats:`, `journal:`, `linux:`, etc.

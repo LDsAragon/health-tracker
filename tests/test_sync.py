@@ -507,3 +507,53 @@ def test_un_cumpleanos_llega_entero(dos_equipos):
     assert (ev["tipo"], ev["recurrence"], ev["birth_year"], ev["aviso_dias"]) == \
            ("recordatorio", "yearly", 1992, 7)
     assert ev["group_id"] == _grupo_cumples()["id"]
+
+
+def test_borrar_un_grupo_en_una_maquina_no_deja_rutinas_COLGADAS_en_la_otra(test_db, tmp_path):
+    """⚠️ El merge borra el grupo, pero la rutina que vivía adentro se queda en la otra máquina.
+
+    Sin soltarla, su `group_id` queda apuntando a un grupo que ya no existe — y con eso la rutina
+    **desaparece de la pantalla de Rutinas** aunque siga apareciendo todos los días en el
+    calendario, sin forma de editarla ni borrarla. Es lo mismo que hace `delete_event_group()`
+    cuando el borrado es local; el sync tenía que hacerlo también.
+
+    El UPDATE es genérico sobre `PADRES_OPCIONALES`, así que el próximo padre opcional no repite
+    el agujero."""
+    # Esta máquina: el grupo y una rutina adentro.
+    db.add_event_group({"name": "Salud", "tipo": "rutina"})
+    local = [g for g in db.get_event_groups() if g["name"] == "Salud"][0]
+    db.add_recurring_event({"title": "Yoga", "color": "#6366f1", "recurrence": "daily",
+                            "start_date": "2026-01-01", "tipo": "rutina",
+                            "group_id": local["id"]})
+
+    # La otra máquina: el mismo grupo (mismo uid, que es lo que los hace "el mismo") y lo borra.
+    otra = str(tmp_path / "otra.db")
+    _en(otra, lambda: _sembrar_grupo_borrado(local["uid"]))
+    paquete = str(tmp_path / "paquete.db")
+    _en(otra, lambda: sync.exportar(paquete))
+
+    sync.aplicar(paquete)
+
+    ev = db.get_recurring_events()[0]
+    assert ev["title"] == "Yoga", "la rutina no se borra con el grupo"
+    assert ev["group_id"] is None, "quedó apuntando a un grupo que ya no existe"
+
+
+def _sembrar_grupo_borrado(uid):
+    db.init_db()
+    db.add_event_group({"name": "Salud", "tipo": "rutina"})
+    g = [x for x in db.get_event_groups() if x["name"] == "Salud"][0]
+    with db.get_db() as c:
+        c.execute("UPDATE recurring_groups SET uid = ? WHERE id = ?", (uid, g["id"]))
+    db.delete_event_group(g["id"])
+
+
+def _en(ruta, fn):
+    """Corre `fn` contra otra base, y deja la original apuntada al volver."""
+    import bitacora.database.conn as conn
+    antes = conn.DB_PATH
+    conn.DB_PATH = ruta
+    try:
+        return fn()
+    finally:
+        conn.DB_PATH = antes

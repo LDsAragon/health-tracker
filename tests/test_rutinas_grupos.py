@@ -582,6 +582,49 @@ def test_una_rutina_ya_anual_no_se_vuelve_a_ofrecer(client):
 
 
 
+# ── Nada puede quedar en la base sin forma de tocarlo desde la app ───────────
+
+def test_TODA_rutina_guardada_aparece_en_la_pantalla(client):
+    """⚠️ El invariante, y el caso más caro de los de esta familia.
+
+    Una rutina que apunta a un grupo que ya no existe no entraba en ningún bloque de
+    `_secciones` y **desaparecía de /recurring** — mientras seguía saliendo todos los días en el
+    calendario y en la vista del día. Una rutina que ves a diario y no podés ni editar ni borrar:
+    la única salida era el SQLite a mano.
+
+    Se llega por el sync (lo fija `test_sync.py`) pero el test va contra la PANTALLA, que es la
+    red que importa: `/recurring` es el único lugar desde donde se borra una rutina, así que lo
+    que se caiga acá se cae para siempre, venga de donde venga."""
+    db.add_event_group({"name": "Salud", "tipo": "rutina"})
+    g = [x for x in db.get_event_groups() if x["name"] == "Salud"][0]
+    db.add_recurring_event({"title": "Yoga", "color": "#6366f1", "recurrence": "daily",
+                            "start_date": "2026-01-01", "tipo": "rutina", "group_id": g["id"]})
+    with db.get_db() as c:      # el grupo se va y la referencia queda colgada
+        c.execute("DELETE FROM recurring_groups WHERE id = ?", (g["id"],))
+
+    html = client.get("/recurring").data.decode()
+    for ev in db.get_recurring_events():
+        assert ev["title"] in html, f"«{ev['title']}» está en la base y no en la pantalla"
+        assert f"/recurring/{ev['id']}/edit" in html
+        assert f"/recurring/{ev['id']}/delete" in html
+
+
+def test_una_rutina_sin_grupo_cae_en_SIN_GRUPO_y_no_al_vacio(client):
+    """La otra mitad: además de aparecer, tiene que aparecer donde se la busca."""
+    db.add_event_group({"name": "Salud", "tipo": "recordatorio"})
+    g = [x for x in db.get_event_groups() if x["name"] == "Salud"][0]
+    db.add_recurring_event({"title": "Renovar el pasaporte", "color": "#6366f1",
+                            "recurrence": "once", "start_date": "2026-01-01",
+                            "tipo": "recordatorio", "group_id": g["id"]})
+    with db.get_db() as c:
+        c.execute("DELETE FROM recurring_groups WHERE id = ?", (g["id"],))
+
+    html = client.get("/recurring").data.decode()
+    assert "Sin grupo" in html
+    i = html.index("Sin grupo")
+    assert "Renovar el pasaporte" in html[i:], "quedó fuera del bloque Sin grupo"
+
+
 # ── Editar no puede perder lo que no estás editando ──────────────────────────
 
 def _editar_como_el_navegador(client, event_id, **cambios):

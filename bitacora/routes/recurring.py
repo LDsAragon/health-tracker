@@ -22,7 +22,15 @@ def _secciones(events, grupos):
 
     Se listan **todos** los grupos del tipo aunque estén vacíos —si acabás de crear uno, tenés que
     verlo— y "Sin grupo" solo cuando tiene algo adentro.
+
+    ⚠️ **Nada puede quedar afuera.** "Sin grupo" se decide por si el grupo EXISTE, no por si el
+    `group_id` está vacío: una rutina que apunte a un grupo que ya no está no entraba en ningún
+    bloque y **desaparecía de esta pantalla** —sin editar ni borrar— mientras seguía apareciendo
+    todos los días en el calendario. El sync ya no deja esa referencia colgada, pero la pantalla
+    no puede depender de que los datos estén sanos: es el único lugar desde donde se borra una
+    rutina, así que si acá se cae algo, se cae para siempre.
     """
+    ids_grupo = {g["id"] for g in grupos}
     out = []
     for tipo, titulo, sub in TIPOS:
         bloques = []
@@ -30,7 +38,7 @@ def _secciones(events, grupos):
             if g["tipo"] == tipo:
                 bloques.append((g, [e for e in events if e["group_id"] == g["id"]]))
         sueltos = [e for e in events
-                   if (e.get("tipo") or "rutina") == tipo and not e["group_id"]]
+                   if (e.get("tipo") or "rutina") == tipo and e["group_id"] not in ids_grupo]
         if sueltos:
             bloques.append((None, sueltos))
         out.append({"tipo": tipo, "titulo": titulo, "sub": sub, "bloques": bloques,

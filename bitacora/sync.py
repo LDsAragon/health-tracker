@@ -250,6 +250,16 @@ def aplicar(paquete: str) -> dict:
             c.execute(_sql_updates(c, t))
             c.execute(f"DELETE FROM {t} WHERE uid IN (SELECT d.uid FROM remoto.deletions d"
                       f" WHERE {_where_bajas(t)})")
+        # ⚠️ Un padre OPCIONAL que se borra tiene que soltar a sus hijos, igual que hace
+        # `delete_event_group()` cuando el borrado es local. Sin esto, borrar un grupo en una
+        # máquina dejaba en la otra rutinas apuntando a un grupo que ya no existe — y esas
+        # rutinas **desaparecían de la pantalla de Rutinas mientras seguían saliendo todos los
+        # días en el calendario**, sin forma de editarlas ni borrarlas. Va acá, después de todos
+        # los DELETE, y es genérico sobre PADRES_OPCIONALES para que el próximo padre opcional
+        # no repita el agujero.
+        for hija, (fk, padre) in PADRES_OPCIONALES.items():
+            c.execute(f"UPDATE {hija} SET {fk} = NULL WHERE {fk} IS NOT NULL"
+                      f" AND {fk} NOT IN (SELECT id FROM {padre})")
         # Los tombstones remotos se propagan DESPUÉS de borrar: el trigger de DELETE ya dejó
         # uno local con la hora de ahora, y este lo pisa con la fecha real del borrado.
         c.execute("INSERT OR REPLACE INTO deletions (tabla, uid, deleted_at)"
