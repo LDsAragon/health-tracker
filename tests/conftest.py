@@ -1,4 +1,5 @@
 import pytest
+
 from bitacora import database as db
 from bitacora import app as flask_app
 

@@ -86,6 +86,74 @@
 </div>
 {%- endmacro %}
 
+{# La frecuencia de una rutina: los cinco radios y el detalle que cada uno despliega.
+
+   ⚠️ Vive en un macro por lo MISMO que `campos_rutina` acá arriba, y porque ya se pagó: el
+   bloque estaba copiado en el alta y en la edición, se agregó `yearly` a una sola de las dos, y
+   editar un cumpleaños —aunque solo le cambiaras el nombre— lo pasaba a "todos los días". Sin
+   ningún radio marcado el navegador no manda `rtype`, así que el servidor no tenía cómo saber
+   que la frecuencia no se estaba tocando. Dos copias de un formulario no divergen si se
+   descuidan: divergen siempre, la pregunta es cuándo.
+
+   `suf` hace únicos los ids: vacío en el alta, "-<id>" en cada edición. #}
+{% macro campos_frecuencia(ev=None, suf='') -%}
+{% set rec = ev.recurrence if ev else 'daily' %}
+{% set elegida = 'weekly' if rec.startswith('weekly:')
+                 else ('every' if rec.startswith('every:') else rec) %}
+<div class="field-group">
+  <label>Frecuencia</label>
+  <div class="freq-options">
+    {# ⚠️ Por mes-día, no cada 365 días: así no se corre. Un cumpleaños modelado como
+       "cada 364 días" se adelanta un día por año — el del 5 de mayo caía el 1 a los tres
+       años y en febrero a los cincuenta. #}
+    {% for val, txt in [('daily', 'Todos los días'), ('weekly', 'Días de la semana'),
+                        ('every', 'Cada N días'), ('once', 'Una sola vez'),
+                        ('yearly', 'Una vez al año')] %}
+    <label class="freq-opt">
+      <input type="radio" name="rtype" value="{{ val }}"
+             {% if elegida == val %}checked{% endif %}
+             onchange="showFreq(this.value, '{{ suf }}')">
+      <span>{{ txt }}</span>
+    </label>
+    {% endfor %}
+  </div>
+
+  <div id="freq-yearly{{ suf }}" class="freq-detail"
+       {% if elegida != 'yearly' %}style="display:none;"{% endif %}>
+    <p class="rec-hint" style="margin:8px 0 0;">
+      Se repite cada año en la misma fecha de <b>Desde</b>.
+    </p>
+  </div>
+
+  <div id="freq-weekly{{ suf }}" class="freq-detail"
+       {% if elegida != 'weekly' %}style="display:none;"{% endif %}>
+    <div class="weekday-row">
+      {% set dias = rec.split(':')[1].split(',') if rec.startswith('weekly:') else [] %}
+      {% for val, name in [('0','Lu'),('1','Ma'),('2','Mi'),('3','Ju'),('4','Vi'),('5','Sá'),('6','Do')] %}
+      <label class="weekday-btn">
+        <input type="checkbox" name="weekdays" value="{{ val }}"
+               {% if val in dias %}checked{% endif %}>
+        <span>{{ name }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <p id="weekday-error{{ suf }}" class="form-error" style="display:none;">Seleccioná al menos un día de la semana.</p>
+  </div>
+
+  <div id="freq-every{{ suf }}" class="freq-detail"
+       {% if elegida != 'every' %}style="display:none;"{% endif %}>
+    <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+      <span>Cada</span>
+      <input type="number" name="interval_days" min="2" max="365" style="width:70px;"
+             value="{{ rec.split(':')[1] if rec.startswith('every:') else 2 }}">
+      <span>días</span>
+    </div>
+  </div>
+</div>
+{%- endmacro %}
+
+
+
 
 {# ── El editor de campos de una categoría de nota especial ──────────────────────────────────
    Una fila por campo: nombre, tipo, si va a Estadísticas y la cruz para quitarlo. La

@@ -4,11 +4,14 @@ La distinción que ordena todo: **una rutina se mide, un recordatorio avisa**. D
 reglas que fijan estos tests — los recordatorios no tienen porcentaje, y lo anual se repite por
 mes-día y no por días transcurridos.
 """
+import re
 from datetime import date
 
 import pytest
+from werkzeug.datastructures import MultiDict
 
 from bitacora import database as db
+from tests.formularios import lo_que_manda_el_form
 
 
 def _cumple(fecha="1992-05-05", **extra):
@@ -578,7 +581,24 @@ def test_una_rutina_ya_anual_no_se_vuelve_a_ofrecer(client):
     assert 'class="rec-sugerencia"' not in client.get("/recurring").data.decode()
 
 
+
 # ── Editar no puede perder lo que no estás editando ──────────────────────────
+
+def _editar_como_el_navegador(client, event_id, **cambios):
+    """Abre /recurring, toma el formulario de edición TAL COMO QUEDÓ RENDERIZADO y lo envía.
+
+    ⚠️ El POST no se escribe a mano a propósito: escribiéndolo, el test manda campos que la
+    pantalla no tiene y deja de ver lo único que importa acá —que el formulario venga precargado
+    con lo que ya estaba guardado—. `cambios` es lo que tocarías vos en la pantalla; todo lo
+    demás viaja como el formulario lo trajo.
+    """
+    action = f"/recurring/{event_id}/edit"
+    campos = lo_que_manda_el_form(client.get("/recurring").data.decode(), action)
+    campos = [(k, v) for k, v in campos if k not in cambios] + list(cambios.items())
+    # MultiDict y no dict: los días de la semana repiten el nombre `weekdays`, y un dict se
+    # quedaría con uno solo — que es justamente uno de los datos que hay que ver llegar entero.
+    return client.post(action, data=MultiDict(campos), follow_redirects=True)
+
 
 def test_editar_una_rutina_no_le_borra_el_grupo(client):
     """⚠️ El formulario de edición nació sin los campos nuevos, así que guardar cualquier cambio
@@ -590,18 +610,120 @@ def test_editar_una_rutina_no_le_borra_el_grupo(client):
           donde=_donde(grupo), edad="34", aviso="7")
     ev = db.get_recurring_events()[-1]
 
-    # Editar cambiándole SOLO el color.
-    client.post(f"/recurring/{ev['id']}/edit",
-                data={"title": "Cumple de Pablo", "color": "#a855f7", "rtype": "yearly",
-                      "start_date": "1992-05-05", "donde": _donde(grupo), "edad": "34",
-                      "aviso": "7"},
-                follow_redirects=True)
+    # Editar cambiándole SOLO el color, desde el formulario de verdad.
+    _editar_como_el_navegador(client, ev["id"], color="#a855f7")
+
     de_nuevo = db.get_recurring_events()[-1]
     assert de_nuevo["color"] == "#a855f7"
     assert de_nuevo["group_id"] == grupo["id"]
     assert de_nuevo["tipo"] == "recordatorio"
     assert de_nuevo["aviso_dias"] == 7
     assert de_nuevo["birth_year"] == date.today().year - 34
+
+
+def test_editar_un_cumpleanos_no_lo_pasa_a_TODOS_LOS_DIAS(client):
+    """⚠️ El bug que encontró el usuario, y el peor de esta familia: **callado**.
+
+    El bloque de Frecuencia estaba copiado en el alta y en la edición. `yearly` se agregó solo al
+    del alta, así que en la edición ningún radio quedaba marcado — el navegador no manda `rtype`,
+    el servidor caía al default y **cambiarle el nombre a un cumpleaños lo convertía en una
+    rutina diaria**. Ni un error ni un aviso: solo un cumpleaños que de golpe aparecía todos los
+    días en el calendario.
+
+    El test entra por donde entra el usuario: renderiza la pantalla y manda lo que la pantalla
+    tiene. Escribiendo el POST a mano no falla ni con el bug puesto — de hecho había uno acá
+    arriba que no falló."""
+    _alta(client, title="Cumple de Pablo", rtype="yearly", start_date="1992-05-05",
+          donde=_donde(_grupo_cumples()), edad="34")
+    ev = db.get_recurring_events()[-1]
+
+    _editar_como_el_navegador(client, ev["id"], title="Cumple de Pablito")
+
+    de_nuevo = db.get_recurring_events()[-1]
+    assert de_nuevo["title"] == "Cumple de Pablito"
+    assert de_nuevo["recurrence"] == "yearly"
+
+
+@pytest.mark.parametrize("rec", ["daily", "weekly:1,3", "every:5", "once", "yearly"])
+def test_la_edicion_trae_marcada_la_frecuencia_que_tiene(client, rec):
+    """Las cinco frecuencias, una por una: abrir la edición tiene que mostrar la que está
+    guardada, y guardar sin tocarla tiene que dejarla igual.
+
+    Recorrerlas todas es el punto. Con cuatro de cinco andando, la que faltaba se veía como un
+    campo en blanco y se comía el dato al guardar."""
+    db.add_recurring_event({"title": "Algo", "color": "#6366f1", "recurrence": rec,
+                            "start_date": "2026-05-05"})
+    ev = db.get_recurring_events()[-1]
+
+    campos = lo_que_manda_el_form(client.get("/recurring").data.decode(),
+                                  f"/recurring/{ev['id']}/edit")
+    esperado = {"weekly:1,3": "weekly", "every:5": "every"}.get(rec, rec)
+    assert ("rtype", esperado) in campos, f"la edición de «{rec}» no trae la frecuencia marcada"
+
+    _editar_como_el_navegador(client, ev["id"], color="#a855f7")
+    assert db.get_recurring_events()[-1]["recurrence"] == rec
+
+
+def test_la_edicion_trae_los_dias_y_el_cada_cuanto(client):
+    """No alcanza con la frecuencia: el detalle que la acompaña también tiene que venir puesto, o
+    guardar sin tocar nada lo pierde igual."""
+    db.add_recurring_event({"title": "Gimnasio", "color": "#6366f1",
+                            "recurrence": "weekly:0,2,4", "start_date": "2026-05-05"})
+    semanal = db.get_recurring_events()[-1]
+    db.add_recurring_event({"title": "Regar", "color": "#6366f1", "recurrence": "every:9",
+                            "start_date": "2026-05-05"})
+    cada_n = db.get_recurring_events()[-1]
+
+    html = client.get("/recurring").data.decode()
+    dias = [v for k, v in lo_que_manda_el_form(html, f"/recurring/{semanal['id']}/edit")
+            if k == "weekdays"]
+    assert sorted(dias) == ["0", "2", "4"]
+    assert ("interval_days", "9") in lo_que_manda_el_form(html, f"/recurring/{cada_n['id']}/edit")
+
+    _editar_como_el_navegador(client, semanal["id"], color="#a855f7")
+    _editar_como_el_navegador(client, cada_n["id"], color="#a855f7")
+    por_titulo = {e["title"]: e["recurrence"] for e in db.get_recurring_events()}
+    assert por_titulo["Gimnasio"] == "weekly:0,2,4"
+    assert por_titulo["Regar"] == "every:9"
+
+
+def test_el_alta_y_la_edicion_OFRECEN_LAS_MISMAS_frecuencias(client):
+    """⚠️ Tripwire de la causa de raíz, no del síntoma.
+
+    Los dos bloques estaban copiados y divergieron: el alta ofrecía cinco frecuencias y la
+    edición cuatro. Hoy salen del mismo macro (`campos_frecuencia`), y este test es lo que impide
+    que alguien los vuelva a separar "para tocar solo uno". Compara las opciones que cada
+    formulario ofrece de verdad, así que falla igual si la próxima frecuencia entra en uno solo.
+    """
+    _alta(client, title="Algo")
+    ev = db.get_recurring_events()[-1]
+    html = client.get("/recurring").data.decode()
+
+    def opciones(action):
+        i = html.index(f'action="{action}"')
+        return re.findall(r'name="rtype" value="([a-z]+)"', html[i:html.index("</form>", i)])
+
+    del_alta = opciones("/recurring/add")
+    assert "yearly" in del_alta, "el alta perdió la frecuencia anual"
+    assert opciones(f"/recurring/{ev['id']}/edit") == del_alta
+
+
+def test_sin_frecuencia_en_el_formulario_la_edicion_NO_la_reescribe(client):
+    """La red de abajo, para cuando la de arriba falle.
+
+    `rtype` ausente es indistinguible de "no lo toqué": el navegador no manda lo que el
+    formulario no tiene. Con el default `daily` a secas, cualquier divergencia futura vuelve a
+    costar un dato; conservando lo que había, cuesta un cambio que no se aplica. Entre las dos,
+    la que no reescribe."""
+    _alta(client, title="Cumple de Pablo", rtype="yearly", donde=_donde(_grupo_cumples()))
+    ev = db.get_recurring_events()[-1]
+
+    client.post(f"/recurring/{ev['id']}/edit",
+                data={"title": "Cumple de Pablo", "color": "#a855f7",
+                      "start_date": "1992-05-05", "donde": _donde(_grupo_cumples())},
+                follow_redirects=True)
+
+    assert db.get_recurring_events()[-1]["recurrence"] == "yearly"
 
 
 def test_se_puede_cambiar_de_grupo_editando(client):

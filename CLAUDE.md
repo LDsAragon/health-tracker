@@ -757,6 +757,36 @@ recordatorios con `applicable = 0`.
   un sufijo para los ids (vacío en el alta, `-<id>` en cada edición) y el JS lo usa para saber
   sobre qué formulario trabaja; **el "template" del cumpleaños busca dentro de SU formulario**, o
   tocaría los radios del alta.
+  ⚠️ El "template" **no corre en la pasada inicial** (`recDonde(suf, inicial)`): al cargar, esa
+  función solo muestra u oculta bloques. Empujando además la frecuencia le cambiaría la regla en
+  silencio a una rutina diaria que ya vive en un grupo de cumpleaños, y el primer cambio que
+  guardaras —el nombre, el color— se llevaría ese empujón con ella.
+- ⚠️ **La frecuencia vive en el macro `campos_frecuencia`, por lo mismo, y ya se pagó.** El bloque
+  estaba copiado en el alta y en la edición; `yearly` se agregó a una sola, así que en la edición
+  **ningún radio quedaba marcado** y, como el navegador no manda lo que el formulario no tiene,
+  `_recurrence_from_form` caía a su default: **cambiarle el nombre a un cumpleaños lo pasaba a
+  "todos los días"**. Callado, sin error, y con el cumpleaños apareciendo de golpe todos los días
+  en el calendario. De yapa, `recDonde` buscaba ese radio inexistente y el `TypeError` cortaba el
+  script a mitad del `forEach` que inicializa los formularios: los que venían después quedaban con
+  "Año de nacimiento" y "Avisar antes" **escondidos encima de un valor guardado**, y la validación
+  de días de la semana no se enganchaba nunca. Un solo macro y un solo `showFreq(val, suf)`
+  —eran dos funciones, y la del alta era la que conocía `yearly`—.
+- ⚠️ **Sin `rtype`, la edición NO reescribe la frecuencia**: conserva la que había
+  (`_recurrence_from_form(form, actual)`). Es la red de abajo. Un radio ausente llega al servidor
+  como ausencia, indistinguible de "no lo toqué", así que la próxima divergencia tiene que costar
+  un cambio que no se aplica y no un dato reescrito.
+- ⚠️ **Los tres tests que había no cazaron nada de esto porque armaban el POST a mano**, mandando
+  `rtype=yearly` — una opción que el formulario no tenía. El test probaba el test. Hoy
+  `tests/formularios.py::lo_que_manda_el_form` lee el `<form>` renderizado con las reglas del
+  navegador (sin `name` no viaja, sin `checked` tampoco, un `<select>` sin `selected` manda la
+  primera opción) y de ahí sale el POST. Es el mismo agujero que ya tuvieron `smoke_desktop` y
+  `smoke_widget`: **antes de creerle a un test de formulario, mirar si manda lo que manda la
+  pantalla**. El tripwire de la causa es
+  `test_el_alta_y_la_edicion_OFRECEN_LAS_MISMAS_frecuencias`.
+- **La validación de "elegí al menos un día" es un listener delegado**, no uno atado al formulario
+  del alta: así la edición también valida —antes no, y pasar una rutina a semanal desde ahí la
+  guardaba sin días, que el servidor devuelve a `daily` sin avisar— y los formularios que se
+  agreguen después quedan cubiertos solos.
 
 ### La frecuencia `yearly`
 ⚠️ **Se repite por MES-DÍA, no por días transcurridos.** El cumpleaños se venía modelando con

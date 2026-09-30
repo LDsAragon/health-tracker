@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block vista %}rutinas{% endblock %}
-{% from "_macros.html" import date_field, campos_rutina %}
+{% from "_macros.html" import date_field, campos_rutina, campos_frecuencia %}
 {% block title %}Rutinas y recordatorios{% endblock %}
 
 {% block content %}
@@ -86,61 +86,7 @@
 
     {{ campos_rutina(secciones, anio_actual) }}
 
-    <div class="field-group">
-      <label>Frecuencia</label>
-      <div class="freq-options">
-        <label class="freq-opt">
-          <input type="radio" name="rtype" value="daily" checked onchange="showFreq(this.value)">
-          <span>Todos los días</span>
-        </label>
-        <label class="freq-opt">
-          <input type="radio" name="rtype" value="weekly" onchange="showFreq(this.value)">
-          <span>Días de la semana</span>
-        </label>
-        <label class="freq-opt">
-          <input type="radio" name="rtype" value="every" onchange="showFreq(this.value)">
-          <span>Cada N días</span>
-        </label>
-        <label class="freq-opt">
-          <input type="radio" name="rtype" value="once" onchange="showFreq(this.value)">
-          <span>Una sola vez</span>
-        </label>
-        {# ⚠️ Por mes-día, no cada 365 días: así no se corre. Un cumpleaños modelado como
-           "cada 364 días" se adelanta un día por año — el del 5 de mayo caía el 1 a los tres
-           años y en febrero a los cincuenta. #}
-        <label class="freq-opt">
-          <input type="radio" name="rtype" value="yearly" onchange="showFreq(this.value)">
-          <span>Una vez al año</span>
-        </label>
-      </div>
-
-      <div id="freq-yearly" class="freq-detail" style="display:none;">
-        <p class="rec-hint" style="margin:8px 0 0;">
-          Se repite cada año en la misma fecha de <b>Desde</b>.
-        </p>
-      </div>
-
-      <div id="freq-weekly" class="freq-detail" style="display:none;">
-        <div class="weekday-row">
-          {% set day_names = [('0','Lu'),('1','Ma'),('2','Mi'),('3','Ju'),('4','Vi'),('5','Sá'),('6','Do')] %}
-          {% for val, name in day_names %}
-          <label class="weekday-btn">
-            <input type="checkbox" name="weekdays" value="{{ val }}">
-            <span>{{ name }}</span>
-          </label>
-          {% endfor %}
-        </div>
-        <p id="weekday-error" class="form-error" style="display:none;">Seleccioná al menos un día de la semana.</p>
-      </div>
-
-      <div id="freq-every" class="freq-detail" style="display:none;">
-        <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
-          <span>Cada</span>
-          <input type="number" name="interval_days" value="2" min="2" max="365" style="width:70px;">
-          <span>días</span>
-        </div>
-      </div>
-    </div>
+    {{ campos_frecuencia() }}
 
     <button type="submit" class="btn-primary">Agregar</button>
   </form>
@@ -205,7 +151,6 @@
   <div class="rec-list">
   {% for ev in eventos %}
   {% set colors = note_colors %}
-  {% set wdays_checked = ev.recurrence.split(':')[1].split(',') if ev.recurrence.startswith('weekly:') else [] %}
 
   <div class="rec-entry">
 
@@ -328,59 +273,7 @@
 
         {{ campos_rutina(secciones, anio_actual, ev, '-' ~ ev.id) }}
 
-        <div class="field-group">
-          <label>Frecuencia</label>
-          <div class="freq-options">
-            <label class="freq-opt">
-              <input type="radio" name="rtype" value="daily"
-                     {% if ev.recurrence == 'daily' %}checked{% endif %}
-                     onchange="showEditFreq({{ ev.id }}, this.value)">
-              <span>Todos los días</span>
-            </label>
-            <label class="freq-opt">
-              <input type="radio" name="rtype" value="weekly"
-                     {% if ev.recurrence.startswith('weekly:') %}checked{% endif %}
-                     onchange="showEditFreq({{ ev.id }}, this.value)">
-              <span>Días de la semana</span>
-            </label>
-            <label class="freq-opt">
-              <input type="radio" name="rtype" value="every"
-                     {% if ev.recurrence.startswith('every:') %}checked{% endif %}
-                     onchange="showEditFreq({{ ev.id }}, this.value)">
-              <span>Cada N días</span>
-            </label>
-            <label class="freq-opt">
-              <input type="radio" name="rtype" value="once"
-                     {% if ev.recurrence == 'once' %}checked{% endif %}
-                     onchange="showEditFreq({{ ev.id }}, this.value)">
-              <span>Una sola vez</span>
-            </label>
-          </div>
-
-          <div id="ef-weekly-{{ ev.id }}" class="freq-detail"
-               {% if not ev.recurrence.startswith('weekly:') %}style="display:none;"{% endif %}>
-            <div class="weekday-row">
-              {% for val, name in [('0','Lu'),('1','Ma'),('2','Mi'),('3','Ju'),('4','Vi'),('5','Sá'),('6','Do')] %}
-              <label class="weekday-btn">
-                <input type="checkbox" name="weekdays" value="{{ val }}"
-                       {% if val in wdays_checked %}checked{% endif %}>
-                <span>{{ name }}</span>
-              </label>
-              {% endfor %}
-            </div>
-          </div>
-
-          <div id="ef-every-{{ ev.id }}" class="freq-detail"
-               {% if not ev.recurrence.startswith('every:') %}style="display:none;"{% endif %}>
-            <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
-              <span>Cada</span>
-              <input type="number" name="interval_days"
-                     value="{{ ev.recurrence.split(':')[1] if ev.recurrence.startswith('every:') else 2 }}"
-                     min="2" max="365" style="width:70px;">
-              <span>días</span>
-            </div>
-          </div>
-        </div>
+        {{ campos_frecuencia(ev, '-' ~ ev.id) }}
 
         <div style="display:flex; gap:8px;">
           <button type="submit" class="btn-primary">Guardar</button>
@@ -423,17 +316,21 @@
 <script>
 const today = "{{ today }}";
 
-function showFreq(val) {
-  document.getElementById('freq-weekly').style.display = val === 'weekly' ? 'block' : 'none';
-  document.getElementById('freq-every').style.display  = val === 'every'  ? 'block' : 'none';
-  document.getElementById('freq-yearly').style.display = val === 'yearly' ? 'block' : 'none';
+// UNA sola función para el alta y para cada edición: eran dos (`showFreq` y `showEditFreq`) y
+// es justo donde la divergencia se esconde — la del alta conocía `yearly` y la otra no.
+function showFreq(val, suf) {
+  suf = suf || '';
+  ['yearly', 'weekly', 'every'].forEach(function (k) {
+    const d = document.getElementById('freq-' + k + suf);
+    if (d) d.style.display = val === k ? 'block' : 'none';
+  });
 }
 
 // ── Dónde va, y el aviso ────────────────────────────────────────────────────
 // Un solo campo decide el grupo y el tipo. Elegir un grupo de cumpleaños es el "template":
 // deja la frecuencia anual puesta y pide la edad. Solo empuja la frecuencia si estaba en el
 // default, para no pisar lo que hayas elegido a mano.
-function recDonde(suf) {
+function recDonde(suf, inicial) {
   suf = suf || '';
   const sel = document.getElementById('rec-donde' + suf);
   if (!sel) return;
@@ -447,12 +344,22 @@ function recDonde(suf) {
   // El "template" del cumpleaños: deja la frecuencia anual puesta, y solo si estaba en el
   // default, para no pisar lo que hayas elegido a mano. En la edición se busca dentro de SU
   // formulario: si no, tocaría los radios del alta.
-  if (esCumple) {
+  //
+  // ⚠️ NO corre en la pasada inicial. Al cargar, esta función solo muestra u oculta lo que
+  // corresponda; empujar además la frecuencia le cambiaría en silencio la regla a una rutina
+  // diaria que ya vive en un grupo de cumpleaños, y al primer cambio que guardes —el nombre, el
+  // color— se llevaría ese empujón con ella. Un template es para lo que estás creando.
+  if (esCumple && !inicial) {
     const form = sel.closest('form');
     const actual = form.querySelector('[name="rtype"]:checked');
-    if (actual && actual.value === 'daily') {
-      form.querySelector('[name="rtype"][value="yearly"]').checked = true;
-      if (suf) { showEditFreq(suf.slice(1), 'yearly'); } else { showFreq('yearly'); }
+    const anual  = form.querySelector('[name="rtype"][value="yearly"]');
+    // ⚠️ La guarda no sobra aunque el macro garantice el radio: este forEach inicializa TODOS
+    // los formularios de la pantalla, así que una excepción acá dejaba sin arrancar a los que
+    // vinieran después —con el "Avisar antes" escondido encima de un valor guardado— y mataba
+    // la validación de días que se engancha más abajo. Nada de eso se veía como un error.
+    if (anual && actual && actual.value === 'daily') {
+      anual.checked = true;
+      showFreq('yearly', suf);
     }
   }
 }
@@ -540,18 +447,13 @@ function filtrarRutinas(q) {
   });
 }
 
-function showEditFreq(id, val) {
-  document.getElementById('ef-weekly-' + id).style.display = val === 'weekly' ? 'block' : 'none';
-  document.getElementById('ef-every-'  + id).style.display = val === 'every'  ? 'block' : 'none';
-}
-
 // El estado de cada sección se recuerda, como en Ajustes y el visor de tareas.
 document.querySelectorAll('.rec-grupo-sec').forEach(function (d) {
   recordarColapsable(d.id, 'recOpen-' + d.id, true);
 });
 // Cada formulario arranca mostrando lo que corresponde a su propio valor.
 document.querySelectorAll('[id^="rec-donde"]').forEach(function (sel) {
-  recDonde(sel.id.replace('rec-donde', ''));
+  recDonde(sel.id.replace('rec-donde', ''), true);   // inicial: mostrar, nunca decidir por vos
 });
 
 function editRec(id) {
@@ -569,16 +471,22 @@ function cancelRec(id) {
   document.getElementById('rec-view-' + id).style.display = 'flex';
 }
 
-// A4: validación weekdays en el form de agregar
-document.getElementById('rec-add-form').addEventListener('submit', function(e) {
-  const rtype = this.querySelector('[name="rtype"]:checked').value;
-  if (rtype === 'weekly') {
-    const checked = this.querySelectorAll('[name="weekdays"]:checked');
-    if (checked.length === 0) {
-      e.preventDefault();
-      document.getElementById('weekday-error').style.display = 'block';
-    }
-  }
-});
+// "Días de la semana" sin ningún día no se envía, y el aviso va inline al lado de lo que falta
+// (nunca un diálogo, como el #jday-cat-error del día).
+//
+// ⚠️ Vale para el alta Y para cada edición. Estaba atada a mano al formulario del alta, así que
+// pasar una rutina a semanal desde la edición la guardaba sin días — y el servidor, que con
+// `weekly:` vacío no tiene qué escribir, la devolvía a "todos los días" sin decir nada. Un
+// listener delegado no se olvida de los formularios que se agreguen después.
+document.addEventListener('submit', function (e) {
+  const form = e.target;
+  if (!form.querySelector) return;
+  const rtype = form.querySelector('[name="rtype"]:checked');
+  if (!rtype || rtype.value !== 'weekly') return;
+  if (form.querySelectorAll('[name="weekdays"]:checked').length) return;
+  e.preventDefault();
+  const error = form.querySelector('.form-error[id^="weekday-error"]');
+  if (error) error.style.display = 'block';
+}, true);
 </script>
 {% endblock %}

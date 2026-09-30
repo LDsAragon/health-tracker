@@ -54,8 +54,20 @@ def recurring_view():
                            today=hoy.isoformat())
 
 
-def _recurrence_from_form(form):
-    rtype = form.get("rtype", "daily")
+def _recurrence_from_form(form, actual=None):
+    """La regla de repetición que pide el formulario.
+
+    ⚠️ Sin `rtype` NO se inventa una frecuencia cuando ya había una: se conserva `actual`. El
+    navegador no manda lo que el formulario no tiene, así que un radio que falte —o que ninguno
+    quede marcado— llega acá como ausencia, indistinguible de "no lo toqué". Con el default
+    `daily` a secas, el formulario de edición, al que le faltaba el radio `yearly`, pasaba cada
+    cumpleaños a "todos los días" con solo cambiarle el nombre. El macro `campos_frecuencia`
+    impide que los radios vuelvan a divergir; esta guarda decide qué pasa si igual pasa, y la
+    respuesta tiene que ser "no cambió nada", no un dato reescrito.
+    """
+    rtype = form.get("rtype")
+    if rtype is None:
+        return actual or "daily"
     if rtype == "weekly":
         days = form.getlist("weekdays")
         return "weekly:" + ",".join(sorted(days)) if days else "daily"
@@ -101,12 +113,14 @@ def _donde_from_form(form, grupos) -> tuple:
     return None, tipo
 
 
-def _datos_from_form(form) -> dict:
+def _datos_from_form(form, actual=None) -> dict:
+    """`actual` es la rutina que se está editando, y solo sirve para no perder lo que el
+    formulario no mandó. En el alta no hay nada que conservar."""
     group_id, tipo = _donde_from_form(form, db.get_event_groups())
     return {
         "title":      form.get("title", "").strip(),
         "color":      form.get("color", "#6366f1"),
-        "recurrence": _recurrence_from_form(form),
+        "recurrence": _recurrence_from_form(form, actual["recurrence"] if actual else None),
         "start_date": form.get("start_date", date.today().isoformat()),
         "end_date":   form.get("end_date", "").strip(),
         "tipo":       tipo,
@@ -128,7 +142,8 @@ def recurring_add():
 
 @bp.route("/recurring/<int:event_id>/edit", methods=["POST"])
 def recurring_edit(event_id):
-    datos = _datos_from_form(request.form)
+    actual = next((e for e in db.get_recurring_events() if e["id"] == event_id), None)
+    datos = _datos_from_form(request.form, actual)
     if datos["title"]:
         db.update_recurring_event(event_id, datos)
     return redirect(url_for("recurring.recurring_view"))
