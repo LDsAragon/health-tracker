@@ -354,24 +354,31 @@ window.BITACORA_REINIT.push(restaurarRuedas);
     });
   }
 
-  // ── El ancho, compartido por los dos paneles ──────────────────────────────
-  // El tope sale de la pantalla y no es un número fijo: lo que sobra después de la card se
-  // reparte entre los dos lados. En un monitor de 2560 eso da ~900 por lado; con un 560 fijo
-  // quedaba media pantalla sin usar.
-  // ⚠️ Lo que se le reserva a la card es su MÍNIMO legible (CARD_MIN), no su ancho de lectura
-  // (760). Reservándole los 760, al achicar la ventana el que pagaba era siempre el panel: en
-  // una ventana de 1372 quedaba en 262px y las tareas se leían a una palabra por línea, con
-  // scroll interno. La card sí se lee bien más angosta, y es lo que el grid hace solo cuando
-  // nadie arrastró nada — que es justamente el estado que se veía bien.
-  const ANCHO_MIN = 200, ANCHO_TOPE = 900, CARD_MIN = 520, GAPS = 40;
-  const gripAncho = document.getElementById('day-side-grip');
-  const panelIzq = gripAncho && gripAncho.closest('.day-side');
-  arrastrable({
-    grip: gripAncho, eje: 'x', variable: '--day-side', pref: 'day_side_width',
-    minimo: ANCHO_MIN,
-    maximo: () => Math.max(ANCHO_MIN, Math.min(ANCHO_TOPE,
-      Math.floor((document.documentElement.clientWidth - 48 - CARD_MIN - GAPS) / 2))),
-    medir: () => panelIzq.getBoundingClientRect().width,
+  // ── El ancho, uno por columna ─────────────────────────────────────────────
+  // Antes había UNA sola variable para los dos lados. Alcanzaba mientras los dos mostraban
+  // listas cortas; con las notas especiales —formularios a medida— de un lado y las tareas del
+  // otro, un ancho común le queda mal a alguno de los dos. Ahora cada columna declara el suyo
+  // en el HTML (`data-var`, `data-pref`), igual que ya hacían los agarres de alto.
+  //
+  // ⚠️ El tope de cada una sale de lo que dejan libre las OTRAS DOS, medidas en el momento. Un
+  // número fijo no sirve —en un monitor de 2560 desperdicia media pantalla— y repartir el
+  // sobrante en partes iguales tampoco, que es lo que hacía la versión de una sola variable.
+  // Así el conjunto nunca se pasa del ancho de la ventana por mucho que arrastres una sola.
+  const ANCHO_MIN = 200, ANCHO_TOPE = 900, GAPS = 40, MARGEN = 48;
+  const OTRAS = 2;
+
+  document.querySelectorAll('.day-ancho-grip').forEach((grip) => {
+    const columna = grip.parentElement;
+    arrastrable({
+      grip, eje: 'x', variable: grip.dataset.var, pref: grip.dataset.pref,
+      minimo: ANCHO_MIN,
+      // ⚠️ El tope le RESERVA el mínimo a las otras dos en vez de medirlas. Medirlas no sirve
+      // desde que arrancan en `1fr`: se encogen a medida que arrastrás, así que el tope crecía
+      // solo y se las podía aplastar hasta nada. Reservando, siempre queda columna.
+      maximo: () => Math.max(ANCHO_MIN, Math.min(ANCHO_TOPE,
+        Math.floor(document.documentElement.clientWidth - MARGEN - GAPS - ANCHO_MIN * OTRAS))),
+      medir: () => columna.getBoundingClientRect().width,
+    });
   });
 
   // ── El alto, uno por panel ────────────────────────────────────────────────
@@ -383,7 +390,10 @@ window.BITACORA_REINIT.push(restaurarRuedas);
   const altoMaximo = () => Math.max(ALTO_MIN, document.documentElement.clientHeight - 40);
 
   document.querySelectorAll('.day-alto-grip').forEach((grip) => {
-    const panel = grip.closest('.day-side').querySelector(grip.dataset.panel);
+    // ⚠️ El panel se busca entre los HERMANOS del agarre, no en la columna: tareas y rutinas
+    // comparten el aside de la izquierda, así que `closest('.day-side').querySelector(...)`
+    // le daba al agarre de rutinas el panel de tareas (el primero que encontraba).
+    const panel = grip.parentElement.querySelector(grip.dataset.panel);
     if (!panel) return;
     arrastrable({
       grip, eje: 'y', variable: grip.dataset.var, pref: grip.dataset.pref,

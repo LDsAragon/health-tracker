@@ -2,9 +2,11 @@
 Tests de rutas HTTP — verifica status codes, redirects y contenido clave.
 Usa el fixture `client` (Flask test client con DB aislada).
 """
+import re
 from datetime import date, timedelta
 
 from bitacora import database as db
+from bitacora.appconfig import clave_de_vista_valida
 
 DATE = "2026-06-09"
 
@@ -138,12 +140,35 @@ def test_volver_no_acepta_una_url_externa(client):
 
 
 def test_el_panel_de_rutinas_aparece_solo_si_hay_algo_que_mostrar(client):
-    """El aside cuelga de `day_events or avisos`: un recordatorio a tres días era lo único que
-    había para mostrar y quedaba invisible cuando colgaba solo de day_events."""
-    assert "day-side-right" not in client.get(f"/day/{DATE}").data.decode()
+    """Cuelga de `day_events or avisos`: un recordatorio a tres días era lo único que había para
+    mostrar y quedaba invisible cuando colgaba solo de day_events.
+
+    Desde el trípode el panel vive en la columna izquierda, debajo de las tareas, así que lo que
+    se mira es el panel y no el aside — el aside está siempre."""
+    assert "day-card-events-panel" not in client.get(f"/day/{DATE}").data.decode()
     db.add_recurring_event({"title": "Gimnasio", "color": "#22c55e", "recurrence": "daily",
                             "start_date": "2020-01-01", "end_date": ""})
-    assert "day-side-right" in client.get(f"/day/{DATE}").data.decode()
+    assert "day-card-events-panel" in client.get(f"/day/{DATE}").data.decode()
+
+
+def test_el_dia_es_un_triptico(client):
+    """Izquierda lo que hay que hacer, medio el día, derecha las notas especiales.
+
+    ⚠️ Va por `assert` y no por inspección visual porque cada panel tiene que estar en SU
+    columna: con el marcado suelto, mover uno de lugar no rompe nada que se note hasta que
+    alguien abre la pantalla."""
+    db.add_recurring_event(EV_BASE | {"title": "Rutina"})
+    db.add_journal_category({"name": "Sueño", "color": "#3b82f6", "show_in_calendar": 0,
+                             "fields_json": '[{"label": "Notas", "type": "text"}]'})
+    html = client.get(f"/day/{DATE}").data.decode()
+    izq = html.index('class="day-side day-side-izq"')
+    medio = html.index('class="day-col-medio"')
+    der = html.index('class="day-side day-side-der"')
+    assert izq < medio < der, "las columnas tienen que salir en orden"
+    assert izq < html.index("day-card-todos") < medio
+    assert izq < html.index("day-card-events-panel") < medio
+    assert medio < html.index('class="day-card-notes"') < der
+    assert der < html.index("day-card-journal")
 
 
 def test_vista_semana(client):
@@ -945,12 +970,55 @@ def test_la_frase_equivocada_al_borrar_un_perfil_avisa_en_datos(client, tmp_path
 # Lo sustancial (arrastrar, el scroll interno, el tope) es de navegador; acá solo se fija que el
 # marcado esté, que es lo que el JS necesita para cablearse.
 
-def test_el_dia_trae_los_tres_agarres(client):
-    """Uno de ancho —compartido por los dos paneles— y uno de alto por panel."""
+def test_el_dia_trae_un_agarre_de_ancho_POR_COLUMNA_y_uno_de_alto_POR_PANEL(client):
+    """Tres de ancho y cuatro de alto.
+
+    ⚠️ El de ancho era UNO solo para los dos lados. Alcanzaba mientras los dos mostraban listas
+    cortas; con las notas especiales —formularios a medida— de un lado y las tareas del otro, un
+    ancho común le queda mal a alguno de los dos. Y el de alto le faltaba a las especiales, que
+    eran el único panel que no se podía achicar — y después las rápidas, por lo mismo."""
     db.add_recurring_event(EV_BASE | {"title": "Rutina"})
+    db.add_journal_category({"name": "Sueño", "color": "#3b82f6", "show_in_calendar": 0,
+                             "fields_json": '[{"label": "Notas", "type": "text"}]'})
     html = client.get(f"/day/{DATE}").data.decode()
-    assert 'id="day-side-grip"' in html                       # el ancho
-    assert html.count('class="day-alto-grip"') == 2           # un alto por panel
+    assert html.count('class="day-ancho-grip"') == 3          # uno por columna
+    assert html.count('class="day-alto-grip"') == 4           # uno por panel
+
+
+def test_cada_agarre_de_alto_va_dentro_de_SU_panel(client):
+    """⚠️ Tripwire del bug que trajo el trípode.
+
+    El agarre de alto es `position: absolute` y se cuelga del ancestro posicionado más cercano.
+    Con tareas y rutinas sueltas dentro del mismo aside, ese ancestro pasó a ser el ASIDE: los
+    dos agarres se iban al fondo de la columna, uno encima del otro, y el de tareas quedaba
+    inalcanzable —la lista de tareas perdía el arrastre de alto por completo—. No se veía como
+    un error: se veía como un panel que dejó de responder.
+
+    La caja `.day-panel` es lo que le devuelve a cada panel su borde de abajo, así que cada
+    agarre tiene que estar adentro de una."""
+    db.add_recurring_event(EV_BASE | {"title": "Rutina"})
+    db.add_journal_category({"name": "Sueño", "color": "#3b82f6", "show_in_calendar": 0,
+                             "fields_json": '[{"label": "Notas", "type": "text"}]'})
+    html = client.get(f"/day/{DATE}").data.decode()
+
+    for grip in re.finditer(r'<div class="day-alto-grip"[^>]*data-var="(--[a-z-]+)"', html):
+        antes = html[:grip.start()]
+        abiertas = antes.count('<div class="day-panel')
+        cerradas = antes.count('</aside>')          # cada columna cierra las suyas
+        assert abiertas > cerradas, (
+            f"el agarre de {grip.group(1)} no está dentro de un .day-panel: "
+            "va a posicionarse contra la columna y se va a pisar con el de al lado")
+
+
+def test_cada_agarre_de_ancho_dice_su_variable_y_su_clave(client):
+    """Mismo cableado por `data-*` que los de alto: si falta uno, la columna queda sin arrastre
+    y en silencio."""
+    html = client.get(f"/day/{DATE}").data.decode()
+    for var, pref in (("--day-izq", "day_izq_width"),
+                      ("--day-card-w", "day_card_width"),
+                      ("--day-der", "day_der_width")):
+        assert f'data-var="{var}" data-pref="{pref}"' in html, f"falta el agarre de {var}"
+        assert clave_de_vista_valida("dia", pref), f"{pref} no está en appconfig.VISTAS"
 
 
 def test_cada_agarre_de_alto_dice_su_variable_y_su_clave(client):
@@ -964,7 +1032,12 @@ def test_cada_agarre_de_alto_dice_su_variable_y_su_clave(client):
         assert f'data-panel="{panel}"' in html
 
 
-def test_sin_rutinas_solo_esta_el_agarre_de_tareas(client):
-    """El panel derecho no se renderiza si no hay eventos ese día."""
+def test_un_panel_que_no_se_rinde_no_deja_su_agarre_suelto(client):
+    """Sin rutinas y sin categorías no hay panel de rutinas ni de especiales, y sus agarres
+    tampoco: un agarre sin panel se arrastra contra la nada.
+
+    Quedan los dos que están siempre —tareas y notas rápidas—."""
     html = client.get(f"/day/{DATE}").data.decode()
-    assert html.count('class="day-alto-grip"') == 1
+    assert html.count('class="day-alto-grip"') == 2
+    assert "day-alto-rutinas" not in html
+    assert "day-alto-especiales" not in html

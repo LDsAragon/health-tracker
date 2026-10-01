@@ -25,13 +25,20 @@
 
 <div class="day-layout">
 
-<!-- Panel lateral permanente: objetivos / quehaceres -->
-<aside class="day-side">
-  {# Arrastrar para cambiar el ancho del panel; doble clic lo devuelve al default. Lo maneja
-     day.js y el ancho queda guardado con las demás preferencias de la vista. #}
-  <div class="day-side-grip" id="day-side-grip" title="Arrastrá para cambiar el ancho (doble clic para volver al normal)"></div>
-  {# El de abajo cambia el ALTO. Los data-* los lee day.js: así los dos paneles usan el mismo
-     helper sin que el JS sepa de cuál se trata. #}
+<!-- Columna izquierda: lo que hay que hacer hoy. Tareas y rutinas comparten el alto,
+     igual que en el widget. -->
+<aside class="day-side day-side-izq">
+  {# Arrastrar para cambiar el ancho de la columna; doble clic la devuelve al default. Lo
+     maneja day.js y queda guardado con las demás preferencias de la vista. #}
+  <div class="day-ancho-grip" data-var="--day-izq" data-pref="day_izq_width" data-signo="1"
+       title="Arrastrá para cambiar el ancho (doble clic para volver al normal)"></div>
+  {# ⚠️ Cada panel va envuelto en un `.day-panel`, y no es decorativo: el agarre de alto es
+     `position: absolute` y se cuelga del ancestro posicionado más cercano. Con los dos paneles
+     sueltos dentro del mismo aside, ese ancestro era el ASIDE, así que los dos agarres se iban
+     al fondo de la columna y quedaban uno encima del otro: el de tareas, inalcanzable. Antes no
+     pasaba porque cada panel tenía su propio aside.
+     Los data-* los lee day.js: así todos los paneles usan el mismo helper. #}
+  <div class="day-panel">
   <div class="day-alto-grip" data-var="--day-alto-tareas" data-pref="day_alto_tareas"
        data-panel=".day-card-todos"
        title="Arrastrá para cambiar el alto (doble clic para volver al normal)"></div>
@@ -85,22 +92,211 @@
       <button type="submit" class="btn-primary">Agregar</button>
     </form>
   </div>
-</aside>
-
-<!-- Celda grande centrada -->
-<div class="day-card">
-
-  <!-- Cabecera — mismo estilo que el número en el calendario -->
-  <div class="day-card-header">
-    <div class="day-card-label">
-      <span class="day-card-dow">{{ DAYS[d.weekday()] }}</span>
-      <span class="day-card-full-date">{{ d.day }} de {{ MONTHS[d.month - 1] }} {{ d.year }}</span>
-    </div>
-    <span class="day-card-num {% if date_str == today %}today-num{% endif %}">{{ d.day }}</span>
   </div>
 
+  {# El panel sigue colgando de que haya algo HOY o algo que se viene: un recordatorio a
+     tres días era lo único en pantalla y quedaba invisible cuando colgaba solo de
+     `day_events`. #}
+  {% if day_events or avisos %}
+  <div class="day-panel day-panel-rutinas">
+  <div class="day-alto-grip" data-var="--day-alto-rutinas" data-pref="day_alto_rutinas"
+       data-panel=".day-card-events-panel"
+       title="Arrastrá para cambiar el alto (doble clic para volver al normal)"></div>
+  <div class="day-card-events-panel">
+    <h3 class="day-section-title">📅 Rutinas y eventos</h3>
+    <div class="day-card-events" data-refresco="rutinas">
+      {% for ev in day_events %}
+      <div class="day-ev-wrap" id="ev-wrap-{{ ev.id }}">
+
+        {% if ev.done %}
+        <!-- Hecho: chip tachado + nota + deshacer -->
+        <div class="day-chip day-chip-done" style="--c: {{ ev.color }};">
+          <span class="day-chip-check">&#10003;</span>
+          <span class="day-chip-title">{% if ev.grupo_especial == 'cumpleanos' %}🎂 {% endif %}{{ ev.title }}</span>
+          {% if ev.completion_note %}
+          <span class="day-chip-note">— {{ ev.completion_note }}</span>
+          {% endif %}
+          <form method="POST" action="{{ url_for('day.event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
+            <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
+          </form>
+        </div>
+
+        {% elif ev.skipped %}
+        <!-- Salteado: chip gris + nota + deshacer -->
+        <div class="day-chip day-chip-skipped">
+          <span class="day-chip-title">{% if ev.grupo_especial == 'cumpleanos' %}🎂 {% endif %}{{ ev.title }}</span>
+          {% if ev.completion_note %}
+          <span class="day-chip-note">— {{ ev.completion_note }}</span>
+          {% endif %}
+          <form method="POST" action="{{ url_for('day.event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
+            <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
+          </form>
+        </div>
+
+        {% else %}
+        <!-- No hecho: chip clickeable que abre formulario inline -->
+        <div class="day-chip day-chip-todo" style="--c: {{ ev.color }};"
+             onclick="openEvForm({{ ev.id }})" id="ev-chip-{{ ev.id }}">
+          <span class="day-chip-circle"></span>
+          <span class="day-chip-title">{% if ev.grupo_especial == 'cumpleanos' %}🎂 {% endif %}{{ ev.title }}</span>
+          <span class="day-chip-hint">clic para marcar</span>
+        </div>
+        <form class="day-ev-form" id="ev-form-{{ ev.id }}" style="display:none;">
+          <input type="text" name="note" class="ev-note-input"
+                 placeholder="comentario opcional...">
+          <button type="submit"
+                  formmethod="POST"
+                  formaction="{{ url_for('day.event_complete', date_str=date_str, event_id=ev.id) }}"
+                  class="btn-check">&#10003; Hecho</button>
+          <button type="submit"
+                  formmethod="POST"
+                  formaction="{{ url_for('day.event_skip', date_str=date_str, event_id=ev.id) }}"
+                  class="btn-skip">&#8212; Salteé</button>
+          <button type="button" class="btn-cancel-sm" onclick="closeEvForm({{ ev.id }})">&#10005;</button>
+        </form>
+        {% endif %}
+
+      </div>
+      {% endfor %}
+
+      {# Lo que se viene. Van al final y SIN tilde: todavía no pasó, así que no hay nada que
+         marcar como hecho. Solo aparecen mirando el día de hoy. #}
+      {% for av in avisos %}
+      <div class="day-aviso" style="--c: {{ av.color }};">
+        <span class="day-aviso-cuando">en {{ av.faltan }} día{{ 's' if av.faltan != 1 }}</span>
+        <span class="day-aviso-titulo">{{ av.title }}</span>
+        <a href="{{ url_for('day.day_view', date_str=av.fecha) }}"
+           class="day-aviso-ir" title="Ir a ese día">&#8594;</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  </div>
+  {% endif %}
+</aside>
+
+<!-- Columna del medio: el día y las notas rápidas -->
+<div class="day-col-medio">
+  {# El agarre de cada columna está a SU derecha y la ensancha. Son tres y ninguno queda
+     pegado a otro: izquierda | agarre | medio | agarre | derecha | agarre. #}
+  <div class="day-ancho-grip" data-var="--day-card-w" data-pref="day_card_width" data-signo="1"
+       title="Arrastrá para cambiar el ancho (doble clic para volver al normal)"></div>
+  <div class="day-panel">
+  <div class="day-alto-grip" data-var="--day-alto-notas" data-pref="day_alto_notas"
+       data-panel=".day-card"
+       title="Arrastrá para cambiar el alto (doble clic para volver al normal)"></div>
+  <div class="day-card">
+
+    <!-- Cabecera — mismo estilo que el número en el calendario -->
+    <div class="day-card-header">
+      <div class="day-card-label">
+        <span class="day-card-dow">{{ DAYS[d.weekday()] }}</span>
+        <span class="day-card-full-date">{{ d.day }} de {{ MONTHS[d.month - 1] }} {{ d.year }}</span>
+      </div>
+      <span class="day-card-num {% if date_str == today %}today-num{% endif %}">{{ d.day }}</span>
+    </div>
+
+
+    <h3 class="day-section-title day-qn-title">📝 Notas rápidas</h3>
+
+    <!-- Notas -->
+    <div class="day-card-notes" data-refresco="notas">
+      {% for note in notes %}
+      <div class="day-note {% if note.color %}day-note-colored{% endif %}"
+           {% if note.color %}style="--c: {{ note.color }};"{% endif %}
+           id="dnote-{{ note.id }}" data-color="{{ note.color }}">
+
+        <!-- Vista -->
+        <div class="day-note-view" id="dview-{{ note.id }}">
+          <div style="flex:1;">
+            <p class="day-note-text">{{ note.content }}</p>
+            {% if note.created_at %}<span class="day-note-time">{{ note.created_at | humantime }}</span>{% endif %}
+          </div>
+          <div class="day-note-actions">
+            <button class="btn-edit" onclick="editDayNote({{ note.id }})">Editar</button>
+            <form method="POST" action="{{ url_for('day.note_delete', date_str=date_str, note_id=note.id) }}"
+                  data-confirmar="¿Eliminar?" data-confirmar-ok="Eliminar"
+              onsubmit="return false;" style="display:inline;">
+              <button type="submit" class="btn-delete">&#10005;</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Edición -->
+        <form class="day-note-edit" id="dedit-{{ note.id }}" style="display:none;"
+              method="POST" action="{{ url_for('day.note_edit', date_str=date_str, note_id=note.id) }}">
+          <textarea name="content" class="note-edit-ta" rows="3">{{ note.content }}</textarea>
+          <div class="note-form-footer">
+            <div class="color-picker-row">
+              <label class="color-opt-none">
+                <input type="radio" name="color" value="" {% if not note.color %}checked{% endif %}
+                       onchange="previewNoteColor({{ note.id }}, '')">
+                <span class="color-circle color-none">&#10006;</span>
+              </label>
+              {% for c in COLORS %}
+              <label class="color-opt">
+                <input type="radio" name="color" value="{{ c }}" {% if note.color == c %}checked{% endif %}
+                       onchange="previewNoteColor({{ note.id }}, '{{ c }}')">
+                <span class="color-circle" style="background:{{ c }};"></span>
+              </label>
+              {% endfor %}
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button type="submit" class="btn-primary">Guardar</button>
+              <button type="button" class="btn-cancel" onclick="cancelDayNote({{ note.id }})">Cancelar</button>
+            </div>
+          </div>
+        </form>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Input de nota al fondo — como la celda del calendario -->
+    {% set rapida_open = settings.note_form_default != 'collapsed' %}
+    <div class="day-card-footer-wrap">
+    <button type="button" class="day-journal-add-toggle" id="rapida-collapsed" style="display:{{ 'none' if rapida_open else 'block' }};"
+            onclick="openRapida()">+ Agregar nota rápida</button>
+    <form class="day-card-footer" id="rapida-form" {% if not rapida_open %}style="display:none;"{% endif %} method="POST" action="{{ url_for('day.note_add', date_str=date_str) }}">
+      <textarea name="content" class="day-add-input" rows="2"
+                placeholder="Escribí una nota..."></textarea>
+      <div class="day-add-bottom">
+        <div class="color-picker-row">
+          <label class="color-opt-none">
+            <input type="radio" name="color" value="" {% if not color_sugerido %}checked{% endif %}
+                   onchange="previewAddColor('')">
+            <span class="color-circle color-none">&#10006;</span>
+          </label>
+          {% for c in COLORS %}
+          <label class="color-opt">
+            <input type="radio" name="color" value="{{ c }}" {% if color_sugerido == c %}checked{% endif %}
+                   onchange="previewAddColor('{{ c }}')">
+            <span class="color-circle" style="background:{{ c }};"></span>
+          </label>
+          {% endfor %}
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="submit" class="btn-primary">Agregar</button>
+          <button type="button" class="btn-cancel" onclick="collapseRapida()">Cancelar</button>
+        </div>
+      </div>
+    </form>
+    </div>
+
+  </div>
+  </div>
+</div>
+
+<!-- Columna derecha: las notas especiales, que son formularios a medida -->
+<aside class="day-side day-side-der">
+  <div class="day-ancho-grip" data-var="--day-der" data-pref="day_der_width" data-signo="1"
+       title="Arrastrá para cambiar el ancho (doble clic para volver al normal)"></div>
   <!-- Registros de journal -->
   {% if journal_entries or journal_cats %}
+  <div class="day-panel">
+  <div class="day-alto-grip" data-var="--day-alto-especiales" data-pref="day_alto_especiales"
+       data-panel=".day-card-journal"
+       title="Arrastrá para cambiar el alto (doble clic para volver al normal)"></div>
   <div class="day-card-journal">
     <h3 class="day-section-title">📊 Notas especiales</h3>
 
@@ -314,175 +510,9 @@
     {% endif %}
 
   </div>
+  </div>
   {% endif %}
-
-  <h3 class="day-section-title day-qn-title">📝 Notas rápidas</h3>
-
-  <!-- Notas -->
-  <div class="day-card-notes" data-refresco="notas">
-    {% for note in notes %}
-    <div class="day-note {% if note.color %}day-note-colored{% endif %}"
-         {% if note.color %}style="--c: {{ note.color }};"{% endif %}
-         id="dnote-{{ note.id }}" data-color="{{ note.color }}">
-
-      <!-- Vista -->
-      <div class="day-note-view" id="dview-{{ note.id }}">
-        <div style="flex:1;">
-          <p class="day-note-text">{{ note.content }}</p>
-          {% if note.created_at %}<span class="day-note-time">{{ note.created_at | humantime }}</span>{% endif %}
-        </div>
-        <div class="day-note-actions">
-          <button class="btn-edit" onclick="editDayNote({{ note.id }})">Editar</button>
-          <form method="POST" action="{{ url_for('day.note_delete', date_str=date_str, note_id=note.id) }}"
-                data-confirmar="¿Eliminar?" data-confirmar-ok="Eliminar"
-            onsubmit="return false;" style="display:inline;">
-            <button type="submit" class="btn-delete">&#10005;</button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Edición -->
-      <form class="day-note-edit" id="dedit-{{ note.id }}" style="display:none;"
-            method="POST" action="{{ url_for('day.note_edit', date_str=date_str, note_id=note.id) }}">
-        <textarea name="content" class="note-edit-ta" rows="3">{{ note.content }}</textarea>
-        <div class="note-form-footer">
-          <div class="color-picker-row">
-            <label class="color-opt-none">
-              <input type="radio" name="color" value="" {% if not note.color %}checked{% endif %}
-                     onchange="previewNoteColor({{ note.id }}, '')">
-              <span class="color-circle color-none">&#10006;</span>
-            </label>
-            {% for c in COLORS %}
-            <label class="color-opt">
-              <input type="radio" name="color" value="{{ c }}" {% if note.color == c %}checked{% endif %}
-                     onchange="previewNoteColor({{ note.id }}, '{{ c }}')">
-              <span class="color-circle" style="background:{{ c }};"></span>
-            </label>
-            {% endfor %}
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button type="submit" class="btn-primary">Guardar</button>
-            <button type="button" class="btn-cancel" onclick="cancelDayNote({{ note.id }})">Cancelar</button>
-          </div>
-        </div>
-      </form>
-
-    </div>
-    {% endfor %}
-  </div>
-
-  <!-- Input de nota al fondo — como la celda del calendario -->
-  {% set rapida_open = settings.note_form_default != 'collapsed' %}
-  <div class="day-card-footer-wrap">
-  <button type="button" class="day-journal-add-toggle" id="rapida-collapsed" style="display:{{ 'none' if rapida_open else 'block' }};"
-          onclick="openRapida()">+ Agregar nota rápida</button>
-  <form class="day-card-footer" id="rapida-form" {% if not rapida_open %}style="display:none;"{% endif %} method="POST" action="{{ url_for('day.note_add', date_str=date_str) }}">
-    <textarea name="content" class="day-add-input" rows="2"
-              placeholder="Escribí una nota..."></textarea>
-    <div class="day-add-bottom">
-      <div class="color-picker-row">
-        <label class="color-opt-none">
-          <input type="radio" name="color" value="" {% if not color_sugerido %}checked{% endif %}
-                 onchange="previewAddColor('')">
-          <span class="color-circle color-none">&#10006;</span>
-        </label>
-        {% for c in COLORS %}
-        <label class="color-opt">
-          <input type="radio" name="color" value="{{ c }}" {% if color_sugerido == c %}checked{% endif %}
-                 onchange="previewAddColor('{{ c }}')">
-          <span class="color-circle" style="background:{{ c }};"></span>
-        </label>
-        {% endfor %}
-      </div>
-      <div style="display:flex; gap:8px;">
-        <button type="submit" class="btn-primary">Agregar</button>
-        <button type="button" class="btn-cancel" onclick="collapseRapida()">Cancelar</button>
-      </div>
-    </div>
-  </form>
-  </div>
-
-</div>
-
-<!-- Panel lateral derecho: rutinas y eventos agendados -->
-{# El panel aparece si hay algo HOY o algo que se viene: un recordatorio a tres días era lo
-   único en pantalla y quedaba invisible porque el aside colgaba solo de day_events. #}
-{% if day_events or avisos %}
-<aside class="day-side day-side-right">
-  <div class="day-alto-grip" data-var="--day-alto-rutinas" data-pref="day_alto_rutinas"
-       data-panel=".day-card-events-panel"
-       title="Arrastrá para cambiar el alto (doble clic para volver al normal)"></div>
-  <div class="day-card-events-panel">
-    <h3 class="day-section-title">📅 Rutinas y eventos</h3>
-    <div class="day-card-events" data-refresco="rutinas">
-      {% for ev in day_events %}
-      <div class="day-ev-wrap" id="ev-wrap-{{ ev.id }}">
-
-        {% if ev.done %}
-        <!-- Hecho: chip tachado + nota + deshacer -->
-        <div class="day-chip day-chip-done" style="--c: {{ ev.color }};">
-          <span class="day-chip-check">&#10003;</span>
-          <span class="day-chip-title">{% if ev.grupo_especial == 'cumpleanos' %}🎂 {% endif %}{{ ev.title }}</span>
-          {% if ev.completion_note %}
-          <span class="day-chip-note">— {{ ev.completion_note }}</span>
-          {% endif %}
-          <form method="POST" action="{{ url_for('day.event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
-            <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
-          </form>
-        </div>
-
-        {% elif ev.skipped %}
-        <!-- Salteado: chip gris + nota + deshacer -->
-        <div class="day-chip day-chip-skipped">
-          <span class="day-chip-title">{% if ev.grupo_especial == 'cumpleanos' %}🎂 {% endif %}{{ ev.title }}</span>
-          {% if ev.completion_note %}
-          <span class="day-chip-note">— {{ ev.completion_note }}</span>
-          {% endif %}
-          <form method="POST" action="{{ url_for('day.event_uncomplete', date_str=date_str, event_id=ev.id) }}" style="display:inline;">
-            <button type="submit" class="day-chip-undo" title="Deshacer">&#8635;</button>
-          </form>
-        </div>
-
-        {% else %}
-        <!-- No hecho: chip clickeable que abre formulario inline -->
-        <div class="day-chip day-chip-todo" style="--c: {{ ev.color }};"
-             onclick="openEvForm({{ ev.id }})" id="ev-chip-{{ ev.id }}">
-          <span class="day-chip-circle"></span>
-          <span class="day-chip-title">{% if ev.grupo_especial == 'cumpleanos' %}🎂 {% endif %}{{ ev.title }}</span>
-          <span class="day-chip-hint">clic para marcar</span>
-        </div>
-        <form class="day-ev-form" id="ev-form-{{ ev.id }}" style="display:none;">
-          <input type="text" name="note" class="ev-note-input"
-                 placeholder="comentario opcional...">
-          <button type="submit"
-                  formmethod="POST"
-                  formaction="{{ url_for('day.event_complete', date_str=date_str, event_id=ev.id) }}"
-                  class="btn-check">&#10003; Hecho</button>
-          <button type="submit"
-                  formmethod="POST"
-                  formaction="{{ url_for('day.event_skip', date_str=date_str, event_id=ev.id) }}"
-                  class="btn-skip">&#8212; Salteé</button>
-          <button type="button" class="btn-cancel-sm" onclick="closeEvForm({{ ev.id }})">&#10005;</button>
-        </form>
-        {% endif %}
-
-      </div>
-      {% endfor %}
-
-      {# Lo que se viene. Van al final y SIN tilde: todavía no pasó, así que no hay nada que
-         marcar como hecho. Solo aparecen mirando el día de hoy. #}
-      {% for av in avisos %}
-      <div class="day-aviso" style="--c: {{ av.color }};">
-        <span class="day-aviso-cuando">en {{ av.faltan }} día{{ 's' if av.faltan != 1 }}</span>
-        <span class="day-aviso-titulo">{{ av.title }}</span>
-        <a href="{{ url_for('day.day_view', date_str=av.fecha) }}"
-           class="day-aviso-ir" title="Ir a ese día">&#8594;</a>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
 </aside>
-{% endif %}
 </div>
 
 <script>

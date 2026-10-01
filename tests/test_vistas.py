@@ -20,14 +20,14 @@ def _leer(*partes):
 # ── El almacén ───────────────────────────────────────────────────────────────
 
 def test_guardar_y_leer_una_preferencia(test_db):
-    assert db.set_pref("dia", "day_side_width", "520") is True
-    assert db.get_prefs()["day_side_width"] == "520"
+    assert db.set_pref("dia", "day_izq_width", "520") is True
+    assert db.get_prefs()["day_izq_width"] == "520"
 
 
 def test_guardar_dos_veces_la_misma_clave_no_duplica(test_db):
-    db.set_pref("dia", "day_side_width", "520")
-    db.set_pref("dia", "day_side_width", "480")
-    assert db.get_prefs() == {"day_side_width": "480"}
+    db.set_pref("dia", "day_izq_width", "520")
+    db.set_pref("dia", "day_izq_width", "480")
+    assert db.get_prefs() == {"day_izq_width": "480"}
 
 
 def test_una_clave_que_no_es_de_esa_vista_no_se_guarda(test_db):
@@ -47,7 +47,7 @@ def test_los_colapsables_de_rutinas_entran_por_prefijo(test_db):
 def test_reiniciar_una_vista_no_toca_las_otras(test_db):
     """Es la razón de ser de la columna `vista`: reiniciar el layout del día no puede llevarse
     puesto cómo dejaste Tareas."""
-    db.set_pref("dia", "day_side_width", "520")
+    db.set_pref("dia", "day_izq_width", "520")
     db.set_pref("dia", "day_alto_tareas", "600")
     db.set_pref("tareas", "todosResumenOpen", "1")
     assert db.reset_vista("dia") == 2
@@ -56,9 +56,9 @@ def test_reiniciar_una_vista_no_toca_las_otras(test_db):
 
 def test_borrar_una_sola_preferencia(test_db):
     """El doble clic en un agarre: vuelve al ancho del CSS sin tocar el resto de la vista."""
-    db.set_pref("dia", "day_side_width", "520")
+    db.set_pref("dia", "day_izq_width", "520")
     db.set_pref("dia", "day_alto_tareas", "600")
-    db.borrar_pref("dia", "day_side_width")
+    db.borrar_pref("dia", "day_izq_width")
     assert db.get_prefs() == {"day_alto_tareas": "600"}
 
 
@@ -116,9 +116,9 @@ def test_toda_pantalla_con_preferencias_declara_su_vista():
 # ── Las rutas ────────────────────────────────────────────────────────────────
 
 def test_ruta_set_guarda_y_rechaza(client, test_db):
-    r = client.post("/vista/set", data={"vista": "dia", "clave": "day_side_width", "valor": "520"})
+    r = client.post("/vista/set", data={"vista": "dia", "clave": "day_izq_width", "valor": "520"})
     assert r.status_code == 204
-    assert db.get_prefs()["day_side_width"] == "520"
+    assert db.get_prefs()["day_izq_width"] == "520"
 
     r = client.post("/vista/set", data={"vista": "dia", "clave": "app_zoom", "valor": "2"})
     assert r.status_code == 400
@@ -127,7 +127,7 @@ def test_ruta_set_guarda_y_rechaza(client, test_db):
 def test_ruta_reiniciar_se_lleva_la_vista_y_el_zoom(client, test_db):
     """El zoom es de toda la app, así que reiniciar una vista también lo devuelve a 1. Se pidió
     así, y por eso el texto del menú lo dice en vez de sorprender."""
-    db.set_pref("dia", "day_side_width", "520")
+    db.set_pref("dia", "day_izq_width", "520")
     db.set_pref("app", "app_zoom", "1.4")
     db.set_pref("tareas", "todosResumenOpen", "1")
 
@@ -143,10 +143,10 @@ def test_ruta_reiniciar_rechaza_una_vista_inventada(client, test_db):
 
 def test_la_pagina_trae_las_preferencias_y_la_vista(client, test_db):
     """La lectura es síncrona —el valor ya viene en la página— y por eso el zoom no parpadea."""
-    db.set_pref("dia", "day_side_width", "520")
+    db.set_pref("dia", "day_izq_width", "520")
     html = client.get("/day/2026-06-09").data.decode()
     assert 'data-vista="dia"' in html
-    assert '"day_side_width": "520"' in html or '"day_side_width":"520"' in html
+    assert '"day_izq_width": "520"' in html or '"day_izq_width":"520"' in html
 
 
 def test_un_colapsable_no_guarda_su_propio_default(client, test_db):

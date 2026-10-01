@@ -8,41 +8,64 @@
   margin: 0 auto;
 }
 
-/* Layout del día: panel de objetivos a la izquierda, card centrada.
-   El ancho de los paneles laterales se arrastra (ver el agarre más abajo) y queda en
-   localStorage. Las dos variables van juntas y las setea day.js: agrandar el panel solo no
-   alcanza, porque su columna es `1fr` y la del medio se queda con el espacio primero, así que
-   hay que CEDERLE ancho a la del medio. En los defaults, el layout es idéntico al de siempre. */
+/* Layout del día: un trípode. A la izquierda lo que hay que hacer (tareas y rutinas, que
+   comparten el alto como en el widget), en el medio el día y las notas rápidas, a la derecha
+   las notas especiales — que son formularios a medida y por eso quieren su propia columna.
+
+   Las tres columnas tienen su PROPIO ancho arrastrable. Antes había una sola variable para los
+   dos lados, y alcanzaba porque los dos mostraban listas cortas; con los formularios de las
+   especiales de un lado y una lista de tareas del otro, un ancho común le queda mal a alguno. */
 .day-layout {
   display: grid;
-  /* El ancho de los paneles laterales se arrastra (`--day-side`, ver el agarre más abajo) y
-     queda en localStorage.
-     Los tres anchos son topes (minmax(0, X)) y NO hay ninguna columna `1fr`: con un `1fr` en
-     el medio, la del medio se comía todo el sobrante y la card quedaba lejísimos del panel. Así
-     el conjunto mide lo que necesita, `justify-content: center` lo centra y **el sobrante queda
-     afuera** — que es el espacio que se aprovecha al ensanchar los paneles. */
-  grid-template-columns: minmax(0, var(--day-side, 400px)) minmax(0, 760px)
-                         minmax(0, var(--day-side, 400px));
+  /* De arranque las tres son `1fr`: **iguales y llenando el ancho**, que es como se espera ver
+     un trípode. Arrastrar una le pone px a su variable y esa columna se vuelve fija; las otras
+     siguen en `1fr` y se reparten lo que queda.
+
+     ⚠️ Un `1fr` suelto entre columnas fijas es lo que estaba PROHIBIDO acá —esa columna se comía
+     todo el sobrante y quedaba lejísimos de los paneles—. Las tres en `1fr` es lo contrario: no
+     hay sobrante que repartir mal porque se reparte en partes iguales. Y el mínimo de 200px
+     evita que, al ensanchar una, las otras dos se aplasten hasta desaparecer.
+
+     `justify-content: center` queda porque sigue haciendo falta en el caso en que arrastres las
+     tres: ahí no hay ninguna `1fr`, el conjunto mide lo que vos pediste y el sobrante va afuera. */
+  grid-template-columns: minmax(200px, var(--day-izq, 1fr))
+                         minmax(200px, var(--day-card-w, 1fr))
+                         minmax(200px, var(--day-der, 1fr));
   justify-content: center;
   gap: 20px;
   align-items: start;
 }
-.day-card {
+/* El alto útil de la pantalla: lo que queda abajo del navbar y del nav del día, menos el aire
+   de abajo. De acá salen los cuatro defaults, y es lo que hace que las tres columnas **terminen
+   a la misma altura** sin que ninguna sepa de las otras. Medido sobre la app: con el viewport
+   en 1007 el layout arranca en 126 y `main` deja 20 abajo. */
+:root { --day-alto-base: calc(100vh - 150px); }
+
+.day-col-medio {
   grid-column: 2;
-  max-width: 760px;     /* ancho de lectura; antes lo imponía la columna */
+  /* Contexto de posicionamiento para el agarre: `.day-card` tiene `overflow: hidden` y un
+     agarre absoluto adentro quedaría recortado. */
+  position: relative;
   width: 100%;
-  margin: 0 auto;
 }
+.day-card { width: 100%; }
 .day-side {
-  grid-column: 1;
-  justify-self: end;
   width: 100%;
-  position: sticky;
-  top: 20px;
+}
+/* Ninguna es sticky: las tres arrancan del alto de la pantalla, así que no hay nada que pegar
+   —y pegando una sola, al scrollear se desalineaba de las otras dos. */
+.day-side-izq {
+  grid-column: 1;
+  position: relative;
+}
+.day-side-der {
+  grid-column: 3;
+  position: relative;
 }
 
-/* Agarre para cambiar el ancho: en el borde interno del panel de tareas. Doble clic resetea. */
-.day-side-grip {
+/* Agarre para cambiar el ancho. El de cada columna está a SU derecha y la ensancha: así son
+   tres y ninguno queda pegado a otro. Doble clic resetea. */
+.day-ancho-grip {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -54,7 +77,7 @@
   align-items: center;
   justify-content: center;
 }
-.day-side-grip::before {
+.day-ancho-grip::before {
   content: "";
   width: 3px;
   height: 34px;
@@ -62,8 +85,24 @@
   background: var(--border);
   transition: background .15s, height .15s;
 }
-.day-side-grip:hover::before,
-.day-side-grip.arrastrando::before { background: var(--accent); height: 60px; }
+.day-ancho-grip:hover::before,
+.day-ancho-grip.arrastrando::before { background: var(--accent); height: 60px; }
+/* ⚠️ La caja de cada panel. El agarre de alto es `position: absolute` y se cuelga del ancestro
+   posicionado más cercano: con los paneles sueltos dentro del mismo aside, ese ancestro era el
+   ASIDE y los dos agarres terminaban juntos al fondo de la columna —el de tareas, inalcanzable,
+   y el de rutinas agarrando el alto equivocado—. Antes no pasaba porque cada panel tenía su
+   propio aside; ahora la caja es lo que le devuelve a cada uno su borde de abajo. */
+.day-panel { position: relative; }
+.day-panel-rutinas { margin-top: 22px; }
+/* La columna izquierda tiene DOS paneles, así que se reparten la base menos lo que los separa.
+   El 58/42 no es arbitrario: las tareas son una lista que crece y las rutinas del día son unas
+   pocas líneas. Así la columna termina a la misma altura que las otras dos. */
+:root {
+  --day-izq-util: calc(var(--day-alto-base) - 22px);
+  --day-alto-tareas-def: calc(var(--day-izq-util) * .58);
+  --day-alto-rutinas-def: calc(var(--day-izq-util) * .42);
+}
+
 /* Agarre para cambiar el ALTO: abajo del panel, y cada panel tiene el suyo. */
 .day-alto-grip {
   position: absolute;
@@ -90,7 +129,7 @@
 
 /* Mientras se arrastra, que no se seleccione texto ni parpadee el cursor por toda la página. */
 body.day-redimensionando { user-select: none; }
-body.day-redimensionando:has(.day-side-grip.arrastrando) { cursor: col-resize; }
+body.day-redimensionando:has(.day-ancho-grip.arrastrando) { cursor: col-resize; }
 body.day-redimensionando:has(.day-alto-grip.arrastrando) { cursor: row-resize; }
 .day-side .day-card-todos {
   border: 1px solid var(--border);
@@ -100,72 +139,110 @@ body.day-redimensionando:has(.day-alto-grip.arrastrando) { cursor: row-resize; }
      "Agregar una tarea" quedan siempre a la vista. `auto` = como siempre hasta que arrastres. */
   display: flex;
   flex-direction: column;
-  height: var(--day-alto-tareas, auto);
+  height: var(--day-alto-tareas, var(--day-alto-tareas-def));
   /* El alto de arranque deja de ser "lo que midan las tareas". El mismo var en el min-height es
      lo que mantiene el arrastre intacto: con un alto elegido, height y min-height valen lo mismo
      y se puede achicar; sin arrastrar, el panel nace en 420px y CRECE con las tareas, así que
      tampoco aparece un scroll interno cuando son muchas. */
-  min-height: var(--day-alto-tareas, 420px);
+  min-height: var(--day-alto-tareas, var(--day-alto-tareas-def));
 }
 /* ⚠️ `min-height: 0` no es opcional: un item flex no se encoge por debajo de su contenido, y sin
    esto el overflow-y no llega a actuar nunca y el panel se estira igual. */
 .day-side .day-card-todos .todo-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .day-card-events-panel .day-card-events { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
-/* Panel derecho: rutinas y eventos (espejo del panel de tareas) */
-.day-side-right { grid-column: 3; justify-self: start; }
+/* Rutinas: segundo panel de la columna izquierda, debajo de las tareas. La separación la pone
+   `.day-panel-rutinas`, no el panel: adentro del panel, el agarre del de arriba caía sobre él. */
 .day-card-events-panel {
   border: 1px solid var(--border);
+  overflow: hidden;
   border-radius: var(--r);
   background: var(--bg);
   padding: 14px 20px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: var(--day-alto-rutinas, auto);
+  height: var(--day-alto-rutinas, var(--day-alto-rutinas-def));
+  min-height: var(--day-alto-rutinas, var(--day-alto-rutinas-def));
 }
 
-/* Reordenar secciones de la card: notas rápidas suben al hueco de los objetivos */
-/* La banda del título la comparten las dos secciones; el `order` es solo de las rápidas,
-   que son hijas directas de la card (las especiales viven dentro de .day-card-journal). */
+/* Las notas especiales ya no viven dentro de la card: son la columna de la derecha, y por eso
+   se dibujan como una tarjeta propia igual que los otros dos paneles. */
+.day-side-der .day-card-journal {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg);
+  overflow: hidden;
+  /* Mismo trato que las notas rápidas: el panel RESERVA su espacio en vez de encogerse hasta el
+     título. Vacío se leía como un cartel y no como un lugar donde van cosas — y al lado de las
+     rápidas, que sí reservan 60vh, parecía que las especiales estaban rotas.
+     El mismo var en `height` y en `min-height` es lo que deja el arrastre intacto: con un alto
+     elegido los dos valen lo mismo y se puede achicar; sin arrastrar, crece con el contenido. */
+  display: flex;
+  flex-direction: column;
+  height: var(--day-alto-especiales, var(--day-alto-base));
+  min-height: var(--day-alto-especiales, var(--day-alto-base));
+}
+/* Con un alto fijo el que scrollea es la LISTA: el título y el "+ Agregar nota especial" quedan
+   siempre a la vista, igual que en el panel de tareas. `min-height: 0` no es opcional — un item
+   flex no se encoge por debajo de su contenido y sin eso el overflow-y no actúa nunca. */
+.day-side-der .day-journal-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.day-side-der .day-journal-add-wrap { flex-shrink: 0; }
+/* ⚠️ Los CUATRO paneles tienen la misma anatomía: una banda de título con su línea, y abajo el
+   cuerpo con su propio padding. Tareas y rutinas tenían el título suelto adentro del padding del
+   panel —sin banda y sin línea—, así que al lado de las notas se leían como otra cosa: el mismo
+   contenido, dos lenguajes visuales. La banda es lo que dice "acá empieza el panel". */
+.day-card-todos > .day-section-title,
+.day-card-events-panel > .day-section-title,
 .day-qn-title,
 .day-card-journal > .day-section-title {
   padding: 14px 20px 12px;
-  border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
-.day-qn-title        { order: 2; }
+/* En el medio la banda necesita además el borde de arriba: la separa de la cabecera del día. */
+.day-qn-title { border-top: 1px solid var(--border); order: 2; }
+
+/* El padding se va del panel y pasa al cuerpo: si se queda en el panel, la banda no llega a los
+   bordes y la línea queda flotando a 20px de cada lado. */
+.day-side .day-card-todos,
+.day-card-events-panel { padding: 0; gap: 0; }
+.day-side .day-card-todos .todo-list { padding: 14px 20px; }
+.day-side .day-card-todos .todo-add-form { padding: 0 20px 14px; margin-top: 0; flex-shrink: 0; }
+.day-card-events-panel .day-card-events { padding: 14px 20px; display: flex;
+  flex-direction: column; gap: 10px; }
 .day-card-notes      { order: 3; }
 .day-card-footer-wrap { order: 4; }
-.day-card-journal    { order: 5; flex: 1; }   /* el mismo espacio que las rápidas */
 
 @media (max-width: 1100px) {
   .day-layout { grid-template-columns: 1fr; }
-  /* Apilado en una columna no hay ancho que repartir: el panel ocupa todo. */
-  .day-side-grip, .day-alto-grip { display: none; }
-  /* Apilado en una columna: Card → Tareas → Rutinas/eventos */
-  .day-card { grid-column: 1; order: 0; }
-  .day-side {
-    grid-column: 1;
-    order: 1;
+  /* Apilado en una columna no hay ancho que repartir: cada panel ocupa todo. */
+  .day-ancho-grip, .day-alto-grip { display: none; }
+  /* El orden de lectura de siempre: primero lo del día (notas rápidas y especiales, que antes
+     eran la misma card) y después los paneles de lo que hay que hacer. */
+  .day-col-medio { grid-column: 1; order: 0; }
+  .day-side-der  { grid-column: 1; order: 1; }
+  .day-side-izq  { grid-column: 1; order: 2; }
+  .day-side-izq, .day-side-der {
     justify-self: stretch;
     max-width: none;
     position: static;
   }
-  .day-side-right {
-    grid-column: 1;
-    order: 2;
-    justify-self: stretch;
-    max-width: none;
-    position: static;
+  /* ⚠️ Y los altos vuelven a salir del contenido. Apilado, el alto de pantalla que se reparten
+     las tres columnas deja de tener sentido: son cuatro bloques de media pantalla uno abajo del
+     otro, y sin agarres —acá están escondidos— no hay forma de achicarlos. */
+  .day-card-todos, .day-card-events-panel, .day-card, .day-side-der .day-card-journal {
+    height: auto;
+    min-height: 0;
   }
+  .day-card { min-height: 40vh; }
 }
 
 .day-topnav {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 760px;
+  /* Sigue al ancho de la columna del medio: es su encabezado, no el de la pantalla. */
+  max-width: var(--day-card-w, 620px);
   margin: 0 auto 16px;
 }
 
@@ -178,9 +255,20 @@ body.day-redimensionando:has(.day-alto-grip.arrastrando) { cursor: row-resize; }
   background: var(--bg);
   display: flex;
   flex-direction: column;
-  min-height: 60vh;
   overflow: hidden;
+  /* El cuarto panel que se arrastra. Era el único que no se podía achicar, y al lado de los
+     otros tres se leía como que le faltaba algo. El mismo var en `height` y en `min-height`
+     mantiene el arrastre: con un alto elegido los dos valen lo mismo y se puede achicar; sin
+     arrastrar, nace en 60vh y crece con las notas. */
+  height: var(--day-alto-notas, var(--day-alto-base));
+  min-height: var(--day-alto-notas, var(--day-alto-base));
 }
+/* Con un alto fijo el que scrollea es la LISTA, no el panel: el encabezado del día y el
+   "+ Agregar nota rápida" quedan siempre a la vista. */
+.day-card > .day-card-notes { min-height: 0; overflow-y: auto; }
+.day-card > .day-card-header,
+.day-card > .day-qn-title,
+.day-card > .day-card-footer-wrap { flex-shrink: 0; }
 
 /* Cabecera de la celda */
 .day-card-header {

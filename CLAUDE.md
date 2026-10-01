@@ -936,6 +936,63 @@ es "achicar el texto".
 - **No hay validación de "nota vacía"**: una categoría sin campos es un marcador legítimo ("hoy
   medité"), y exigir contenido rompería ese uso.
 
+## El layout de la vista del día: un trípode
+
+> Izquierda lo que hay que hacer, medio el día, derecha lo que registrás con formulario.
+
+Reemplaza al de dos paneles laterales + card del medio, que estaba congelado esperando esto
+(*"se va a rehacer entero más adelante, con algo más adaptable"*). Las notas especiales salieron
+de la card y se fueron a su propia columna; las rutinas bajaron a la izquierda, debajo de las
+tareas, **compartiendo el alto como en el widget**.
+
+| Columna | Qué tiene |
+|---|---|
+| `.day-side-izq` | `.day-card-todos` + `.day-card-events-panel` |
+| `.day-col-medio` | `.day-card`: encabezado del día + notas rápidas + su alta |
+| `.day-side-der` | `.day-card-journal`: notas especiales + su alta |
+
+- ⚠️ **Las tres columnas arrancan en `1fr`**: iguales y llenando el ancho, que es como se espera
+  ver un trípode. Arrastrar una le pone px a su variable y esa columna se vuelve fija; las otras
+  siguen en `1fr` y se reparten lo que queda. **Esto NO contradice la regla vieja** de que un
+  `1fr` acá estaba prohibido: lo prohibido era **uno solo** entre columnas fijas, porque se comía
+  todo el sobrante. Las tres en `1fr` es lo contrario — no hay sobrante mal repartido. El mínimo
+  de 200px en cada `minmax` evita que al ensanchar una las otras se aplasten hasta desaparecer, y
+  `justify-content: center` sigue haciendo falta para el caso en que arrastres las tres: ahí no
+  queda ninguna `1fr` y el sobrante vuelve a ir afuera.
+- ⚠️ **Los cuatro altos salen de una base común**, `--day-alto-base: calc(100vh - 150px)`, que es
+  el alto útil **medido sobre la app** (viewport 1007 → el layout arranca en 126 y `main` deja 20
+  abajo). La izquierda reparte esa base entre sus dos paneles (58/42, descontando la separación).
+  Así las tres columnas **terminan en el mismo píxel** sin que ninguna sepa de las otras.
+- ⚠️ **Cada panel va envuelto en un `.day-panel` con `position: relative`, y no es decorativo.**
+  El agarre de alto es `position: absolute` y se cuelga del ancestro posicionado más cercano: con
+  tareas y rutinas sueltas dentro del mismo aside, ese ancestro pasó a ser la **columna**, los dos
+  agarres se fueron juntos al fondo y el de tareas quedó inalcanzable — la lista de tareas perdió
+  el arrastre de alto por completo. Antes no pasaba porque cada panel tenía su propio `<aside>`.
+  No se veía como un error: se veía como un panel que dejó de responder. Tripwire:
+  `test_cada_agarre_de_alto_va_dentro_de_SU_panel`.
+- ⚠️ **Ninguna columna es `sticky`.** La izquierda lo era; con las tres arrancando del alto de la
+  pantalla no hay nada que pegar, y pegando una sola se desalineaba de las otras al scrollear.
+- **Apilado (≤1100px) los altos vuelven a salir del contenido.** Ahí los agarres están
+  escondidos, así que cuatro bloques de media pantalla uno abajo del otro no habría forma de
+  achicarlos. El orden es medio → derecha → izquierda, que preserva el de lectura de antes
+  (primero lo del día, después los paneles de lo que hay que hacer).
+- **Los cuatro paneles tienen la misma anatomía**: una banda de título con su línea de borde a
+  borde, y abajo el cuerpo con su propio padding. Tareas y rutinas tenían el título suelto dentro
+  del padding del panel y al lado de las notas se leían como otra cosa. ⚠️ El padding va en el
+  **cuerpo** y no en el panel: en el panel, la banda no llega a los bordes y la línea queda
+  flotando a 20px de cada lado.
+- **Las dos altas son independientes.** Había una alternancia —abrir una cerraba la otra— que
+  existía porque las dos vivían dentro de la misma card y se peleaban el alto. En columnas
+  distintas no hay nada que repartir, y cerrarle a alguien un formulario que no tocó es trabajo
+  perdido.
+- ⚠️ **Las cuatro zonas del refresco (`tareas`, `rutinas`, `notas`, `especiales`) cambiaron de
+  columna pero no de nombre**, así que el refresco parcial sigue andando. Lo verifica
+  `hacer.ps1 refresco`, que es la red de este cambio: el día tiene que pasar las dos pruebas.
+- **Las claves de `vista_prefs` son siete**: `day_izq_width`, `day_card_width`, `day_der_width`,
+  `day_alto_tareas`, `day_alto_rutinas`, `day_alto_notas`, `day_alto_especiales`. Las viejas
+  (`day_side_width`) no se migraron: el contenido de las columnas cambió y el ancho viejo ya no
+  significa lo mismo.
+
 ## Volver de una pantalla del navbar
 
 Las ocho pantallas que se abren desde el navbar llevan el mismo `.page-back .back-link`
@@ -1401,32 +1458,9 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
 - **Linux / descargas**: `webview.settings["ALLOW_DOWNLOADS"] = True` es necesario (está en `bitacora/escritorio/main.py`); por defecto pywebview cancela descargas silenciosamente.
 - **Arch / keyring**: `instalar.sh` detecta keyring sin inicializar chequeando `/etc/pacman.d/gnupg/trustdb.gpg` (no solo el directorio — el dir puede existir vacío).
 - **Windows / Mark of the Web**: si el zip viajó por internet, .NET se niega a cargar `Python.Runtime.dll`. `escritorio/main.py::_unblock_dlls()` borra el stream `Zone.Identifier` de las DLLs de `_internal/` en cada arranque; el updater hace lo mismo tras copiar los archivos nuevos.
-- **Las columnas laterales arrancan en 400px** (`--day-side`), no en 300: con 300 al texto de una
-  tarea le quedaban 103px y los títulos se partían en dos líneas. 400 es lo más ancho que entra
-  sin achicar la card en una pantalla de 1600.
-  ⚠️ **Las tres columnas se declaran siempre, incluso sin panel de rutinas.** Se probó no
-  declarar la tercera cuando el panel no está —una columna vacía igual mide su ancho y corre todo
-  a la izquierda— y **se revirtió por pedido del usuario**: el tema del layout del día se va a
-  rehacer entero más adelante, con algo más adaptable, y mientras tanto la vista se queda como
-  estaba. No volver a intentarlo suelto.
-- **El panel de tareas arranca en 420px de alto** (`min-height: var(--day-alto-tareas, 420px)`).
-  El mismo var en `height` y en `min-height` es lo que deja el arrastre intacto: con un alto
-  elegido los dos valen lo mismo y se puede achicar; sin arrastrar, crece con las tareas y **no
-  aparece scroll interno**.
 - ⚠️ **`.main-day` NO lleva `max-width`**, como `.main-wide` (el calendario). Con el tope de
-  1400px que tenía, en una pantalla grande el día vivía en 1400px centrados y ensanchar el panel
-  solo podía robarle ancho a la card: los costados quedaban sin usar. Y las tres columnas de
-  `.day-layout` son **topes `minmax(0, X)` sin ninguna `1fr`** + `justify-content: center`: con un
-  `1fr` en el medio, esa columna se comía todo el sobrante y la card quedaba lejísimos del panel.
-  Así el conjunto mide lo que necesita, queda centrado y el sobrante va **afuera** — que es el
-  espacio que se gana al ensanchar. El tope del arrastre sale de la pantalla
-  (`(ancho - CARD_MIN - gaps) / 2`, hasta 900) y no es un número fijo: con el 560 fijo que tenía
-  quedaba media pantalla sin usar.
-  ⚠️ **Lo que ese tope le reserva a la card es su mínimo legible (520), no sus 760.**
-  Reservándole los 760, achicar la ventana se lo cobraba siempre al panel: en 1372px quedaba en
-  262 y las tareas se leían **a una palabra por línea**, con scroll interno. Y se sentía
-  permanente porque solo se salía de ahí con el doble clic que resetea — que es justo el estado
-  que se ve bien, porque sin ancho pedido el grid achica la card y deja los paneles en su lugar.
+  1400px que tenía, en una pantalla grande el día vivía en 1400px centrados y ensanchar un panel
+  solo podía robarle ancho a otro: los costados quedaban sin usar.
 - ⚠️ **La fila de una tarea (`.todo-row`) envuelve**: el panel es angosto por elección del
   usuario, y al mínimo las acciones —que son `flex-shrink: 0`— se salían del panel (41px afuera)
   dejando el texto en 55px, o sea cinco líneas de una palabra. Con `flex-wrap: wrap` bajan a una
@@ -1435,24 +1469,20 @@ Hacerlo a mano sigue siendo válido; lo que hay que respetar es el conjunto de a
   ⚠️ **La base del texto es chica (70px) a propósito**: con una grande (110px) el texto tampoco
   entraba al lado del asa y el tilde y bajaba a una línea propia — tres líneas por tarea en vez
   de dos.
-- ⚠️ **Los paneles del día se arrastran a lo ancho Y a lo alto**, con un helper compartido en
-  `day.js` (`arrastrable({grip, eje, variable, pref, ...})`) que usan los tres agarres. El ancho es
-  uno solo para los dos paneles; **el alto es de cada uno**, porque tienen contenidos muy distintos.
-  Con un alto fijo el panel pasa a ser columna flex y **scrollea la lista**, no el panel: así el
-  título y el "Agregar una tarea" quedan siempre a la vista. El hijo que scrollea necesita
-  `min-height: 0` — un item flex no se encoge por debajo de su contenido y sin eso el `overflow-y`
-  no actúa nunca.
+- ⚠️ **Los paneles se arrastran a lo ancho Y a lo alto**, con un helper compartido en `day.js`
+  (`arrastrable({grip, eje, variable, pref, ...})`). **Tres de ancho** (uno por columna) y
+  **cuatro de alto** (uno por panel), todos declarados en el HTML con `data-var` y `data-pref`:
+  el JS no sabe de cuál se trata. Se guarda el valor **pedido** y no el medido —midiendo, cada
+  recarga lo encogía un poco: 402 → 354 → 306…— y por eso el arrastre es 1:1 con el mouse.
+  ⚠️ **El agarre de ancho era UNO solo para los dos lados.** Alcanzaba mientras los dos mostraban
+  listas cortas; con las notas especiales de un lado y las tareas del otro, un ancho común le
+  queda mal a alguno.
   ⚠️ **El tope del alto va en el JS, no como `max-height` en el CSS**: un `max-height` también
-  aplicaría en modo automático y a alguien con treinta tareas le aparecería un scroll interno que
-  hoy no tiene. Y el tope es `alto de ventana − 40` porque `.day-side` es `position: sticky`: un
-  panel más alto que la ventana deja de quedarse pegado.
-- ⚠️ **El ancho del panel de tareas del día se arrastra** (`.day-side-grip`, lo maneja `day.js`,
-  queda en `localStorage`; doble clic resetea). Las columnas laterales toman el ancho pedido
-  (`--day-side`, 300px) y la del medio absorbe con `minmax(0, 1fr)`. **Antes eran `1fr` con la del
-  medio capada en 760px y así el panel no podía crecer**: la del medio se quedaba con el espacio
-  primero. El tope de lectura se mudó a `.day-card`. Dos cosas que salieron de probar el arrastre:
-  se guarda el ancho **pedido** y no el medido (midiendo, cada recarga lo encogía: 402 → 354 →
-  306…), y por eso mismo el arrastre es 1:1 con el mouse.
+  aplicaría en modo automático, y a alguien con treinta tareas le aparecería un scroll interno
+  que hoy no tiene.
+  ⚠️ **El tope del ancho RESERVA el mínimo a las otras dos columnas en vez de medirlas.** Medirlas
+  dejó de servir cuando pasaron a arrancar en `1fr`: se encogen mientras arrastrás, así que el
+  tope crecía solo y se las podía aplastar hasta nada.
 - ⚠️ **El calendario se deformaba con texto largo**: `grid-template-columns: repeat(7, 1fr)` es
   `minmax(auto, 1fr)`, y ese `auto` como mínimo **impide que la columna se encoja por debajo del
   min-content de su contenido**. Con un `white-space: nowrap` en `.chip` (rutinas y notas

@@ -147,7 +147,9 @@ EMOTION_FALLBACK = "#8892a4"
 # ⚠️ `app` es la vista de lo que vale para toda la app (hoy el zoom). Al reiniciar una vista se
 # borra también, porque así se pidió — y por eso el texto del menú lo dice en vez de sorprender.
 VISTAS = {
-    "dia":        ("day_side_width", "day_alto_tareas", "day_alto_rutinas"),
+    "dia":        ("day_izq_width", "day_card_width", "day_der_width",
+                   "day_alto_tareas", "day_alto_rutinas",
+                   "day_alto_notas", "day_alto_especiales"),
     "calendario": ("cal_cell_height",),
     "tareas":     ("todosNuevaOpen", "todosResumenOpen"),
     "rutinas":    ("recSugOcultas", "recOpen-*"),
