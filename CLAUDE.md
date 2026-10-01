@@ -703,7 +703,16 @@ cargar— hasta que el usuario lo notó usando la app. Tres piezas, y las tres h
   `screenshots_audit.mjs`.
   ⚠️ En una pantalla cubierta el veredicto sale de **comparar el texto de `<main>` contra lo que
   sirve el servidor**, no de "¿recargó?": es lo único que caza una parte que se quedó fuera de
-  toda zona, que es el fallo callado de este diseño. Y toca una nota **y** una tarea a propósito,
+  toda zona, que es el fallo callado de este diseño.
+  ⚠️ **La fecha de la auditoría va en hora LOCAL, no con `toISOString()`**, que es UTC. La app
+  vive en la hora local, y de noche las dos no coinciden —a las 22:50 de Argentina para UTC ya
+  es el día siguiente—: la auditoría quedaba mirando el mes equivocado, ahí ninguna celda es
+  `is-today`, el borrador caía justo en la celda que el cambio tenía que actualizar y el
+  veredicto salía **"EL CAMBIO NO ENTRÓ" con la app funcionando perfecto**. Estuvo en rojo doce
+  horas por día sin que fuera un bug. Por eso la celda del borrador ahora se excluye **por su
+  fecha** y no por la clase: por fecha no hay acuerdo que pueda romperse. Es el tercer andamio
+  del repo que falla por repetir a mano el criterio de la app en vez de usar el suyo —
+  `smoke_desktop` y `smoke_widget` ya habían hecho lo mismo. Y toca una nota **y** una tarea a propósito,
   porque con un solo tipo de dato quedaban zonas sin ejercitar.
 - **Tests en `tests/test_refresco.py`**, que corren siempre y sin dependencias: que **toda**
   pantalla cargue `refresco.js` y traiga el token, que ninguna quede impedida de refrescarse por

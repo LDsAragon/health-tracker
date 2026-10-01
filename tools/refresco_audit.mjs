@@ -20,7 +20,20 @@ import { existsSync } from 'fs';
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PUERTO = 5199;
 const BASE = `http://127.0.0.1:${PUERTO}`;
-const HOY = new Date().toISOString().slice(0, 10);
+// ⚠️ La fecha va en hora LOCAL, no con `toISOString()`, que es UTC. La app vive en la hora
+// local, así que de noche las dos no coinciden —a las 22:50 de Argentina, para UTC ya es el día
+// siguiente— y la auditoría quedaba mirando el mes equivocado. Ahí NINGUNA celda es `is-today`,
+// el selector del borrador caía justo en la celda que el cambio tenía que actualizar, esa zona
+// se saltea por estar en uso y el veredicto salía "EL CAMBIO NO ENTRÓ".
+//
+// O sea: la auditoría se reprobaba a sí misma, de noche y solo en el mes. Es el tercer andamio
+// de este repo que falla por repetir a mano lo que hace la app en vez de usar su criterio —
+// `smoke_desktop` y `smoke_widget` ya habían hecho lo mismo.
+const HOY = (() => {
+  const d = new Date();
+  const dosDigitos = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${dosDigitos(d.getMonth() + 1)}-${dosDigitos(d.getDate())}`;
+})();
 const [Y, M] = HOY.split('-');
 
 // Cuánto se le da al poleo (3 s) para traer el cambio.
@@ -49,14 +62,19 @@ const PANTALLAS = [
 const CON_BORRADOR = [
   { nombre: 'día',    path: `/day/${HOY}`,
     abrir: '#rapida-collapsed', campo: '#rapida-form .day-add-input' },
-  // ⚠️ El borrador va en una celda que NO sea la de hoy. Cada celda es su propia zona y una
-  // zona con algo tipeado adentro se saltea a propósito: dejando el borrador en la celda de hoy
-  // —que es la que el otro lado cambia— la auditoría se reprobaba a sí misma. Pasaba los lunes
-  // en la semana (la primera celda es hoy) y pasaría el día 1 en el mes.
+  // ⚠️ El borrador va en una celda que NO sea la que el cambio toca. Cada celda es su propia
+  // zona y una zona con algo tipeado adentro se saltea a propósito: dejando el borrador ahí, la
+  // auditoría se reprobaba a sí misma.
+  //
+  // Se excluye la celda POR SU FECHA y no por la clase `is-today`. Con `:not(.is-today)` la
+  // exclusión depende de que la app y esta auditoría estén de acuerdo en qué día es hoy — y
+  // cuando no lo estaban (la fecha salía en UTC, ver arriba) el mes no tenía ninguna celda
+  // marcada y el borrador caía justo en la que había que mirar. Por fecha no hay acuerdo que
+  // pueda romperse: es la misma que se le manda al servidor.
   { nombre: 'mes',    path: `/calendar/${Y}/${Number(M)}`,
-    campo: '.cal-cell:not(.is-today) .cal-quick-input' },
+    campo: `.cal-cell:not([data-refresco="dia-${HOY}"]) .cal-quick-input` },
   { nombre: 'semana', path: `/week/${HOY}`,
-    campo: '.cal-cell:not(.is-today) .cal-quick-input' },
+    campo: `.cal-cell:not([data-refresco="dia-${HOY}"]) .cal-quick-input` },
 ];
 
 function python() {
