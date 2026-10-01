@@ -192,7 +192,11 @@ function filterJCats(q) {
   });
 }
 
-// Alternancia: solo una alta activa a la vez (cada una colapsable en su lugar).
+// Las dos altas son independientes: cada una se abre y se cierra sola.
+//
+// ⚠️ Hubo una alternancia —abrir una cerraba la otra— y se fue con el trípode. Existía porque
+// las dos vivían dentro de la misma card y se peleaban el alto; en columnas distintas no hay
+// nada que repartir, y cerrarle a alguien el formulario que no tocó es trabajo perdido.
 function _setRapida(open) {
   const f = document.getElementById('rapida-form');
   const b = document.getElementById('rapida-collapsed');
@@ -214,10 +218,10 @@ function _setEspecial(open) {
   _jcatExpandir();
   if (w) { w.style.removeProperty('--c'); w.classList.remove('jday-form-cat'); }
 }
-function openEspecial()    { _setEspecial(true);  _setRapida(false); }
-function closeEspecial()   { _setEspecial(false); _setRapida(true);  }
-function openRapida()      { _setRapida(true);    _setEspecial(false); }
-function collapseRapida()  { _setRapida(false); }
+function openEspecial()    { _setEspecial(true);  }
+function closeEspecial()   { _setEspecial(false); }
+function openRapida()      { _setRapida(true);    }
+function collapseRapida()  { _setRapida(false);   }
 
 function collectValues(containerId) {
   const container = document.getElementById(containerId);
