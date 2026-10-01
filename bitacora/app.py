@@ -82,7 +82,8 @@ def create_app():
                 # Adónde manda una emoción anotada desde el menú del clic derecho. Va acá
                 # porque el menú vive en todas las pantallas; es None si no hay ninguna
                 # categoría con rueda y entonces el atajo no se ofrece.
-                "emocion_destino": db.categoria_con_rueda()}
+                "emocion_destino": db.categoria_con_rueda(),
+                "menu_categorias": db.categorias_en_menu()}
 
     for module in BLUEPRINTS:
         app.register_blueprint(module.bp)

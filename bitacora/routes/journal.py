@@ -42,12 +42,14 @@ def journal_category_add():
     name  = request.form.get("name", "").strip()
     color = request.form.get("color", "#6366f1").strip()
     show  = 1 if request.form.get("show_in_calendar") else 0
+    menu  = 1 if request.form.get("show_in_menu") else 0
     if name:
         db.add_journal_category({
             "name":             name,
             "color":            color,
             "fields_json":      json.dumps(_parse_fields(request.form), ensure_ascii=False),
             "show_in_calendar": show,
+            "show_in_menu":     menu,
         })
     return redirect(url_for("journal.journal_view", back=safe_back(request.form.get("back"))))
 
@@ -81,6 +83,7 @@ def journal_category_edit(cat_id):
     name  = request.form.get("name", "").strip()
     color = request.form.get("color", "#6366f1").strip()
     show  = 1 if request.form.get("show_in_calendar") else 0
+    menu  = 1 if request.form.get("show_in_menu") else 0
     if not name:
         return redirect(url_for("journal.journal_view", back=safe_back(request.form.get("back"))))
 
@@ -112,6 +115,7 @@ def journal_category_edit(cat_id):
         "color":            color,
         "fields_json":      json.dumps(new_fields, ensure_ascii=False),
         "show_in_calendar": show,
+        "show_in_menu":     menu,
     })
     db.migrate_entry_values(cat_id, label_renames, option_renames)
     return redirect(url_for("journal.journal_view", back=safe_back(request.form.get("back"))))

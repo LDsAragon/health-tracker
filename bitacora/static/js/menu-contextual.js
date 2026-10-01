@@ -10,19 +10,34 @@
   // se ofrecen: es mejor que falte el atajo a inventarle una categoría a alguien.
   const DESTINO = window.EMOCION_DESTINO || null;
 
+  // Qué categorías pusiste en el menú (el tilde de /journal). Son un atajo DISTINTO al de la
+  // rueda: abren el día de hoy con esa categoría ya elegida, porque una categoría con cuatro
+  // campos no se llena desde un menú. La rueda sí, y por eso guarda sin abrir nada.
+  const CATEGORIAS = window.MENU_CATEGORIAS || [];
+
+  // Cuál de las dos ruedas se ofrece. Son taxonomías distintas y hay quien usa una sola.
+  const RUEDAS = [
+    { clave: 'willcox', codigo: 'es', texto: '🎯 Anotar emoción · Willcox' },
+    { clave: 'ekman',   codigo: 'ek', texto: '🧭 Anotar emoción · Ekman' },
+  ].filter((r) => (window.MENU_RUEDAS || 'ambas') === 'ambas'
+                  || window.MENU_RUEDAS === r.clave);
+
   function items() {
     const lista = [];
     if (DESTINO) {
-      lista.push({
-        texto: '🎯 Anotar emoción · Willcox',
+      RUEDAS.forEach((r) => lista.push({
+        texto: r.texto,
         detalle: 'Abre la rueda y guarda lo que elijas en ' + DESTINO.nombre + ', con fecha de hoy.',
-        accion: () => anotarEmocion('es'),
-      });
-      lista.push({
-        texto: '🧭 Anotar emoción · Ekman',
-        detalle: 'Abre la rueda y guarda lo que elijas en ' + DESTINO.nombre + ', con fecha de hoy.',
-        accion: () => anotarEmocion('ek'),
-      });
+        accion: () => anotarEmocion(r.codigo),
+      }));
+      if (RUEDAS.length) lista.push({ separador: true });
+    }
+    if (CATEGORIAS.length) {
+      CATEGORIAS.forEach((c) => lista.push({
+        texto: '📊 Anotar · ' + c.nombre,
+        detalle: 'Abre el día de hoy con esta categoría ya elegida.',
+        accion: () => { location.href = '/day/' + hoyISO() + '?cat=' + c.id; },
+      }));
       lista.push({ separador: true });
     }
     lista.push({ texto: 'Ir a hoy', accion: () => { location.href = '/day/' + hoyISO(); } });

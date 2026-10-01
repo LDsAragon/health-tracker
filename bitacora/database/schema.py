@@ -20,7 +20,7 @@ _EN_SETUP = threading.Lock()
 #  2. el import de sincronización va a poder rechazar un archivo incompatible.
 # ⚠️ AL AGREGAR UNA MIGRACIÓN HAY QUE SUBIRLA. Si no, las DBs ya instaladas se saltean el
 # paso y nunca reciben la columna nueva.
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 # Tablas que participan de la sincronización entre dispositivos. `settings` queda afuera a
 # propósito: mezcla preferencias de la persona (formato de fecha) con las del dispositivo
@@ -72,7 +72,8 @@ SCHEMA = """
         color            TEXT DEFAULT '#6366f1',
         fields_json      TEXT DEFAULT '[]',
         show_in_calendar INTEGER DEFAULT 0,
-        active           INTEGER DEFAULT 1
+        active           INTEGER DEFAULT 1,
+        show_in_menu     INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS journal_entries (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -162,6 +163,10 @@ MIGRATIONS = [
     # El AÑO de nacimiento y no la edad: la edad se desactualiza sola, el año no.
     ("recurring_events", "birth_year", "ALTER TABLE recurring_events ADD COLUMN birth_year INTEGER"),
     ("recurring_events", "aviso_dias", "ALTER TABLE recurring_events ADD COLUMN aviso_dias INTEGER DEFAULT 0"),
+    # Atajos del menú del clic derecho (oct 2026). Arranca en 0: una categoría que armaste vos no
+    # se mete sola en el menú. Las de fábrica se marcan aparte, ver `_marcar_fabrica_en_menu`.
+    ("journal_categories", "show_in_menu",
+     "ALTER TABLE journal_categories ADD COLUMN show_in_menu INTEGER DEFAULT 0"),
 ]
 
 # Identidad para sincronizar (sep 2026). Generadas y no escritas a mano: 14 entradas idénticas
@@ -261,6 +266,8 @@ SEED = f"""
 # qué encontrarse tres más una mañana. La marca se escribe igual, así que la pregunta no se vuelve
 # a hacer nunca.
 CLAVE_SEED_JOURNAL = "_seed_journal"
+# Misma idea que la de arriba: una marca para no repetir un paso que corre en cada request.
+CLAVE_MENU_FABRICA = "_menu_fabrica"
 
 
 def _sembrar_categorias(conn):
@@ -273,11 +280,34 @@ def _sembrar_categorias(conn):
         p = plantillas.por_slug(slug)
         conn.execute(
             "INSERT INTO journal_categories"
-            " (name, color, fields_json, show_in_calendar, active, uid, updated_at)"
-            " VALUES (?,?,?,1,1,?,?)",
+            " (name, color, fields_json, show_in_calendar, active, show_in_menu,"
+            "  uid, updated_at)"
+            " VALUES (?,?,?,1,1,1,?,?)",
             (p["nombre"], p["color"],
              json.dumps(plantillas.campos_json(p), ensure_ascii=False),
              p["uid"], MARCA_SEED))
+
+
+def _marcar_fabrica_en_menu(conn):
+    """Las tres categorías de fábrica arrancan en el menú del clic derecho, también en las bases
+    que ya existían.
+
+    ⚠️ Se identifican por su **uid fijo** (`plantillas.PLANTILLAS[*]["uid"]`), no por el nombre:
+    el uid es identidad —es la razón por la que lo tienen— y el nombre lo pudiste cambiar. Eso lo
+    saca de la clase de cosas que el repo no hace, que son las heurísticas sobre datos del
+    usuario: acá no se adivina nada.
+
+    ⚠️ Y corre **una sola vez por perfil**, marcado en `settings`. Sin esa guarda volverían al
+    menú en el request siguiente a sacarlas, que es el mismo error que el sembrado evita con
+    `_seed_journal`: `init_db()` corre en cada request.
+    """
+    if conn.execute("SELECT 1 FROM settings WHERE key = ?", (CLAVE_MENU_FABRICA,)).fetchone():
+        return
+    conn.execute("INSERT INTO settings (key, value) VALUES (?, '1')", (CLAVE_MENU_FABRICA,))
+    uids = [plantillas.por_slug(s)["uid"] for s in plantillas.DE_FABRICA]
+    conn.execute(
+        "UPDATE journal_categories SET show_in_menu = 1 WHERE uid IN (%s)"
+        % ",".join("?" * len(uids)), uids)
 
 
 def init_db():
@@ -330,4 +360,5 @@ def _setup():
         # sincronizar como cualquier otra fila.
         conn.executescript(SEED)
         _sembrar_categorias(conn)                       # 5) las categorías de fábrica
+        _marcar_fabrica_en_menu(conn)                   # 6) y su atajo en el menú
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")

@@ -100,6 +100,7 @@ SETTINGS = {
     # (bitacora/despedidas.py), así que sumar una animación no toca esta línea. "aleatorio" es
     # el default —la gracia es no saber cuál te toca— y "off" la borra sin ceremonia.
     "animacion_borrado": {"default": despedidas.AZAR, "choices": despedidas.OPCIONES},
+    "menu_ruedas": {"default": "ambas", "choices": ("ambas", "willcox", "ekman")},
     # ANDAMIO: ajustes — `hacer.ps1 nuevo ajuste` inserta aca. No mover ni borrar.
 }
 

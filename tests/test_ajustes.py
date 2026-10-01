@@ -27,6 +27,7 @@ SWITCHES = {
 }
 SEGMENTADOS = ("date_format", "time_format", "week_start", "start_view",
                "todo_alert", "todo_overdue_from", "pet",
+               "menu_ruedas",
                # ANDAMIO: segmentados — idem.
                )
 SECCIONES = ("apariencia", "calendario", "tareas", "escritorio", "menu", "detalles")

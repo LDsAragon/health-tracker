@@ -55,6 +55,10 @@
         <input type="checkbox" name="show_in_calendar" value="1" checked>
         Mostrar badge en el calendario
       </label>
+      <label class="jcat-badge" title="Un atajo en el menú del clic derecho que abre el día de hoy con esta categoría elegida.">
+        <input type="checkbox" name="show_in_menu" value="1">
+        En el menú del clic derecho
+      </label>
     </div>
 
     <div class="jcat-paso">
@@ -93,6 +97,7 @@
             Sin campos definidos
           {% endif %}
           {% if cat.show_in_calendar %} · Badge en calendario{% endif %}
+          {% if cat.show_in_menu %} · En el menú{% endif %}
         </span>
       </div>
       <button class="btn-edit" onclick="editJCat({{ cat.id }})">Editar</button>
@@ -148,6 +153,12 @@
                    {% if cat.show_in_calendar %}checked{% endif %}
                    style="margin-right:6px;accent-color:var(--accent);">
             Mostrar badge en el calendario
+          </label>
+          <label title="Un atajo en el menú del clic derecho que abre el día de hoy con esta categoría elegida.">
+            <input type="checkbox" name="show_in_menu" value="1"
+                   {% if cat.show_in_menu %}checked{% endif %}
+                   style="margin-right:6px;accent-color:var(--accent);">
+            En el menú del clic derecho
           </label>
         </div>
 

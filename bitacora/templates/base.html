@@ -13,7 +13,9 @@
      zoom.js aplica el zoom guardado lo antes posible y sin esto habría un salto al cargar.
      ⚠️ Con `| tojson` y nunca `"{{ ... }}"`: mismo motivo que el token del refresco. #}
   <script>window.VISTA_PREFS = {{ vista_prefs | tojson }};
-          window.EMOCION_DESTINO = {{ emocion_destino | tojson }};</script>
+          window.EMOCION_DESTINO = {{ emocion_destino | tojson }};
+          window.MENU_CATEGORIAS = {{ menu_categorias | tojson }};
+          window.MENU_RUEDAS = {{ settings.menu_ruedas | tojson }};</script>
   <script src="{{ url_for('static', filename='js/vista-prefs.js') }}"></script>
   <script src="{{ url_for('static', filename='js/zoom.js') }}"></script>
 </head>

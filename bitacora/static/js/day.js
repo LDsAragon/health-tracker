@@ -270,9 +270,27 @@ function restaurarRuedas(raiz) {
   });
 }
 
+// `/day/<hoy>?cat=<id>`: el atajo del menú del clic derecho. Abre el alta de nota especial con
+// esa categoría ya elegida reusando lo que ya existe —`selectJCat` setea el hidden, construye los
+// campos, colapsa el selector y tiñe el formulario—, así que no hay un segundo camino que pueda
+// divergir del clic. Una categoría que no esté entre los chips (archivada, borrada) simplemente
+// no abre nada: mejor eso que un formulario a medio armar.
+function _abrirCategoriaPedida() {
+  const pedida = new URLSearchParams(location.search).get('cat');
+  if (!pedida) return;
+  const chip = [...document.querySelectorAll('#jday-cat-chips .jcat-chip')]
+    .find((b) => b.dataset.id === pedida);
+  if (!chip) return;
+  _setEspecial(true);
+  selectJCat(chip);
+  const w = document.getElementById('jday-form-wrap');
+  if (w) w.scrollIntoView({ block: 'center' });
+}
+
 window.addEventListener('DOMContentLoaded', function () {
   restaurarRuedas(document);
   _jcatAutoElegir();
+  _abrirCategoriaPedida();
 });
 
 // ⚠️ Las notas especiales son una zona `data-refresco`: cuando el refresco reemplaza su

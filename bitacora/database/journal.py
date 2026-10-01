@@ -3,6 +3,17 @@ import json
 from .conn import get_db, snapshot_to, backup_path
 
 
+def categorias_en_menu() -> list:
+    """Las categorías que eligieron estar en el menú del clic derecho, en orden de pantalla.
+
+    Solo las activas: archivar afecta dónde se ESCRIBE, y el menú es justamente un atajo para
+    escribir. Una categoría archivada que siguiera ofreciéndose ahí llevaría a un alta que la
+    pantalla del día ya no deja elegir.
+    """
+    return [{"id": c["id"], "nombre": c["name"], "color": c["color"]}
+            for c in get_journal_categories() if c.get("show_in_menu")]
+
+
 def categoria_con_rueda() -> dict | None:
     """La categoría activa donde cae una emoción anotada desde el menú del clic derecho.
 
@@ -39,18 +50,22 @@ def get_journal_categories(incluir_archivadas: bool = False) -> list:
 def add_journal_category(data: dict):
     with get_db() as conn:
         conn.execute(
-            "INSERT INTO journal_categories (name, color, fields_json, show_in_calendar) VALUES (?,?,?,?)",
+            "INSERT INTO journal_categories"
+            " (name, color, fields_json, show_in_calendar, show_in_menu) VALUES (?,?,?,?,?)",
             (data["name"], data.get("color", "#6366f1"),
-             data.get("fields_json", "[]"), int(data.get("show_in_calendar", 0))),
+             data.get("fields_json", "[]"), int(data.get("show_in_calendar", 0)),
+             int(data.get("show_in_menu", 0))),
         )
 
 
 def update_journal_category(cat_id: int, data: dict):
     with get_db() as conn:
         conn.execute(
-            "UPDATE journal_categories SET name=?, color=?, fields_json=?, show_in_calendar=? WHERE id=?",
+            "UPDATE journal_categories SET name=?, color=?, fields_json=?,"
+            " show_in_calendar=?, show_in_menu=? WHERE id=?",
             (data["name"], data.get("color", "#6366f1"),
-             data.get("fields_json", "[]"), int(data.get("show_in_calendar", 0)), cat_id),
+             data.get("fields_json", "[]"), int(data.get("show_in_calendar", 0)),
+             int(data.get("show_in_menu", 0)), cat_id),
         )
 
 
