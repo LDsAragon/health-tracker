@@ -89,6 +89,8 @@ bitacora/
     instancia.py        # Una sola Bitácora a la vez: lock del SO + aviso por HTTP
     notify.py           # Notificación del escritorio (toast WinRT vía PowerShell / notify-send)
     updater.py          # Auto-actualización via GitHub Releases (check/download/apply)
+    compatible.py       # Modo compatible (main.py --compatible): Python embebido + Edge en
+                        #   modo app, para Smart App Control. Ver § Build y release
 
 tests/                  # pytest; conftest.py trae los fixtures test_db y client
 docs/                   # manual.html → Bitacora-Manual.pdf (tools/make_manual.ps1,
@@ -258,6 +260,30 @@ pasar por una versión publicada que no era la que tenía adentro y el updater l
 "actualizar" a algo con **menos** código del recién compilado. Con el sufijo siguiente queda por
 encima de todo lo publicado (`available: False`) y coincide con el tag que va a llevar cuando se
 publique. Lo fijan tres tests en `tests/test_updater.py`.
+
+**Windows compatible** — `dist\Bitacora-Compatible-<tag>.zip`, lo arma `make_release.ps1` al
+final (`tools\make_release_compatible.ps1`, con la **misma** versión). Es para las máquinas con
+**Smart App Control**, que bloquea todo binario sin firma y no acepta excepciones por app: el
+`.exe` de PyInstaller no lo pasa nunca, y no hay certificado (decisión, oct 2026). El zip lleva el
+**Python embebido oficial** (firmado por la PSF) + `main.py` + el paquete, y la ventana es **Edge
+en modo app** (`escritorio/compatible.py`). Lanzador: `Bitacora.bat` → `pythonw.exe main.py
+--compatible`. Se pierden el widget y la bandeja (son pywebview); los datos son los mismos
+`APP_DIR` y el mismo arranque (`preparar_entorno()` + `preparar_datos()`).
+- ⚠️ **El build verifica que TODO `.exe/.dll/.pyd` tenga firma válida y aborta si no.** Es la
+  única garantía del zip. Por eso se borran el `flask.exe` que deja pip y el `_speedups` de
+  markupsafe (que cae solo a su versión en Python puro).
+- ⚠️ **El nombre NO lleva "Windows"**: las instalaciones ya repartidas eligen su asset con
+  `"windows" in nombre and .zip`, y bajarían el compatible para espejarlo encima de una carpeta
+  con `Bitacora.exe`. Hoy elige `updater.elegir_asset()` según `CANAL` en `_version.py`, y el
+  relanzado después de actualizar también depende del canal (no hay `.exe` que relanzar).
+- ⚠️ **Edge corre con perfil propio** (`APP_DIR/edge`): así el proceso lanzado es el navegador y
+  vive lo que vive la ventana (medido), que es lo que apaga el servidor. Si sale en menos de
+  `ENTREGA` le pasó la ventana a otro Edge con ese perfil, y manda el último pedido.
+- El script es ASCII y compatible con Windows PowerShell 5.1, y termina con `exit 0`: si no, su
+  código de salida es el del último `robocopy`, que devuelve 1 cuando copió bien.
+- Sin verificar todavía: que `Bitacora.bat` corra en una máquina con Smart App Control
+  prendido (puede controlar scripts bajados de internet) y la auto-actualización de punta a
+  punta (necesita un release publicado).
 
 **Publicar a GitHub Releases** (ambas plataformas): `.\hacer.ps1 publicar`.
 ⚠️ **Sin `-Tag`, el script busca el primer sufijo libre del día** (`.1`, `.2`, …) y avisa cuál

@@ -68,6 +68,11 @@ if (Test-Path $zip) { Remove-Item $zip -Force }
 # actualiza. Antes el manual y el LEEME se quedaban con la version del dia que descomprimiste,
 # para siempre. Es lo que ya venia haciendo bien el tarball de Linux.
 Copy-Item "$root\docs\LEEME.txt" "$root\dist\Bitacora\LEEME.txt" -Force
+# Al lado de Bitacora.exe: usa su propia carpeta (%~dp0) como la carpeta de la app.
+Copy-Item "$root\tools\windows\Si-Windows-la-bloquea.bat" "$root\dist\Bitacora\Si-Windows-la-bloquea.bat" -Force
+# Aparte del menu a proposito: ese no toca nada fuera de la carpeta de la app, y este apaga una
+# proteccion de toda la PC. Lo corre por separado quien lo decide (explica y confirma adentro).
+Copy-Item "$root\tools\windows\Apagar-Control-inteligente.bat" "$root\dist\Bitacora\Apagar-Control-inteligente.bat" -Force
 if (Test-Path "$root\docs\Bitacora-Manual.pdf") {
     Copy-Item "$root\docs\Bitacora-Manual.pdf" "$root\dist\Bitacora\Bitacora-Manual.pdf" -Force
 }
@@ -75,3 +80,8 @@ Compress-Archive -Path "$root\dist\Bitacora" -DestinationPath $zip
 
 Write-Output "OK: $zip ($([math]::Round((Get-Item $zip).Length/1MB, 1)) MB)"
 Write-Output "Contiene: la carpeta Bitacora con la app, LEEME.txt y el manual PDF adentro."
+
+# El zip compatible (Python embebido + Edge, para Smart App Control) sale del mismo build y con
+# la MISMA version: un tag distinto haria que el updater de uno le ofrezca el release del otro.
+& "$PSScriptRoot\make_release_compatible.ps1" -Version $ver
+if ($LASTEXITCODE) { Write-Error "fallo el zip compatible"; exit 1 }

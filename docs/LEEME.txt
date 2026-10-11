@@ -16,6 +16,20 @@ SI WINDOWS SE QUEJA
   original → Propiedades → tildá "Desbloquear" → Aceptar, y volvé a
   descomprimir. (La app intenta desbloquearse sola en cada arranque,
   pero por si acaso.)
+- Si sigue sin abrir, o el antivirus borra Bitacora.exe: hacé doble clic
+  en "Si-Windows-la-bloquea.bat", en esta misma carpeta. Es un menú que
+  te dice qué la está frenando y lo destraba SOLO para esta carpeta: no
+  apaga el antivirus ni la protección de Windows, y todo se deshace
+  desde el mismo menú.
+- "Control inteligente de aplicaciones bloqueó..." (Windows 11), sin
+  botón para ejecutarla igual: esa protección no deja hacer excepciones
+  para una sola app. Tenés dos caminos:
+  1. Bajar la versión "Bitacora-Compatible" (está en la misma página de
+     descarga): abre sin apagar nada. Es lo recomendado.
+  2. Apagar esa protección con "Apagar-Control-inteligente.bat", en esta
+     carpeta. Ojo: se apaga para TODA la computadora, y en muchas
+     versiones de Windows no se puede volver a prender sin reinstalar.
+     El archivo te lo explica y te pregunta antes de cambiar nada.
 
 CÓMO ACTUALIZAR
 La app avisa sola cuando hay una versión nueva: aparece un cartel arriba

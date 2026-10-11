@@ -1,0 +1,42 @@
+BITÁCORA — versión COMPATIBLE para Windows
+==========================================
+
+¿PARA QUIÉN ES ESTA VERSIÓN?
+Para las computadoras donde Windows bloquea la versión normal con el
+cartel "Control inteligente de aplicaciones bloqueó una aplicación que
+podría no ser segura". Esta versión no trae ningún programa propio: usa
+el Python oficial y abre la Bitácora en una ventana de Microsoft Edge,
+así que Windows la deja correr.
+
+Si la versión normal te abre bien, seguí usando esa: tiene dos cosas que
+esta no tiene, el widget de escritorio y el icono junto al reloj.
+
+CÓMO INSTALARLA
+1. Descomprimí este zip en una carpeta local, por ejemplo C:\Bitacora.
+   (Evitá OneDrive/Dropbox: pueden "des-descargar" archivos y romper la app.)
+2. Entrá a la carpeta "Bitacora" y hacé doble clic en Bitacora.bat.
+   Se abre una ventana de Edge sin barra de direcciones: esa es la app.
+3. Si querés un acceso directo: clic derecho sobre Bitacora.bat
+   → Enviar a → Escritorio (crear acceso directo).
+
+SI WINDOWS IGUAL SE QUEJA
+- Si Windows no deja abrir Bitacora.bat: cerrá todo, clic derecho sobre
+  el ZIP original → Propiedades → tildá "Desbloquear" → Aceptar, y
+  volvé a descomprimir.
+
+CÓMO ACTUALIZAR
+La app avisa sola cuando hay una versión nueva, igual que la normal:
+aparece un cartel arriba con "Instalar actualización". Hace un backup de
+tu base, reemplaza los archivos y se reabre sola.
+
+TUS DATOS
+- Son los mismos que los de la versión normal, en
+  %LOCALAPPDATA%\Bitacora\perfiles\<perfil>\health.db
+  Si ya usabas la Bitácora en esta computadora, vas a encontrar todo.
+- Sin cuentas y sin nube; lo único que sale a internet es el chequeo de
+  actualizaciones.
+- Hacé copias de seguridad desde la pestaña "Datos" de la app
+  (botón "Descargar backup") cada tanto.
+
+MANUAL
+El manual completo de uso viene en este zip: Bitacora-Manual.pdf

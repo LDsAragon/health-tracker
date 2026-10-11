@@ -192,6 +192,52 @@ def test_el_manual_y_el_leeme_van_dentro_de_la_carpeta_que_se_espeja():
     assert 'cp docs/Bitacora-Manual.pdf "$APP/"' in sh
 
 
+def test_la_ayuda_de_windows_va_al_lado_del_exe_y_nunca_apaga_la_proteccion():
+    """El .bat usa su propia carpeta (%~dp0) como la de la app, así que tiene que viajar al lado
+    de Bitacora.exe — y dentro de la carpeta que se espeja, o se queda viejo para siempre.
+    Y solo toca ESA carpeta: apagar Defender, SmartScreen o Smart App Control para todo el
+    sistema deja la máquina entera expuesta por una sola app, y SAC en muchas versiones no se
+    puede volver a prender sin reinstalar.
+    """
+    import pathlib
+    ps = _script("make_release.ps1")
+    assert r'"$root\dist\Bitacora\Si-Windows-la-bloquea.bat"' in ps
+
+    bat_path = (pathlib.Path(__file__).resolve().parent.parent
+                / "tools" / "windows" / "Si-Windows-la-bloquea.bat")
+    crudo = bat_path.read_bytes()
+    # Con LF, cmd falla al saltar a etiquetas: el menú entero es goto.
+    assert crudo.count(b"\n") == crudo.count(b"\r\n"), "el .bat tiene que ir con CRLF"
+    bat = crudo.decode("ascii")  # sin acentos: cmd lo lee con la página de códigos de la consola
+    for prohibido in ("DisableRealtimeMonitoring", "SmartScreenEnabled", "EnableSmartScreen",
+                      "VerifiedAndReputablePolicyState", "Set-MpPreference"):
+        assert prohibido not in bat, f"el .bat no puede apagar protecciones del sistema: {prohibido}"
+    assert "-ExclusionPath $env:DIR" in bat, "la exclusión tiene que ser solo de la carpeta"
+
+
+def test_apagar_smart_app_control_pregunta_antes_de_tocar_y_antes_de_reiniciar():
+    """Apagar Smart App Control es decisión de la persona, pero informada: afecta a toda la PC
+    y en muchas versiones no vuelve a prenderse sin reinstalar. El script explica y confirma
+    ANTES del `reg add`, y no reinicia sin otra confirmación (se perdería lo que esté abierto).
+    """
+    import pathlib
+    # Viaja en el zip normal, dentro de la carpeta que se espeja, para correrlo por separado.
+    assert r'"$root\dist\Bitacora\Apagar-Control-inteligente.bat"' in _script("make_release.ps1")
+    crudo = (pathlib.Path(__file__).resolve().parent.parent
+             / "tools" / "windows" / "Apagar-Control-inteligente.bat").read_bytes()
+    assert crudo.count(b"\n") == crudo.count(b"\r\n"), "el .bat tiene que ir con CRLF"
+    bat = crudo.decode("ascii")
+    reg = bat.index("reg add")
+    reinicio = bat.index("shutdown /r")
+    assert bat.index("NO se puede volver a prender") < bat.index("choice") < reg
+    assert "Bitacora-Compatible" in bat[:reg], "tiene que ofrecer la alternativa que no apaga nada"
+    assert bat.index("choice", reg) < reinicio
+    # "net session" falla siendo admin con el servicio Servidor apagado: relanzaría en bucle.
+    codigo = "\n".join(l for l in bat.splitlines() if not l.lstrip().lower().startswith("rem"))
+    assert "net session" not in codigo and "fltmc" in codigo
+    assert '"%~1"=="elevado"' in bat
+
+
 # ── El tag que estampa un build local ───────────────────────────────────────
 
 def test_un_build_local_no_se_hace_pasar_por_una_release(monkeypatch):

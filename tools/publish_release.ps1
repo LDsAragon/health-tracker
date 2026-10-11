@@ -58,6 +58,7 @@ if ($Tag) {
     if ($n) { Write-Output "Ya habia releases de hoy: publico como $tag" }
 }
 $zip = "dist\Bitacora-Windows-$fecha.zip"
+$zipc = "dist\Bitacora-Compatible-$tag.zip"
 
 # Fecha en español para el título y el cuerpo del release
 $meses = @('enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre')
@@ -68,6 +69,7 @@ $titulo = "Bitácora $([char]0x2014) $fechaEs"
 Write-Output "== Build Windows =="
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\make_release.ps1 -Version $tag
 if ($LASTEXITCODE -or -not (Test-Path $zip)) { Write-Error "falló el build Windows"; exit 1 }
+if (-not (Test-Path $zipc)) { Write-Error "falta el zip compatible ($zipc)"; exit 1 }
 
 Write-Output "== Build Linux (WSL) =="
 wsl -d Ubuntu-24.04 -- bash tools/make_release_linux.sh $tag
@@ -100,17 +102,18 @@ $commits
 ---
 **Windows:** descomprimí el zip, entrá a la carpeta ``Bitacora`` y ejecutá ``Bitacora.exe``.
 **Linux:** descomprimí el tar.gz, entrá a la carpeta ``Bitacora`` y ejecutá ``./instalar.sh``.
+**Windows, si "Control inteligente de aplicaciones" bloquea la app:** bajá ``Bitacora-Compatible``, descomprimilo y ejecutá ``Bitacora.bat``. Corre sin el widget de escritorio.
 "@
 [System.IO.File]::WriteAllText($notesFile, $notesBody, (New-Object System.Text.UTF8Encoding $false))
 
 Write-Output "== Publicando $tag =="
 gh release view $tag *> $null
 if ($LASTEXITCODE) {
-    gh release create $tag $zip $tgz --title $titulo --notes-file $notesFile --latest
+    gh release create $tag $zip $zipc $tgz --title $titulo --notes-file $notesFile --latest
 } else {
     # Solo se llega aca con -Tag explicito (el default ya eligio un tag libre):
     # re-publicar a proposito un tag que existe, reemplazando archivos y notas.
-    gh release upload $tag $zip $tgz --clobber
+    gh release upload $tag $zip $zipc $tgz --clobber
     gh release edit $tag --title $titulo --notes-file $notesFile
 }
 Remove-Item $notesFile -ErrorAction SilentlyContinue

@@ -346,12 +346,19 @@ def preparar_datos():
     db.init_db()
 
 
-def main():
-    _unblock_dlls()
+def preparar_entorno():
+    """La carpeta de datos y las variables que la apuntan. Antes del lock de instancia y de
+    `preparar_datos()`, y compartido con el modo compatible (`escritorio/compatible.py`) para
+    que los dos arranques no puedan divergir."""
     _migrate_from_old_appdata()
     APP_DIR.mkdir(parents=True, exist_ok=True)
     os.environ["HT_PERFILES"] = str(APP_DIR)
     os.environ["HT_DB"] = str(DB_FILE)
+
+
+def main():
+    _unblock_dlls()
+    preparar_entorno()
 
     # Una sola Bitácora a la vez: si ya hay una, le pedimos que se muestre y nos vamos. Va
     # ANTES de las migraciones y el auto-backup — no hay por qué pagarlos para después salir,
@@ -415,14 +422,16 @@ def main():
     tray.quitar()   # sin esto queda el icono fantasma en la bandeja
 
 
-def arrancar():
+def arrancar(principal=None):
     """`main()` envuelto en el reporte de errores. La llama el entry point de la raíz.
 
     Está en una función y no en un `if __name__` para que el punto de entrada real —`main.py`
-    en la raíz, que es lo que empaqueta PyInstaller— no se quede sin el reporte.
+    en la raíz, que es lo que empaqueta PyInstaller— no se quede sin el reporte. El modo
+    compatible pasa su propio `principal`: corre con `pythonw.exe`, sin consola, y sin este
+    reporte un fallo al arrancar sería un doble clic que no hace nada.
     """
     try:
-        main()
+        (principal or main)()
     except Exception:
         # Congelada con --windowed no hay consola: dejar rastro y avisar.
         APP_DIR.mkdir(parents=True, exist_ok=True)

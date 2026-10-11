@@ -54,5 +54,12 @@ def apply():
 
 @bp.route("/update/quit", methods=["POST"])
 def quit_app():
-    threading.Timer(0.8, lambda: os._exit(0)).start()
+    def salir():
+        for cerrar in updater.al_salir:
+            try:
+                cerrar()
+            except Exception:
+                pass                # cerrar una ventana no puede impedir que se aplique
+        os._exit(0)
+    threading.Timer(0.8, salir).start()
     return jsonify({"ok": True})

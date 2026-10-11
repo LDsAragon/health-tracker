@@ -6,3 +6,6 @@
 
 # El LEEME del release Linux viaja en el tarball: que no le entre CRLF
 docs/LEEME-Linux.txt text eol=lf
+
+# Los .bat SIEMPRE con CRLF: con LF, cmd falla al saltar a etiquetas (goto)
+*.bat text eol=crlf

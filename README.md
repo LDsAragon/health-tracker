@@ -34,6 +34,7 @@ Bajá la versión más reciente desde [Releases](https://github.com/LDsAragon/he
    > Evitá carpetas sincronizadas (OneDrive, Dropbox): pueden "des-descargar" archivos y romper la app.
 2. Entrá a la carpeta `Bitacora` y hacé doble clic en `Bitacora.exe`.
 3. **Si Windows muestra "Windows protegió tu equipo"** (pantalla azul de SmartScreen): tocá **Más información** → **Ejecutar de todas formas**. Pasa porque la app no está firmada digitalmente; es normal.
+   Si sigue sin abrir, o el antivirus borra `Bitacora.exe`, hacé doble clic en `Si-Windows-la-bloquea.bat` (en la misma carpeta): un menú que diagnostica qué la frena y la destraba **solo para esa carpeta**, sin apagar ninguna protección de Windows.
 4. Para un acceso directo: clic derecho sobre `Bitacora.exe` → Enviar a → Escritorio.
 
 Tus datos se guardan en `%LOCALAPPDATA%\Bitacora\perfiles\<perfil>\health.db`, independiente de dónde tengas la app.

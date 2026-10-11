@@ -28,5 +28,16 @@ def ventana():
     arrancar()
 
 
+def compatible():
+    """Python embebido + Edge en modo app: el zip para Windows con Smart App Control."""
+    from bitacora.escritorio.compatible import arrancar
+    arrancar()
+
+
 if __name__ == "__main__":
-    navegador() if "--navegador" in sys.argv else ventana()
+    if "--navegador" in sys.argv:
+        navegador()
+    elif "--compatible" in sys.argv:
+        compatible()
+    else:
+        ventana()

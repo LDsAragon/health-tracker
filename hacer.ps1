@@ -72,6 +72,10 @@ $COMANDOS = [ordered]@{
         d = "Build de Windows: dist\Bitacora-Windows-<fecha>.zip"
         f = { & powershell -NoProfile -ExecutionPolicy Bypass -File "tools\make_release.ps1" @Resto }
     }
+    "build-compatible" = @{
+        d = "Solo el zip compatible (Python embebido + Edge): -Version v... (build lo arma solo)"
+        f = { & powershell -NoProfile -ExecutionPolicy Bypass -File "tools\make_release_compatible.ps1" @Resto }
+    }
     "build-linux" = @{
         d = "Build de Linux via WSL: dist\Bitacora-linux-<fecha>.tar.gz"
         f = { & wsl -d Ubuntu-24.04 -- bash tools/make_release_linux.sh @Resto }

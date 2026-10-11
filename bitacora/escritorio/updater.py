@@ -70,6 +70,39 @@ def current_version():
         return None
 
 
+def canal():
+    """'compatible' en el build sin binarios propios (`make_release_compatible.ps1` lo escribe
+    en `_version.py`); 'normal' en todo lo demás. Decide qué asset bajar y cómo relanzarse."""
+    try:
+        import _version
+        return getattr(_version, "CANAL", "normal")
+    except ImportError:
+        return "normal"
+
+
+# Lo que hay que cerrar antes del os._exit de /update/quit (la ventana de Edge del modo
+# compatible, que si no queda abierta sobre un servidor muerto).
+al_salir = []
+
+# ⚠️ El zip compatible NO puede llevar "windows" en el nombre: las instalaciones ya
+# repartidas eligen su asset con `"windows" in nombre and nombre.endswith(".zip")`, y con
+# ese nombre podrían bajar el compatible y espejarlo sobre una carpeta con Bitacora.exe.
+PREFIJO_COMPATIBLE = "Bitacora-Compatible-"
+
+
+def elegir_asset(assets, plataforma=None, canal_actual=None):
+    plataforma = plataforma or sys.platform
+    canal_actual = canal_actual or canal()
+    if plataforma == "win32" and canal_actual == "compatible":
+        ok = lambda n: n.startswith(PREFIJO_COMPATIBLE) and n.endswith(".zip")
+    elif plataforma == "win32":
+        ok = lambda n: ("windows" in n.lower() and n.endswith(".zip")
+                        and not n.startswith(PREFIJO_COMPATIBLE))
+    else:
+        ok = lambda n: "linux" in n.lower() and n.endswith(".tar.gz")
+    return next((a for a in assets if ok(a["name"])), None)
+
+
 def _version_tuple(tag):
     """v2026-06-12.1 → (2026, 6, 12, 1); v2026-06-24 → (2026, 6, 24, 0)"""
     import re
@@ -132,13 +165,7 @@ def _do_check(current):
             data = json.loads(resp.read().decode())
 
         latest = data.get("tag_name", "")
-        assets = data.get("assets", [])
-        plat, ext = ("Windows", ".zip") if sys.platform == "win32" else ("linux", ".tar.gz")
-        asset = next(
-            (a for a in assets
-             if plat.lower() in a["name"].lower() and a["name"].endswith(ext)),
-            None,
-        )
+        asset = elegir_asset(data.get("assets", []))
         with _lock:
             _state["checked"]   = True
             _state["current"]   = current
@@ -272,7 +299,13 @@ def _ps(p):
 def _launch_win(src, dst, pid):
     import subprocess
     log = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Bitacora" / "update.log"
-    exe = dst / "Bitacora.exe"
+    if canal() == "compatible":
+        # Sin .exe propio: el lanzador es el Python embebido, firmado, con el main.py.
+        relanzar = (f"Start-Process '{_ps(dst / 'python' / 'pythonw.exe')}' "
+                    f"-ArgumentList '\"{_ps(dst / 'main.py')}\" --compatible' "
+                    f"-WorkingDirectory '{_ps(dst)}'")
+    else:
+        relanzar = f"Start-Process '{_ps(dst / 'Bitacora.exe')}'"
 
     # Dejar rastro ANTES de lanzar: si el script externo no llega a loguear, el
     # problema fue el lanzamiento y no el script (así se diagnosticó este bug).
@@ -304,7 +337,7 @@ Get-ChildItem '{_ps(dst)}' -Recurse -File | ForEach-Object {{
     Remove-Item "$($_.FullName):Zone.Identifier" -EA SilentlyContinue
 }}
 Log "Relanzando aplicacion..."
-Start-Process '{_ps(exe)}'
+{relanzar}
 Log "OK"
 """
     ps_path = Path(tempfile.gettempdir()) / "bitacora_updater.ps1"
