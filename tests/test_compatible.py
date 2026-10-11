@@ -180,6 +180,17 @@ def test_lo_que_se_distribuye_va_dentro_de_la_carpeta_que_se_espeja():
     assert "Compress-Archive -Path $out" in ps
 
 
+def test_una_version_de_prueba_no_le_llega_a_nadie_por_el_updater():
+    """El updater consulta /releases/latest, que excluye las pre-releases. Publicada como
+    "latest", una prueba se instalaría sola en todas las máquinas."""
+    pub = _leer("tools/publish_release.ps1")
+    assert '$canal = if ($Prueba) { "--prerelease" } else { "--latest" }' in pub
+    assert "/releases/latest" in _leer("bitacora/escritorio/updater.py")
+    # Desde una rama solo se publica una prueba, y el tag va sobre el commit propio, no main.
+    assert '$rama -ne "main" -and -not $Prueba' in pub
+    assert "--target $commit" in pub
+
+
 def test_el_release_arma_y_publica_el_compatible():
     assert "make_release_compatible.ps1" in _leer("tools/make_release.ps1")
     pub = _leer("tools/publish_release.ps1")

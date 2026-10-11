@@ -5,7 +5,10 @@
 # -Aviso: advertencia para los usuarios (cambio de comportamiento, migracion a mano).
 # Va como primer bullet y no como parrafo aparte a proposito: updater.changelog() se
 # queda solo con los bullets, asi que un parrafo no llegaria al tab Version de la app.
-param([string]$Tag = "", [string]$Aviso = "")
+# -Prueba: sale como PRE-RELEASE. GitHub no la cuenta como "latest", y el updater consulta
+# /releases/latest: no se le ofrece a ninguna instalacion, se baja a mano. Es lo unico que se
+# puede publicar desde una rama que no sea main.
+param([string]$Tag = "", [string]$Aviso = "", [switch]$Prueba)
 # PS 5.1 defaults $OutputEncoding to ASCII; los caracteres no-ASCII (tildes, em dash)
 # se corrompen al pasarlos a procesos externos como gh CLI. Forzar UTF-8.
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -25,9 +28,20 @@ if ($pending) {
     Write-Error "Hay cambios sin commitear. Commiteá o descartá antes de publicar."
     exit 1
 }
-Write-Output "== Push a main =="
-git push
+$rama = git rev-parse --abbrev-ref HEAD
+if ($rama -ne "main" -and -not $Prueba) {
+    Write-Error "Estas en '$rama': un release estable sale de main. Para una version de prueba, -Prueba."
+    exit 1
+}
+if ($Prueba -and -not $Aviso) {
+    $Aviso = "Versión de PRUEBA: no se ofrece como actualización automática. Bajala solo si te lo pidieron."
+}
+Write-Output "== Push de $rama =="
+git push -u origin $rama
 if ($LASTEXITCODE) { Write-Error "git push falló"; exit 1 }
+# El tag va sobre ESTE commit: sin --target, gh lo crea sobre la rama por defecto (main) y
+# un release de prueba quedaria apuntando a codigo que no es el de sus archivos.
+$commit = git rev-parse HEAD
 # gh release create crea el tag SOLO en el remoto: sin este fetch los tags de los
 # releases anteriores no existen localmente, git describe devuelve uno viejisimo y
 # el changelog repite todo lo ya publicado.
@@ -65,6 +79,7 @@ $meses = @('enero','febrero','marzo','abril','mayo','junio','julio','agosto','se
 $hoy = Get-Date
 $fechaEs = "$($hoy.Day) de $($meses[$hoy.Month - 1]) de $($hoy.Year)"
 $titulo = "Bitácora $([char]0x2014) $fechaEs"
+if ($Prueba) { $titulo += " (PRUEBA)" }
 
 Write-Output "== Build Windows =="
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\make_release.ps1 -Version $tag
@@ -109,7 +124,8 @@ $commits
 Write-Output "== Publicando $tag =="
 gh release view $tag *> $null
 if ($LASTEXITCODE) {
-    gh release create $tag $zip $zipc $tgz --title $titulo --notes-file $notesFile --latest
+    $canal = if ($Prueba) { "--prerelease" } else { "--latest" }
+    gh release create $tag $zip $zipc $tgz --target $commit --title $titulo --notes-file $notesFile $canal
 } else {
     # Solo se llega aca con -Tag explicito (el default ya eligio un tag libre):
     # re-publicar a proposito un tag que existe, reemplazando archivos y notas.
